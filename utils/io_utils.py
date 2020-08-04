@@ -71,7 +71,7 @@ def format_h5_data(data_path, switches):
             a_w0 = data.get_node('/'+ens+'/aw0_milc').read()
             p[(ens,'aw0')] = gv.gvar(a_w0[0], a_w0[1])
             p[(ens,'w0a')] = 1 / p[(ens,'aw0')]
-        y[ens] = gvdata['m_omega'] * p[(ens,'w0a')]
+        y[ens] = gvdata['m_omega'] * gv.gvar(p[(ens,'w0a')].mean,p[(ens,'w0a')].sdev)
         print("%9s %s" %(ens,y[ens]))
 
         # MASSES

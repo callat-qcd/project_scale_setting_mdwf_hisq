@@ -37,17 +37,17 @@ switches['sys'] = dict()     # these cause the fitter to loop over various optio
 switches['sys']['Lam_chi']   = True # FF = F, O
 switches['sys']['alphaS']    = True # include alphaS at NNLO?
 # OLDER SYSTEMATICS - still work, but not used
-switches['sys']['FV']        = True # turn on/off FV corrections
+switches['sys']['FV']        = False # turn on/off FV corrections
 switches['scales']           = ['F','O']
                                # scale is used when the loop over scales is not triggered
-switches['scale']            = 'F' # PP, PK, KK, LamChi = 4 * pi * sqrt(FA * FB)
+switches['scale']            = 'O' # PP, PK, KK, LamChi = 4 * pi * sqrt(FA * FB)
 
 switches['print_lattice']    = False # print data for paper - not fitting will occur
 
 # Fitting options
 switches['bs_bias']          = True  # shift bs avg to b0?
 switches['print_fit']        = False # print lsqfit results?
-switches['report_phys']      = False  # report physical point for each fit?
+switches['report_phys']      = True  # report physical point for each fit?
 switches['save_fits']        = False  # save fits in pickle file?
 switches['model_avg']        = True # perform Bayes Model Avg
 switches['prior_search']     = False # perform a crude grid search to optimize
@@ -65,7 +65,7 @@ switches['milc_compare']     = False # compare with MILCs result
 switches['plot_ls']          = False # report fitted Li values
 
 # DEBUGGING
-switches['debug_models']     = True # print list of models being generated
+switches['debug_models']     = False # print list of models being generated
 switches['debug_save_fit']   = False # check pickling of fit works
 switches['debug_phys_point'] = False # run report_phys_point even if fit is just loaded
 switches['debug_shift']      = False # check the shifting of raw data to extrapolated points
@@ -76,9 +76,9 @@ priors = dict()
 priors['c0']   = gv.gvar(1.,0.5)
 priors['t_fv'] = gv.gvar(0,100)
 
-priors['c_l'] = gv.gvar(0,10)
-priors['c_s'] = gv.gvar(0,10)
-priors['d_2'] = gv.gvar(0,10)
+priors['c_l'] = gv.gvar(0.1,10)
+priors['c_s'] = gv.gvar(0.1,10)
+priors['d_2'] = gv.gvar(0.1,10)
 
 nlo_x = 10
 nlo_a = 10

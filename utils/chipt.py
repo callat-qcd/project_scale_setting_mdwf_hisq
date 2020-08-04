@@ -79,7 +79,7 @@ class FitModel:
             try:
                 dummy = sum(getattr(FitModel, term)(self,fake_x,fake_p,fake_cp)
                             for term in self.term_list)
-            except:
+            except Exception as e:
                 pass
         return fake_x.param_list, fake_p.param_list, set(fake_cp.keys())
 
@@ -88,7 +88,7 @@ class FitModel:
         function defined here with the name and an underscore prepended '''
     # xpt masses
     def _p2(self, x, p, cP): return (p['mpi'] / p['Lam_'+self.FF])**2
-    def _s2(self, x, p, cP): return (2*p['mk']**2 - p['mpi']**2) / p['Lam_'+self.FF]**2
+    def _s2(self, x, p, cP): return (2*p['mk']**2 - p['mpi']**2) / (p['Lam_'+self.FF])**2
     # logs
     def _lp(self, x, p, cP): return np.log(cP['p2'])
     # eps_a**2
@@ -99,21 +99,17 @@ class FitModel:
     def k1(self, mL):
         cn = np.array([6,12,8,6,24,24,0,12,30,24,24,8,24,48,0,6,48,36,24,24])
         n_mag = np.sqrt(np.arange(1,len(cn)+1,1))
-        k1 = np.sum(cn * spsp.kn(1,n_mag * mL) / mL / n_mag)
-        return k1
+        k1_r = np.sum(cn * spsp.kn(1,n_mag * mL) / mL / n_mag)
+        return k1_r
 
     # Tadpole Integrals
     def _I(self, eps_sq, mL):
-        return eps_sq*np.log(eps_sq) + (4.*eps_sq*self.k1(mL)[1] if self.fv else 0.)
+        return eps_sq*np.log(eps_sq) + (4.*eps_sq*self.k1(mL) if self.fv else 0.)
     def _Ip(self, x, p, cP): return self._I(cP['p2'], (x['mpiL'] if self.fv else None))
     # mock Taylor Expansion FV correction
     def _IT(self, mL):
-        return (4*self.k1(mL)[1] if self.fv else 0.)
+        return (4*self.k1(mL) if self.fv else 0.)
     def _ITp(self, x, p, cP): return p['t_fv']*self._IT( x['mpiL'] if self.fv else None)
-
-    def _dI(self, eps_sq, mL):
-        return 1 + np.log(eps_sq) + (2*self.k1(mL)[1] -self.k1(mL)[0] -self.k1(mL)[2] if self.fv else 0.)
-    def _dIp(self, x, p, cP): return self._dI(cP['p2'], (x['mpiL'] if self.fv else None))
 
     ''' Define all the fit functions to be used in the analysis.  We describe them
         in pieces, which are assembled based upon the term_list, to form a given
@@ -121,8 +117,12 @@ class FitModel:
     '''
     # Fit functions
     def xpt_lo(self,x,p,cP):
+        #print('DEBUG p:',p)
         a_result  = p['c0']
-        a_result += p['c_l'] * cP['p2'] +p['c_s'] * cP['s2'] + p['d_2'] * cP['a2']
+        a_result +=   p['c_l'] * cP['p2']\
+                    + p['c_s'] * cP['s2']\
+                    + p['d_2'] * cP['a2']
+        #print('DEBUG: p2',cP['p2'], 's2', cP['s2'])
         return a_result
 
     def taylor_lo(self,x,p,cP):
@@ -138,4 +138,4 @@ class FitModel:
         return a_result
 
     def nlo_log(self,x,p,cP):
-        return p['c_lln'] * cP['p2']**2 * cP['lp']
+        return p['c_lln'] * cP['p2'] * cP['Ip']
