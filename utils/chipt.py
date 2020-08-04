@@ -132,7 +132,10 @@ class FitModel:
         return p['daS_2'] * x['alphaS'] * cP['a2']
 
     def nlo_ct(self,x,p,cP):
-        a_result  = p['c_ll'] * cP['p2']**2 + p['c_ls'] * cP['ps'] * cP['s2'] + p['c_ss'] * cP['s2']**2
+        a_result  = p['c_ll'] * cP['p2']**2 + p['c_ls'] * cP['p2'] * cP['s2'] + p['c_ss'] * cP['s2']**2
         a_result += cP['a2'] *( p['d_4'] * cP['a2'] + p['d_l4'] * cP['p2'] + p['d_s4'] * cP['s2'])
 
         return a_result
+
+    def nlo_log(self,x,p,cP):
+        return p['c_lln'] * cP['p2']**2 * cP['lp']

@@ -22,7 +22,7 @@ switches['ensembles_fit'] = [
 
 # FIT MODELS
 switches['ansatz'] = dict()
-switches['ansatz']['models'] = ['xpt_lo','taylor_lo']
+switches['ansatz']['models'] = ['xpt_nlo','taylor_nlo']
 '''
     The full list of models can be rather long.  The sys switches help loop
     over them.  Example other base models are
@@ -80,6 +80,17 @@ priors['t_fv'] = gv.gvar(0,100)
 priors['c_l'] = gv.gvar(0,10)
 priors['c_s'] = gv.gvar(0,10)
 priors['d_2'] = gv.gvar(0,10)
+
+nlo_x = 10
+nlo_a = 10
+priors['c_ll']  = gv.gvar(0., nlo_x)
+priors['c_ls']  = gv.gvar(0., nlo_x)
+priors['c_ss']  = gv.gvar(0., nlo_x)
+priors['c_lln'] = gv.gvar(0., nlo_x)
+priors['d_4']   = gv.gvar(0., nlo_a)
+priors['d_l4']  = gv.gvar(0., nlo_a)
+priors['d_s4']  = gv.gvar(0., nlo_a)
+
 
 # Counter terms
 nnlo_x = 2
