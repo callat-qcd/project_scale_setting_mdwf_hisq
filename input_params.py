@@ -6,50 +6,51 @@ switches = dict()
 switches['ensembles'] = [
     'a15m400'  ,'a12m400' ,'a09m400',
     'a15m350'  ,'a12m350' ,'a09m350',
-    'a15m310'  ,'a12m310' ,'a09m310','a06m310L',
-    'a15m220'  ,'a12m220S','a12m220','a12m220L','a09m220',
-    'a15m135XL','a12m130','a09m135',]
+    'a15m310'  ,'a12m310' ,'a09m310','a06m310L',#'a15m310L',
+    'a15m220'  ,'a12m220' ,'a09m220',
+    'a12m220S', 'a12m220L',#'a12m220ms',
+    #'a12m180L',
+    'a15m135XL','a12m130' ,'a09m135',]
 switches['ensembles_fit'] = [
     'a15m400'  ,'a12m400' ,'a09m400',
     'a15m350'  ,'a12m350' ,'a09m350',
-    'a15m310'  ,'a12m310' ,'a09m310','a06m310L',
-    'a15m220'  ,'a12m220' ,'a09m220','a12m220L','a12m220S',
-    'a15m135XL','a12m130' ,'a09m135',
-    ]
+    'a15m310'  ,'a12m310' ,'a09m310','a06m310L',#'a15m310L',
+    'a15m220'  ,'a12m220' ,'a09m220',
+    'a12m220S', 'a12m220L',#'a12m220ms',
+    #'a12m180L',
+    'a15m135XL','a12m130' ,'a09m135',]
 
 # FIT MODELS
 switches['ansatz'] = dict()
-switches['ansatz']['models'] = ['xpt_nnnlo_FV']
+switches['ansatz']['models'] = ['xpt_lo','taylor_lo']
 '''
     The full list of models can be rather long.  The sys switches help loop
     over them.  Example other base models are
         taylor_nnnlo_FV
         ma_nnnlo_FV
 '''
+
+switches['w0'] = 'callat' # or milc
+
 # SYSTEMATIC SWITCHES
 switches['sys'] = dict()     # these cause the fitter to loop over various options
-switches['sys']['Lam_chi']   = True # FF = Fpi Fpi, Fpi FK, FK FK
+switches['sys']['Lam_chi']   = True # FF = F, O
 switches['sys']['alphaS']    = True # include alphaS at NNLO?
 switches['sys']['nnlo_ct']   = True # NNLO = full XPT or just counterterm
-switches['sys']['ratio']     = True # use ratio version of NLO fit
 # OLDER SYSTEMATICS - still work, but not used
 switches['sys']['FV']        = False # turn on/off FV corrections
-switches['sys']['logSq']     = False # only include logSq and ct (no log)
-switches['sys']['a4']        = False # only include mpi^2 a^4 N3LO ct
-
-switches['scales']           = ['PP','PK','KK'] # choices of F**2 to loop over
+switches['scales']           = ['F','O']
                                # scale is used when the loop over scales is not triggered
-switches['scale']            = 'PP' # PP, PK, KK, LamChi = 4 * pi * sqrt(FA * FB)
+switches['scale']            = 'F' # PP, PK, KK, LamChi = 4 * pi * sqrt(FA * FB)
 
 switches['print_lattice']    = False # print data for paper - not fitting will occur
-switches['print_Li']         = False # print Li at mrho and 4piF0 scales
 
 # Fitting options
 switches['bs_bias']          = True  # shift bs avg to b0?
-switches['print_fit']        = False # print lsqfit results?
+switches['print_fit']        = True # print lsqfit results?
 switches['report_phys']      = False  # report physical point for each fit?
-switches['save_fits']        = True  # save fits in pickle file?
-switches['model_avg']        = True # perform Bayes Model Avg
+switches['save_fits']        = False  # save fits in pickle file?
+switches['model_avg']        = False # perform Bayes Model Avg
 switches['prior_search']     = False # perform a crude grid search to optimize
 switches['prior_verbose']    = False # NNLO and NNNLO prior widths
 switches['scipy']            = False # use scipy minimizer instead of gsl?
@@ -57,35 +58,28 @@ switches['scipy']            = False # use scipy minimizer instead of gsl?
 switches['check_fit']        = False # print pieces of fit function - no fitting will occur
 
 # Plotting options
+switches['save_figs']        = True  # save figures
 switches['make_extrap']      = False # make plots
 switches['make_hist']        = False # make plots
 switches['make_fv']          = True
-switches['save_figs']        = True  # save figures
 switches['milc_compare']     = False # compare with MILCs result
-switches['report_Li']        = False # report fitted Li values
+switches['plot_ls']          = False # report fitted Li values
 
 # DEBUGGING
-switches['debug_models']     = False # print list of models being generated
+switches['debug_models']     = True # print list of models being generated
 switches['debug_save_fit']   = False # check pickling of fit works
 switches['debug_phys_point'] = False # run report_phys_point even if fit is just loaded
 switches['debug_shift']      = False # check the shifting of raw data to extrapolated points
 switches['debug_bs']         = False # debug shape of bs lists
 
-# PRIORS for fit
-gamma_i = {
-    'L1':3./32, 'L2':3./16, 'L3':0, 'L4':1./8, 'L5':3./8, 'L6':11./144, 'L7':0, 'L8':5./48
-}
-Li_mrho = {# central values from Bijnens, Ecker, 1405.6488 BE14
-    'L1':gv.gvar(0.53,.5), 'L2':gv.gvar(0.81,.5),  'L3':gv.gvar(-3.07,1.0), 'L4':gv.gvar(0.3,.3),
-    'L5':gv.gvar(1.01,.5), 'L6':gv.gvar(0.14,.14), 'L7':gv.gvar(-0.34,.34), 'L8':gv.gvar(0.47,.47)
-}
-priors = dict()
-for Li in gamma_i:
-    priors[Li] = 1.e-3 * Li_mrho[Li] - gamma_i[Li]/(4*np.pi)**2 * np.log(4*np.pi*80/770)
-
 # Taylor priors - beyond NLO - use "XPT" NiLO priors
-priors['c2'] = gv.gvar(0,10)
+priors = dict()
+priors['c0']   = gv.gvar(1.,0.5)
 priors['t_fv'] = gv.gvar(0,100)
+
+priors['c_l'] = gv.gvar(0,10)
+priors['c_s'] = gv.gvar(0,10)
+priors['d_2'] = gv.gvar(0,10)
 
 # Counter terms
 nnlo_x = 2
@@ -114,24 +108,21 @@ phys_point = dict()
 # FLAG[2017] = 1607.00299
 FPi_phys = gv.gvar(130.2/np.sqrt(2), 0.8/np.sqrt(2)) # FLAG[2019] (84)
 FK_phys  = gv.gvar(155.7/np.sqrt(2), 0.7/np.sqrt(2)) # FLAG[2019] (85) - use NF=2+1 for consistency
+m_omega_phys = gv.gvar(1672.43,0.32) # PDG 2020
 
 phys_point = {
     'p':{
         'Fpi'     : FPi_phys,
-        'FK'      : FK_phys,
-        'Lchi_PP' : 4 * np.pi * FPi_phys,
-        'Lchi_PK' : 4 * np.pi * np.sqrt(FPi_phys * FK_phys),
-        'Lchi_KK' : 4 * np.pi * FK_phys,
+        'Lam_F'   : 4 * np.pi * FPi_phys,
+        'Lam_O'   : m_omega_phys,
         'mpi'     : gv.gvar(134.8, 0.3), #FLAG 2017 (16)
         'mk'      : gv.gvar(494.2, 0.3), #FLAG 2017 (16) isospin symmetric
+        'm_omega' : m_omega_phys,
         'mk+'     : gv.gvar(491.2, 0.5), #FLAG 2017 (15) strong isospin breaking only
         'mk0'     : gv.gvar(497.2, 0.4), #FLAG 2017 (15) strong isospin breaking only
         'aw0'     : gv.gvar(0,0),
         'a2DI'    : gv.gvar(0,0),
         'w0'      : gv.gvar(0.1714,0),
-
-        'F0'      : gv.gvar(80,20), #FLAG use of F0 in SU(2) correction for FK/Fpi
-        'FKFpi_FLAG' : gv.gvar(1.1932, 0.0019)
     },
     'x' : {'alphaS':0},
     'y' : {},
@@ -151,9 +142,7 @@ check_fit = {
         'mk'     : mk_check,
         'Fpi'    : Fpi_check,
         'FK'     : FK_check,
-        'Lchi_PP': 4 * np.pi * Fpi_check,
-        'Lchi_PK': 4 * np.pi * np.sqrt(Fpi_check * FK_check),
-        'Lchi_KK': 4 * np.pi * FK_check,
+        'Lam_PP': 4 * np.pi * Fpi_check,
         'L1'     :  0.000372,
         'L2'     :  0.000493,
         'L3'     : -0.003070,

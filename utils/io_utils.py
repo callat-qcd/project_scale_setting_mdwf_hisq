@@ -31,17 +31,17 @@ def format_h5_data(data_path, switches):
         lattice_fits = []
         mixed_fits   = []
 
-    print('%9s FK/Fpi' %'ensemble')
+    print('%9s w_0 m_Omega' %'ensemble')
     print('-----------------------------------------------------------------')
     for ens in sort_ens(switches['ensembles']):
         x[ens] = dict()
         data_dict = dict()
-        for m in ['mpi','mk','mss','mju','mjs','mrs','mru']:
-            data_dict[m] = data.get_node('/'+ens+'/'+m).read()
-        for f in ['FK','Fpi']:
-            data_dict[f] = data.get_node('/'+ens+'/'+f).read()
-        for m in ['mres_l','mres_s']:
-            data_dict[m] = data.get_node('/'+ens+'/'+m).read()
+        for q in ['mpi','mk', 'm_omega']:
+            data_dict[q] = data.get_node('/'+ens+'/'+q).read()
+        try:
+            data_dict['Fpi'] = data.get_node('/'+ens+'/Fpi').read()
+        except Exception as e:
+            print(e)
 
         if switches['bs_bias']:
             data_bs = dict()
@@ -59,69 +59,46 @@ def format_h5_data(data_path, switches):
         else:
             gvdata = gv.dataset.avg_data(data_dict,bstrap=True)
 
-        y[ens] = gvdata['FK']/gvdata['Fpi']
-        print("%9s %s" %(ens,y[ens]))
-
-        # mL
         L_ens = data.get_node('/'+ens+'/L').read()
         x[ens]['mpiL'] = gvdata['mpi'].mean * L_ens
-        x[ens]['mkL']  = gvdata['mk'].mean  * L_ens
-        x[ens]['meL']  = np.sqrt(4./3*x[ens]['mkL']**2 - 1./3*x[ens]['mpiL']**2)
-        x[ens]['mssL'] = gvdata['mss'].mean * L_ens
-        x[ens]['mjuL'] = gvdata['mju'].mean * L_ens
-        x[ens]['mjsL'] = gvdata['mjs'].mean * L_ens
-        x[ens]['mruL'] = gvdata['mru'].mean * L_ens
-        x[ens]['mrsL'] = gvdata['mrs'].mean * L_ens
+        x[ens]['alphaS'] = data.get_node('/'+ens+'/alpha_s').read()
+
+        if switches['w0'] == 'callat':
+            w0_a = data.get_node('/'+ens+'/w0a_callat').read()
+            p[(ens,'w0a')] = gv.gvar(w0_a[0],w0_a[1])
+            p[(ens,'aw0')] = 1 / p[(ens,'w0a')]
+        elif switches['w0'] == 'milc':
+            a_w0 = data.get_node('/'+ens+'/aw0_milc').read()
+            p[(ens,'aw0')] = gv.gvar(a_w0[0], a_w0[1])
+            p[(ens,'w0a')] = 1 / p[(ens,'aw0')]
+        y[ens] = gvdata['m_omega'] * p[(ens,'w0a')]
+        print("%9s %s" %(ens,y[ens]))
 
         # MASSES
-        p[(ens,'mpi')] = gvdata['mpi']
-        p[(ens,'mk')]  = gvdata['mk']
-        p[(ens,'mss')] = gvdata['mss']
-        p[(ens,'mju')] = gvdata['mju']
-        p[(ens,'mjs')] = gvdata['mjs']
-        p[(ens,'mru')] = gvdata['mru']
-        p[(ens,'mrs')] = gvdata['mrs']
-        p[(ens,'Lchi_PP')] = 4 * np.pi * gvdata['Fpi']
-        p[(ens,'Lchi_PK')] = 4 * np.pi * np.sqrt(gvdata['FK'] * gvdata['Fpi'])
-        p[(ens,'Lchi_KK')] = 4 * np.pi * gvdata['FK']
-
-        # HISQ params
-        aw0 = data.get_node('/'+ens+'/aw0').read()
-        p[(ens,'aw0')]   = gv.gvar(aw0[0],aw0[1])
-        a2di = data.get_node('/'+ens+'/a2DI').read()
-        p[(ens,'a2DI')]  = gv.gvar(a2di[0],a2di[1])
-        x[ens]['alphaS'] = data.get_node('/'+ens+'/alpha_s').read()
-        x[ens]['mxL']    = np.sqrt(4./3 *(gvdata['mk'].mean)**2 -1./3 *(gvdata['mpi'].mean)**2 + a2di[0]) * L_ens
+        p[(ens,'mpi')]     = gvdata['mpi']
+        p[(ens,'mk')]      = gvdata['mk']
+        p[(ens,'m_omega')] = gvdata['m_omega']
+        p[(ens,'Lam_O')]  = gvdata['m_omega']
+        if 'Fpi' in gvdata:
+            p[(ens,'Lam_F')] = 4 * np.pi * gvdata['Fpi']
 
         if switches['print_lattice']:
-            lattice_fits.append('%9s& %s& %s& %s& %s& %.2f& %s& %s& %s& %s& %s\\\\' \
-                %(ens, gvdata['mpi'], gvdata['mk'], \
+            lattice_fits.append('%9s& %s& %s& %s& %s& %s& %s& %s& %.2f& %s& %s\\\\' \
+                %(ens, gvdata['m_omega'], p[(ens,'w0a')], y[ens],\
                     (gvdata['mpi']/4/np.pi/gvdata['Fpi'])**2,\
-                    (gvdata['mk']/4/np.pi/gvdata['Fpi'])**2,\
-                    x[ens]['mpiL'], (p[(ens,'aw0')] / 2)**2, x[ens]['alphaS'],\
-                    #p[(ens,'aw0')]**2 / 4 / np.pi, x[ens]['alphaS'],\
-                    gvdata['Fpi'],gvdata['FK'], gvdata['FK']/gvdata['Fpi']))
-            dju = p[(ens,'aw0')]**(-2) * (gvdata['mju']**2 - gvdata['mpi']**2)
-            djs = p[(ens,'aw0')]**(-2) * (gvdata['mjs']**2 - gvdata['mk']**2)
-            dru = p[(ens,'aw0')]**(-2) * (gvdata['mru']**2 - gvdata['mk']**2)
-            drs = p[(ens,'aw0')]**(-2) * (gvdata['mrs']**2 - gvdata['mss']**2)
-            dpq = p[(ens,'aw0')]**(-2) * p[(ens,'a2DI')]
-            mixed_fits.append('%9s& %s& %s& %s& %s& %s& %s& %s& %s& %s& %s\\\\' \
-                %(ens,gvdata['mju'],gvdata['mjs'],gvdata['mru'],gvdata['mrs'],gvdata['mss'],dju,djs,dru,drs,dpq))
+                    (2*gvdata['mk']**2 - gvdata['mpi']**2)/(4*np.pi*gvdata['Fpi'])**2,\
+                    (gvdata['mpi']/gvdata['m_omega'])**2, \
+                    (2*gvdata['mk']**2 - gvdata['mpi']**2)/gvdata['m_omega']**2,\
+                    x[ens]['mpiL'], (p[(ens,'aw0')] / 2)**2, x[ens]['alphaS']))
+
     if switches['print_lattice']:
-        print(r'ensemble& $am_\pi$& $am_K$& $\e_\pi^2$& $\e_K^2$& $m_\pi L$& $\e_a^2$& $\a_S$& $aF_\pi$& $aF_K$&  $F_K / F_\pi$\\')
+        print(r'ensemble& $am_\Omega$& $w_0/a$& $w_0 m_\Omega$& $l_F^2$& $s_F^2$& $l_\Omega^2$& $s_\Omega^2$& $m_\pi L$& $\e_a^2$& $\a_S$\\')
         print(r'\hline')
         for l in lattice_fits:
             print(l)
             if any(ens in l for ens in ['a15m135XL','a12m130','a09m135']):
                 print("\\hline")
         print('')
-        print(r'ensemble& $am_{ju}$& $am_{js}$& $am_{ru}$& $am_{rs}$& $am_{ss}$& $w_0^2 \D_{\rm Mix, ju}^2$& $w_0^2\D_{\rm Mix, js}^2$& $w_0^2\D_{\rm Mix, ru}^2$& $w_0^2\D_{\rm Mix, rs}^2$& $w_0^2 a^2 \D_{\rm I}$\\')
-        print(r'\hline')
-        for l in mixed_fits:
-            print(l)
-            if any(ens in l for ens in ['a15m135XL','a12m130','a09m135']):
-                print("\\hline")
         data.close()
         sys.exit()
 

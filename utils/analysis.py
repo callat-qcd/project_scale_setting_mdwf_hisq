@@ -257,17 +257,6 @@ def sys_models(switches):
         check_model('_FV',models)
     if switches['sys']['alphaS']:
         check_model('_alphaS',models,nnlo=True)
-    if switches['sys']['nnlo_ct']:
-        check_model('_ct',models,nnlo=True)
-    if switches['sys']['logSq']:
-        check_model('_logSq',models,nnlo=True)
-    if switches['sys']['a4']:
-        check_model('_a4',models,nnlo=True,nnnlo=True)
-    if switches['sys']['ratio']:
-        for model in models:
-            model_ratio = model.replace('xpt','xpt-ratio').replace('ma','ma-ratio')
-            if '-ratio' not in model and model_ratio not in models:
-                models.append(model_ratio)
     models_FPK = []
     for model in models:
         if switches['sys']['Lam_chi']:
@@ -288,39 +277,21 @@ def gather_model_elements(model):
     FF     = model.split('_')[-1]
     fv     = 'FV'     in model
     alphaS = 'alphaS' in model
-    ct     = 'ct'     in model
-    a4     = 'a4'     in model
 
-    if FF not in ['PP','PK','KK']:
-        sys.exit('unrecognized FF choice [PP, PK, KK]: '+FF)
+    if FF not in ['F','O']:
+        sys.exit('unrecognized Lam choice [F, O]: '+FF)
 
-    if 'ratio' in eft or 'longform' in eft:
-        model_elements = [eft.replace('-','_')+'_nlo']
-    else:
-        model_elements = [eft+'_nlo']
-    if eft == 'taylor':
-        if order in ['nnlo', 'nnnlo']:
-            model_elements += ['nnlo_ct']
-            if alphaS:
-                model_elements += ['nnlo_alphaS']
-        if order in ['nnnlo']:
-            model_elements += ['nnnlo_ct']
-    else:
-        if order in ['nnlo','nnnlo']:
-            if alphaS:
-                model_elements += ['nnlo_alphaS']
-            if ct:
-                model_elements += ['nnlo_ct']
-            else:
-                model_elements += ['nnlo_ct','xpt_nnlo_logSq','xpt_nnlo_log','xpt_nnlo_FF_'+FF]
-                if 'ratio' in eft:
-                    model_elements += ['xpt_nnlo_ratio']
-
-
-            if a4 and order == 'nnlo':
-                model_elements += ['nnnlo_a4']
-            if order == 'nnnlo':
-                model_elements += ['nnnlo_ct']
+    model_elements = [eft+'_lo']
+    if alphaS:
+        model_elements += ['lo_alphaS']
+    if order in ['nlo', 'nnlo']:
+        model_elements += ['nlo_ct']
+        if eft == 'xpt':
+            model_elements += ['nlo_log']
+    if order in ['nnlo']:
+        model_elements += ['nnlo_ct']
+        if eft == 'xpt':
+            model_elements += ['nnlo_log']
 
     return model_elements, FF, fv
 

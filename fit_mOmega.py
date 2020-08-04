@@ -53,22 +53,18 @@ def main():
             model_list, FF, fv = analysis.gather_model_elements(model)
             debug_fit_function(check_fit, model_list, FF, fv)
         sys.exit()
-    if switches['print_Li']:
-        li_rho = r'$10^3L_i(m_\rho)$& '
-        li_mu0 = r'$10^3L_i(\mu_0)$& '
-        for Li in ['L1','L2','L3','L4','L5','L6','L7','L8']:
-            li_rho += str(ip.Li_mrho[Li])+'& '
-            li_mu0 += str(1e3*ip.priors[Li])+'& '
-        print(li_rho)
-        print(li_mu0)
-        sys.exit('Exiting after printing L_i values')
 
     if switches['save_fits']:
         if not os.path.exists('pickled_fits'):
             os.makedirs('pickled_fits')
 
     # load data
-    gv_data = io_utils.format_h5_data('data/FK_Fpi_data.h5',switches)
+    gv_data = io_utils.format_h5_data('data/omega_pi_k_spec.h5',switches)
+
+    # l s plots
+    if switches['plot_ls']:
+        plotting.plot_l_s(gv_data, switches, phys_point)
+
 
     models = analysis.sys_models(switches)
     if switches['prior_search']:
@@ -123,15 +119,6 @@ def main():
             fit_result.phys_point.update({k:v for k,v in phys_point['p'].items() if ('Lchi' in k) or k in ['mpi','mk','mkp']})
             fit_result.ensembles_fit = switches['ensembles_fit']
             report_phys_point(fit_result, phys_point, model_list, FF, report=switches['report_phys'])
-            if switches['report_Li']:
-                for Li in ['L1','L2','L3','L4','L5','L6','L7','L8']:
-                    if Li in fit_result.p:
-                        Li_mu0 = fit_result.p[Li]
-                        Li_rho = Li_mu0 - ip.gamma_i[Li]/(4*np.pi)**2 * np.log(770 / (4*np.pi*80))
-                        print("%s   %10s   %10s" %(Li, 1e3*Li_mu0, 1e3*Li_rho))
-                for k in ['k_4', 'p_4', 'kp_6', 'k_6', 'p_6']:
-                    if k in fit_result.p:
-                        print("%4s   %s" %(k,fit_result.p[k]))
             fit_results[model] = fit_result
             if switches['save_fits']:
                 gv.dump(fit_result, pickled_fit, add_dependencies=True)
@@ -206,6 +193,7 @@ class FitEnv:
                 else:
                     p_ens[k] = v    # the LECs of the fit
             model = self.model
+            #print(ens,p_ens)
             a_result[ens] = FitEnv._fit_function(model, x[ens], p_ens)
         return a_result
 
@@ -232,6 +220,7 @@ def report_phys_point(fit_result, phys_point_params, model_list, FF, report=Fals
             phys_data['p'][k] = fit_result.p[k]
     fit_result.phys                = dict()
     fit_result.phys['FKFpi']       = FitEnv._fit_function(fit_model, phys_data['x'], phys_data['p'])
+    '''
     fit_result.phys['dF_iso_xpt']  = chipt.dFKFpi_iso(phys_data, FF)
     fit_result.phys['dF_iso_xpt2'] = chipt.dFKFpi_iso_2(phys_data, FF, fit_result.phys['FKFpi'])
     if report:
@@ -242,6 +231,7 @@ def report_phys_point(fit_result, phys_point_params, model_list, FF, report=Fals
         print('  dF_iso_xpt2           = %s' %chipt.dFKFpi_iso_2(phys_data, FF, fit_result.phys['FKFpi']))
         print('  dF_iso_vincenzo       = %s' %chipt.dFKFpi_vincenzo(phys_data, FF))
         print('  dF_iso_vincenzo2      = %s' %chipt.dFKFpi_vincenzo_2(phys_data, FF, fit_result.phys['FKFpi']))
+    '''
 
 def debug_fit_function(check_fit, model_list, FF, fv):
     x = check_fit['x']
