@@ -36,9 +36,8 @@ switches['w0'] = 'callat' # or milc
 switches['sys'] = dict()     # these cause the fitter to loop over various options
 switches['sys']['Lam_chi']   = True # FF = F, O
 switches['sys']['alphaS']    = True # include alphaS at NNLO?
-switches['sys']['nnlo_ct']   = True # NNLO = full XPT or just counterterm
 # OLDER SYSTEMATICS - still work, but not used
-switches['sys']['FV']        = False # turn on/off FV corrections
+switches['sys']['FV']        = True # turn on/off FV corrections
 switches['scales']           = ['F','O']
                                # scale is used when the loop over scales is not triggered
 switches['scale']            = 'F' # PP, PK, KK, LamChi = 4 * pi * sqrt(FA * FB)
