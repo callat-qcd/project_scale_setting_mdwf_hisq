@@ -77,8 +77,7 @@ def format_h5_data(data_path, switches):
         # MASSES
         p[(ens,'mpi')]     = gvdata['mpi']
         p[(ens,'mk')]      = gvdata['mk']
-        p[(ens,'m_omega')] = gvdata['m_omega']
-        p[(ens,'Lam_O')]  = gvdata['m_omega']
+        p[(ens,'Lam_O')]   = gvdata['m_omega']
         if 'Fpi' in gvdata:
             p[(ens,'Lam_F')] = 4 * np.pi * gvdata['Fpi']
 

@@ -47,9 +47,9 @@ switches['print_lattice']    = False # print data for paper - not fitting will o
 # Fitting options
 switches['bs_bias']          = True  # shift bs avg to b0?
 switches['print_fit']        = False # print lsqfit results?
-switches['report_phys']      = True  # report physical point for each fit?
+switches['report_phys']      = False  # report physical point for each fit?
 switches['save_fits']        = False  # save fits in pickle file?
-switches['model_avg']        = False # perform Bayes Model Avg
+switches['model_avg']        = True # perform Bayes Model Avg
 switches['prior_search']     = False # perform a crude grid search to optimize
 switches['prior_verbose']    = False # NNLO and NNNLO prior widths
 switches['scipy']            = False # use scipy minimizer instead of gsl?
@@ -89,16 +89,6 @@ priors['c_lln'] = gv.gvar(0., nlo_x)
 priors['d_4']   = gv.gvar(0., nlo_a)
 priors['d_l4']  = gv.gvar(0., nlo_a)
 priors['d_s4']  = gv.gvar(0., nlo_a)
-
-
-# Counter terms
-nnlo_x = 2
-#nnlo_a = 2
-nnlo_a = nnlo_x # from prior optimization, we found holding them the same is good
-priors['k_4']   = gv.gvar(0.0, nnlo_x) # (eps_K^2 - eps_pi^2 ) * eps_K^2
-priors['p_4']   = gv.gvar(0.0, nnlo_x) # (eps_K^2 - eps_pi^2 ) * eps_pi^2
-priors['s_4']   = gv.gvar(0.0, nnlo_a) # (eps_K^2 - eps_pi^2 ) * eps_a^2
-priors['saS_4'] = gv.gvar(0.0, nnlo_a) # (eps_K^2 - eps_pi^2 ) * eps_a^2 * alpha_S
 
 n3lo_x = 5
 #n3lo_a = 5

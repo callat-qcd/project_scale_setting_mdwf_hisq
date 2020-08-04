@@ -61,87 +61,72 @@ class BayesModelAvg:
 
     def print_weighted_models(self):
         i_weights = np.argsort(self.weights)[::-1]
-        print(r"%37s & chi2/dof &   $Q$ &  logGBF& weight& $F_K/F_\pi$\\" %'model')
+        print(r"%37s & chi2/dof &   $Q$ &  logGBF& weight& $w_0 m_O$& w_0\\" %'model')
         print(r'\hline')
         for a_i, a_model in enumerate(np.array(self.r_list)[i_weights]):
-            chi2   = self.results[a_model].chi2
-            dof    = self.results[a_model].dof
-            Q      = self.results[a_model].Q
-            logGBF = self.results[a_model].logGBF
-            w_i    = self.weights[i_weights][a_i]
-            phys   = self.results[a_model].phys['FKFpi']
-            print(r'%37s &  %.3f   &  %.3f&  %.3f&  %.3f&  %s\\' %(a_model.replace('_','\_'), chi2/dof, Q, logGBF, w_i, phys))
+            chi2    = self.results[a_model].chi2
+            dof     = self.results[a_model].dof
+            Q       = self.results[a_model].Q
+            logGBF  = self.results[a_model].logGBF
+            w_i     = self.weights[i_weights][a_i]
+            phys    = self.results[a_model].phys['w0_mO']
+            phys_w0 = self.results[a_model].phys['w0']
+            print(r'%37s &  %.3f   &  %.3f&  %.3f&  %.3f&  %s  & %s\\'
+                %(a_model.replace('_','\_'), chi2/dof, Q, logGBF, w_i, phys, phys_w0))
 
     def bayes_model_avg(self):
         self.pdf_x = np.arange(1.15,1.2301,.0001)
-        avg = {k:0. for k in ['FKFpi', 'dF_iso_xpt', 'dF_iso_xpt2']}
+        avg = {k:0. for k in ['w0_mO']}
         pdf = 0.
         cdf = 0.
         pdf_split = dict()
-        pdf_split['PP'] = 0.
-        pdf_split['PK'] = 0.
-        pdf_split['KK'] = 0.
-        pdf_split['PP_xpt'] = 0.
-        pdf_split['PK_xpt'] = 0.
-        pdf_split['KK_xpt'] = 0.
-        pdf_split['ratio_PP'] = 0.
-        pdf_split['no_ratio_PP'] = 0.
-        pdf_split['ct_PP'] = 0.
-        pdf_split['no_ct_PP'] = 0.
+        pdf_split['F'] = 0.
+        pdf_split['O'] = 0.
+        pdf_split['F_xpt'] = 0.
+        pdf_split['F_taylor'] = 0.
+        pdf_split['O_xpt'] = 0.
+        pdf_split['O_taylor'] = 0.
         results = []
         var_avg = dict()
         for i_r, a_res in enumerate(self.r_list):
             w_i = self.weights[i_r]
             a_i = self.results[a_res].phys
-            results.append(a_i['FKFpi'])
+            results.append(a_i['w0_mO'])
             for k in avg:
                 avg[k] += gv.gvar(w_i*a_i[k].mean, np.sqrt(w_i)*a_i[k].sdev)
             #avg.update({k:v += gv.gvar(w_i*a_i[k].mean, np.sqrt(w_i)*a_i[k].sdev) for k,v in avg.items()})
-            uncertainties = uncertainty_breakdown(self.results[a_res],'FKFpi')
+            uncertainties = uncertainty_breakdown(self.results[a_res],'w0_mO')
             for k in uncertainties:
                 if k not in var_avg: var_avg[k] = 0.
                 var_avg[k] += w_i * uncertainties[k]**2
 
-            p = stats.norm.pdf(self.pdf_x, a_i['FKFpi'].mean, a_i['FKFpi'].sdev)
+            p = stats.norm.pdf(self.pdf_x, a_i['w0_mO'].mean, a_i['w0_mO'].sdev)
             pdf += w_i * p
-            cdf += w_i * stats.norm.cdf(self.pdf_x, a_i['FKFpi'].mean, a_i['FKFpi'].sdev)
+            cdf += w_i * stats.norm.cdf(self.pdf_x, a_i['w0_mO'].mean, a_i['w0_mO'].sdev)
             FF = a_res.split('_')[-1]
             pdf_split[FF] += w_i * p
-            if FF == 'PP':
-                if '_ct_' not in a_res:
-                    if 'ratio' in a_res:
-                        pdf_split['ratio_PP'] += w_i * p
-                    else:
-                        pdf_split['no_ratio_PP'] += w_i * p
-                    pdf_split['no_ct_PP'] += w_i * p
-                else:
-                    pdf_split['ct_PP'] += w_i * p
-            if '_ct_' not in a_res:
-                pdf_split[FF+'_xpt'] += w_i * p
+            if FF == 'F':
+                pdf_split['F'] += w_i * p
+            else:
+                pdf_split['O'] += w_i * p
         self.avg = avg
         self.pdf = pdf
         self.cdf = cdf
         self.pdf_split = pdf_split
         self.model_var  = np.sum(self.weights * np.array([r.mean**2 for r in results]))
-        self.model_var += -self.avg['FKFpi'].mean**2
+        self.model_var += -self.avg['w0_mO'].mean**2
         print('-----------------------------------------------------------------------------------')
-        print('%37s &         %s +- %.4f' %('Bayes Model Avg: FK/Fpi', self.avg['FKFpi'], np.sqrt(self.model_var)))
+        print('%37s &         %s +- %.4f' %('Bayes Model Avg: w0_mO', self.avg['w0_mO'], np.sqrt(self.model_var)))
         for k in var_avg:
             e = '%.4f' %np.sqrt(var_avg[k])
             print('%37s           %9s     %s' %('',e[-2:],k))
-        for k in ['dF_iso_xpt', 'dF_iso_xpt2']:
-            if self.avg[k].mean < 0:
-                print('%37s          %s   %s' %('',self.avg[k],k))
-            else:
-                print('%37s           %s    %s' %('',self.avg[k],k))
-        self.avg['dF_iso_avg'] = avg_iso(self.avg['dF_iso_xpt'],self.avg['dF_iso_xpt2'])
-        print('%37s          %s   %s' %('',self.avg['dF_iso_avg'],'dF_iso_avg'))
+        '''
         #print('-----------------------------------------------------------------------------------')
         self.avg['FK+/Fpi+'] = self.avg['FKFpi'] + self.avg['dF_iso_avg']
         print('                      ----------------------------------------------------')
         print('%37s           %s +- %.4f     |' %('| FK+/Fpi+    =', self.avg['FK+/Fpi+'], np.sqrt(self.model_var)))
         print('                      ----------------------------------------------------')
-
+        '''
     def plot_bma_hist(self,hist_type,save_fig=False):
         hist = plt.figure('hist_'+hist_type, figsize=self.fig_size)
         ax   = plt.axes(self.plt_axes)

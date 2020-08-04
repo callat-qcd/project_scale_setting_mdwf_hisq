@@ -87,8 +87,8 @@ def main():
             fitEnv     = FitEnv(gv_data, fit_model, switches)
 
             do_fit = False
-            pickled_fit = 'pickled_fits/'+model+'_n2lo'+str(ip.nnlo_x)+'_n3lo'+str(ip.n3lo_x)+'.p'
             if switches['save_fits'] or switches['debug_save_fit']:
+                pickled_fit = 'pickled_fits/'+model+'_n2lo'+str(ip.nnlo_x)+'_n3lo'+str(ip.n3lo_x)+'.p'
                 if os.path.exists(pickled_fit):
                     print('reading %s' %pickled_fit)
                     fit_result = gv.load(pickled_fit)
@@ -218,11 +218,12 @@ def report_phys_point(fit_result, phys_point_params, model_list, FF, report=Fals
             phys_data['p'][k] = fit_result.p[k]
     fit_result.phys                = dict()
     fit_result.phys['w0_mO']       = FitEnv._fit_function(fit_model, phys_data['x'], phys_data['p'])
+    fit_result.phys['w0']          = fit_result.phys['w0_mO'] *197.327 / phys_point_params['p']['m_omega']
     if report:
         print('  chi2/dof [dof] = %.2f [%d]   Q=%.3f   logGBF = %.3f' \
             %(fit_result.chi2/fit_result.dof, fit_result.dof, fit_result.Q, fit_result.logGBF))
         print('  w0 * m_O              = %s' %fit_result.phys['w0_mO'])
-        print('  w0                    = %s' %(fit_result.phys['w0_mO'] *197.3 / phys_point_params['p']['m_omega']))
+        print('  w0                    = %s' %(fit_result.phys['w0']))
 
 
 def debug_fit_function(check_fit, model_list, FF, fv):
