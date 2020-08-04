@@ -22,7 +22,7 @@ switches['ensembles_fit'] = [
 
 # FIT MODELS
 switches['ansatz'] = dict()
-switches['ansatz']['models'] = ['xpt_nlo','taylor_nlo']
+switches['ansatz']['models'] = ['xpt_nlo','xpt_nnlo','taylor_nlo','taylor_nnlo']
 '''
     The full list of models can be rather long.  The sys switches help loop
     over them.  Example other base models are
@@ -34,13 +34,13 @@ switches['w0'] = 'callat' # or milc
 
 # SYSTEMATIC SWITCHES
 switches['sys'] = dict()     # these cause the fitter to loop over various options
-switches['sys']['Lam_chi']   = True # FF = F, O
+switches['sys']['Lam_chi']   = False # FF = F, O
 switches['sys']['alphaS']    = True # include alphaS at NNLO?
 # OLDER SYSTEMATICS - still work, but not used
-switches['sys']['FV']        = False # turn on/off FV corrections
+switches['sys']['FV']        = True # turn on/off FV corrections
 switches['scales']           = ['F','O']
                                # scale is used when the loop over scales is not triggered
-switches['scale']            = 'O' # PP, PK, KK, LamChi = 4 * pi * sqrt(FA * FB)
+switches['scale']            = 'F' # PP, PK, KK, LamChi = 4 * pi * sqrt(FA * FB)
 
 switches['print_lattice']    = False # print data for paper - not fitting will occur
 
@@ -60,8 +60,7 @@ switches['check_fit']        = False # print pieces of fit function - no fitting
 switches['save_figs']        = True  # save figures
 switches['make_extrap']      = False # make plots
 switches['make_hist']        = False # make plots
-switches['make_fv']          = True
-switches['milc_compare']     = False # compare with MILCs result
+switches['make_fv']          = False
 switches['plot_ls']          = False # report fitted Li values
 
 # DEBUGGING
@@ -76,12 +75,13 @@ priors = dict()
 priors['c0']   = gv.gvar(1.,0.5)
 priors['t_fv'] = gv.gvar(0,100)
 
-priors['c_l'] = gv.gvar(0.1,10)
-priors['c_s'] = gv.gvar(0.1,10)
-priors['d_2'] = gv.gvar(0.1,10)
+priors['c_l'] = gv.gvar(0.1,1)
+priors['c_s'] = gv.gvar(0.1,1)
+priors['d_2'] = gv.gvar(0.1,1)
+priors['daS_2'] = gv.gvar(0.1,1)
 
-nlo_x = 10
-nlo_a = 10
+nlo_x = 1
+nlo_a = 1
 priors['c_ll']  = gv.gvar(0., nlo_x)
 priors['c_ls']  = gv.gvar(0., nlo_x)
 priors['c_ss']  = gv.gvar(0., nlo_x)
@@ -90,15 +90,21 @@ priors['d_4']   = gv.gvar(0., nlo_a)
 priors['d_l4']  = gv.gvar(0., nlo_a)
 priors['d_s4']  = gv.gvar(0., nlo_a)
 
-n3lo_x = 5
-#n3lo_a = 5
-n3lo_a = n3lo_x
-priors['kp_6']  = gv.gvar(0.0, n3lo_x) # (eps_K^2 - eps_pi^2 ) * eps_K^2 * eps_pi^2
-priors['k_6']   = gv.gvar(0.0, n3lo_x) # (eps_K^2 - eps_pi^2 )^2 * eps_K^2
-priors['p_6']   = gv.gvar(0.0, n3lo_x) # (eps_K^2 - eps_pi^2 )^2 * eps_pi^2
-priors['s_6']   = gv.gvar(0.0, n3lo_a) # (eps_K^2 - eps_pi^2 ) * eps_a^4
-priors['sk_6']  = gv.gvar(0.0, n3lo_a) # (eps_K^2 - eps_pi^2 ) * eps_K^2 * eps_a^2
-priors['sp_6']  = gv.gvar(0.0, n3lo_a) # (eps_K^2 - eps_pi^2 ) * eps_pi^2 * eps_a^2
+nnlo_x = 1
+nnlo_a = 1
+priors['c_lll']   = gv.gvar(0., nnlo_x)
+priors['c_lls']   = gv.gvar(0., nnlo_x)
+priors['c_lss']   = gv.gvar(0., nnlo_x)
+priors['c_sss']   = gv.gvar(0., nnlo_x)
+priors['c_llln2'] = gv.gvar(0., nnlo_x)
+priors['c_llln']  = gv.gvar(0., nnlo_x)
+priors['d_6']     = gv.gvar(0., nnlo_a)
+priors['d_l6']    = gv.gvar(0., nnlo_a)
+priors['d_s6']    = gv.gvar(0., nnlo_a)
+priors['d_ll6']   = gv.gvar(0., nnlo_a)
+priors['d_ls6']   = gv.gvar(0., nnlo_a)
+priors['d_ss6']   = gv.gvar(0., nnlo_a)
+
 
 ''' Physical point extrapolation
 '''

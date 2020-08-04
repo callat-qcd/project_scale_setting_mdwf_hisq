@@ -61,7 +61,7 @@ class BayesModelAvg:
 
     def print_weighted_models(self):
         i_weights = np.argsort(self.weights)[::-1]
-        print(r"%37s & chi2/dof &   $Q$ &  logGBF& weight& $w_0 m_O$& w_0\\" %'model')
+        print(r"%25s & chi2/dof &   $Q$ &  logGBF& weight& $w_0 m_O$& w_0\\" %'model')
         print(r'\hline')
         for a_i, a_model in enumerate(np.array(self.r_list)[i_weights]):
             chi2    = self.results[a_model].chi2
@@ -71,7 +71,7 @@ class BayesModelAvg:
             w_i     = self.weights[i_weights][a_i]
             phys    = self.results[a_model].phys['w0_mO']
             phys_w0 = self.results[a_model].phys['w0']
-            print(r'%37s &  %.3f   &  %.3f&  %.3f&  %.3f&  %s  & %s\\'
+            print(r'%25s &  %.3f   &  %.3f&  %.3f&  %.3f&  %s  & %s\\'
                 %(a_model.replace('_','\_'), chi2/dof, Q, logGBF, w_i, phys, phys_w0))
 
     def bayes_model_avg(self):
@@ -116,10 +116,10 @@ class BayesModelAvg:
         self.model_var  = np.sum(self.weights * np.array([r.mean**2 for r in results]))
         self.model_var += -self.avg['w0_mO'].mean**2
         print('-----------------------------------------------------------------------------------')
-        print('%37s &         %s +- %.4f' %('Bayes Model Avg: w0_mO', self.avg['w0_mO'], np.sqrt(self.model_var)))
+        print('%25s &         %s +- %.4f' %('Bayes Model Avg: w0_mO', self.avg['w0_mO'], np.sqrt(self.model_var)))
         for k in var_avg:
             e = '%.4f' %np.sqrt(var_avg[k])
-            print('%37s           %9s     %s' %('',e[-2:],k))
+            print('%25s           %9s     %s' %('',e[-2:],k))
         '''
         #print('-----------------------------------------------------------------------------------')
         self.avg['FK+/Fpi+'] = self.avg['FKFpi'] + self.avg['dF_iso_avg']
@@ -241,7 +241,7 @@ def sys_models(switches):
     if switches['sys']['FV']:
         check_model('_FV',models)
     if switches['sys']['alphaS']:
-        check_model('_alphaS',models,nnlo=True)
+        check_model('_alphaS',models)
     models_FPK = []
     for model in models:
         if switches['sys']['Lam_chi']:

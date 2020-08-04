@@ -134,8 +134,25 @@ class FitModel:
     def nlo_ct(self,x,p,cP):
         a_result  = p['c_ll'] * cP['p2']**2 + p['c_ls'] * cP['p2'] * cP['s2'] + p['c_ss'] * cP['s2']**2
         a_result += cP['a2'] *( p['d_4'] * cP['a2'] + p['d_l4'] * cP['p2'] + p['d_s4'] * cP['s2'])
-
         return a_result
 
     def nlo_log(self,x,p,cP):
         return p['c_lln'] * cP['p2'] * cP['Ip']
+
+    def nnlo_ct(self,x,p,cP):
+        a_result  =   p['c_lll'] * cP['p2']**3\
+                    + p['c_lls'] * cP['p2']**2 * cP['s2']\
+                    + p['c_lss'] * cP['p2']    * cP['s2']**2\
+                    + p['c_sss'] * cP['s2']**3\
+                    + p['d_6']   * cP['a2']**3\
+                    + p['d_l6']  * cP['a2']**2 * cP['p2']\
+                    + p['d_s6']  * cP['a2']**2 * cP['s2']\
+                    + p['d_ll6'] * cP['a2']    * cP['p2']**2\
+                    + p['d_ls6'] * cP['a2']    * cP['p2']*cP['s2']\
+                    + p['d_ss6'] * cP['a2']    * cP['s2']**2
+        return a_result
+
+    def nnlo_log(self,x,p,cP):
+        # note - Ip = p2 * log(p2)
+        #        p2 * Ip**2 = p2**3 * log(p2)**2
+        return p['c_llln2'] * cP['p2'] * cP['Ip']**2 + p['c_llln'] * cP['p2']**2 * cP['Ip']
