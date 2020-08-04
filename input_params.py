@@ -46,8 +46,8 @@ switches['print_lattice']    = False # print data for paper - not fitting will o
 
 # Fitting options
 switches['bs_bias']          = True  # shift bs avg to b0?
-switches['print_fit']        = True # print lsqfit results?
-switches['report_phys']      = False  # report physical point for each fit?
+switches['print_fit']        = False # print lsqfit results?
+switches['report_phys']      = True  # report physical point for each fit?
 switches['save_fits']        = False  # save fits in pickle file?
 switches['model_avg']        = False # perform Bayes Model Avg
 switches['prior_search']     = False # perform a crude grid search to optimize

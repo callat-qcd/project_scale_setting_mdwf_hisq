@@ -212,26 +212,18 @@ class FitEnv:
 
 def report_phys_point(fit_result, phys_point_params, model_list, FF, report=False):
     phys_data = copy.deepcopy(phys_point_params)
-    if 'ma' in model_list[0]:
-        model_list[0] = model_list[0].replace('ma','xpt')
     fit_model = chipt.FitModel(model_list, _fv=False, _FF=FF)
     for k in fit_result.p:
         if isinstance(k,str):
             phys_data['p'][k] = fit_result.p[k]
     fit_result.phys                = dict()
-    fit_result.phys['FKFpi']       = FitEnv._fit_function(fit_model, phys_data['x'], phys_data['p'])
-    '''
-    fit_result.phys['dF_iso_xpt']  = chipt.dFKFpi_iso(phys_data, FF)
-    fit_result.phys['dF_iso_xpt2'] = chipt.dFKFpi_iso_2(phys_data, FF, fit_result.phys['FKFpi'])
+    fit_result.phys['w0_mO']       = FitEnv._fit_function(fit_model, phys_data['x'], phys_data['p'])
     if report:
         print('  chi2/dof [dof] = %.2f [%d]   Q=%.3f   logGBF = %.3f' \
             %(fit_result.chi2/fit_result.dof, fit_result.dof, fit_result.Q, fit_result.logGBF))
-        print('  FK/Fpi                = %s' %fit_result.phys['FKFpi'])
-        print('  dF_iso_xpt            = %s' %chipt.dFKFpi_iso(phys_data, FF))
-        print('  dF_iso_xpt2           = %s' %chipt.dFKFpi_iso_2(phys_data, FF, fit_result.phys['FKFpi']))
-        print('  dF_iso_vincenzo       = %s' %chipt.dFKFpi_vincenzo(phys_data, FF))
-        print('  dF_iso_vincenzo2      = %s' %chipt.dFKFpi_vincenzo_2(phys_data, FF, fit_result.phys['FKFpi']))
-    '''
+        print('  w0 * m_O              = %s' %fit_result.phys['w0_mO'])
+        print('  w0                    = %s' %(fit_result.phys['w0_mO'] *197.3 / phys_point_params['p']['m_omega']))
+
 
 def debug_fit_function(check_fit, model_list, FF, fv):
     x = check_fit['x']
