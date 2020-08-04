@@ -22,7 +22,7 @@ switches['ensembles_fit'] = [
 
 # FIT MODELS
 switches['ansatz'] = dict()
-switches['ansatz']['models'] = ['xpt_nlo','xpt_nnlo','taylor_nlo','taylor_nnlo']
+switches['ansatz']['models'] = ['xpt_nlo','xpt_nnlo']
 '''
     The full list of models can be rather long.  The sys switches help loop
     over them.  Example other base models are
@@ -35,7 +35,7 @@ switches['w0'] = 'callat' # or milc
 # SYSTEMATIC SWITCHES
 switches['sys'] = dict()     # these cause the fitter to loop over various options
 switches['sys']['Lam_chi']   = False # FF = F, O
-switches['sys']['alphaS']    = True # include alphaS at NNLO?
+switches['sys']['alphaS']    = False # include alphaS at NNLO?
 # OLDER SYSTEMATICS - still work, but not used
 switches['sys']['FV']        = True # turn on/off FV corrections
 switches['scales']           = ['F','O']
@@ -46,7 +46,7 @@ switches['print_lattice']    = False # print data for paper - not fitting will o
 
 # Fitting options
 switches['bs_bias']          = True  # shift bs avg to b0?
-switches['print_fit']        = False # print lsqfit results?
+switches['print_fit']        = True # print lsqfit results?
 switches['report_phys']      = True  # report physical point for each fit?
 switches['save_fits']        = False  # save fits in pickle file?
 switches['model_avg']        = True # perform Bayes Model Avg
@@ -58,9 +58,9 @@ switches['check_fit']        = False # print pieces of fit function - no fitting
 
 # Plotting options
 switches['save_figs']        = True  # save figures
-switches['make_extrap']      = False # make plots
+switches['make_extrap']      = True # make plots
 switches['make_hist']        = False # make plots
-switches['make_fv']          = False
+switches['make_fv']          = True
 switches['plot_ls']          = False # report fitted Li values
 
 # DEBUGGING

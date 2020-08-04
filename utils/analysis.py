@@ -282,8 +282,8 @@ def gather_model_elements(model):
 
 def prior_width_scan(model, fitEnv, fit_model, priors, switches):
     new_priors = dict(priors)
-    p2_vals = [2, 5, 10]
-    p3_vals = [2, 5, 10]
+    p1_vals = [0.5, 1, 1.5, 2, 5]
+    p2_vals = [0.5, 1, 1.5, 2, 5]
 
     logGBF_array = []
     if os.path.exists('data/saved_prior_search.yaml'):
@@ -301,44 +301,45 @@ def prior_width_scan(model, fitEnv, fit_model, priors, switches):
 
     if model not in prior_grid:
         prior_grid[model] = dict()
-    nnlo_x_lst = ['p_4','k_4']
-    nnlo_a_lst = ['s_4','saS_4']
-    n3lo_x_lst = ['kp_6','k_6','p_6']
-    n3lo_a_lst = ['s_6','sk_6','sp_6']
+    nlo_x_lst = ['c_ll','c_ls','c_ss','c_lln']
+    nlo_a_lst = ['d_4','d_l4','d_s4']
+    n2lo_x_lst = ['c_lll','c_lls','c_lss','c_sss','c_llln2','c_llln']
+    n2lo_a_lst = ['d_6','d_l6','d_s6','d_ll6','d_ls6','d_ss6']
 
+    n_p1 = len(p1_vals)
     n_p2 = len(p2_vals)
-    n_p3 = len(p3_vals)
     i_search = 1
-    i_tot = n_p2**2 * n_p3**2
-    for i2x,p2x in enumerate(p2_vals):
-        if p2x not in prior_grid[model]:
-            prior_grid[model][p2x] = dict()
-        for k2x in nnlo_x_lst:
-            new_priors[k2x] = gv.gvar(0,p2x)
-        for i2a,p2a in enumerate(p2_vals):
-            if p2a not in prior_grid[model][p2x]:
-                prior_grid[model][p2x][p2a] = dict()
-            for k2a in nnlo_a_lst:
-                new_priors[k2a] = gv.gvar(0,p2a)
-            for i3x,p3x in enumerate(p3_vals):
-                if p3x not in prior_grid[model][p2x][p2a]:
-                    prior_grid[model][p2x][p2a][p3x] = dict()
-                for k3x in n3lo_x_lst:
-                    new_priors[k3x] = gv.gvar(0,p3x)
-                for i3a,p3a in enumerate(p3_vals):
-                    for k3a in n3lo_a_lst:
-                        new_priors[k3a] = gv.gvar(0,p3a)
-                    if p3a not in prior_grid[model][p2x][p2a][p3x]:
+    i_tot = n_p1**2 * n_p2**2
+    for i1x,p1x in enumerate(p1_vals):
+        if p1x not in prior_grid[model]:
+            prior_grid[model][p1x] = dict()
+        for k1x in nlo_x_lst:
+            new_priors[k1x] = gv.gvar(0,p1x)
+        for i1a,p1a in enumerate(p1_vals):
+            if p1a not in prior_grid[model][p1x]:
+                prior_grid[model][p1x][p1a] = dict()
+            for k1a in nlo_a_lst:
+                new_priors[k1a] = gv.gvar(0,p1a)
+            # add NNLO priors
+            for i2x,p2x in enumerate(p2_vals):
+                if p2x not in prior_grid[model][p1x][p1a]:
+                    prior_grid[model][p1x][p1a][p2x] = dict()
+                for k2x in n2lo_x_lst:
+                    new_priors[k2x] = gv.gvar(0,p2x)
+                for i2a,p2a in enumerate(p2_vals):
+                    for k2a in n2lo_a_lst:
+                        new_priors[k2a] = gv.gvar(0,p2a)
+                    if p2a not in prior_grid[model][p1x][p1a][p2x]:
                         tmp_result = fitEnv.fit_data(new_priors)
                         lgbf = float(tmp_result.logGBF)
-                        prior_grid[model][p2x][p2a][p3x][p3a] = lgbf
-                        logGBF_array.append([ p2x, p2a, p3x, p3a, lgbf] )
+                        prior_grid[model][p1x][p1a][p2x][p2a] = lgbf
+                        logGBF_array.append([ p1x, p1a, p2x, p2a, lgbf] )
                     else:
-                        lgbf = float(prior_grid[model][p2x][p2a][p3x][p3a])
-                        logGBF_array.append([ p2x, p2a, p3x, p3a, lgbf] )
+                        lgbf = float(prior_grid[model][p1x][p1a][p2x][p2a])
+                        logGBF_array.append([ p1x, p1a, p2x, p2a, lgbf] )
                     if switches['prior_verbose']:
-                        print('%4d / %4d: nnlo_x = %.2f,   nnlo_a = %.2f,   n3lo_x = %.2f,   n3lo_a = %.2f:   logGBF=%f' \
-                            %(i_search, i_tot, p2x, p2a, p3x, p3a, lgbf))
+                        print('%4d / %4d: nlo_x = %.2f,   nlo_a = %.2f,   n2lo_x = %.2f,   n2lo_a = %.2f:   logGBF=%f' \
+                            %(i_search, i_tot, p1x, p1a, p2x, p2a, lgbf))
                     else:
                         sys.stdout.write("%4d / %4d\r" %(i_search, i_tot))
                         sys.stdout.flush()
@@ -348,7 +349,7 @@ def prior_width_scan(model, fitEnv, fit_model, priors, switches):
     vals = ''
     vals = vals.join("& %5s   " %str(k) for k in logGBF_array[i_l_max][:-1])
     vals = vals + "& %f" %logGBF_array[i_l_max][-1]
-    print('%37s' %model, vals)
+    print('%25s' %model, vals)
     prior_file = open('data/saved_prior_search.yaml', 'w')
     yaml.dump(prior_grid, prior_file)
     prior_file.close()

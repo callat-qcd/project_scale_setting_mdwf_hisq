@@ -133,7 +133,7 @@ def main():
                 if 'ma' not in model:
                     plots.plot_vs_eps_pi(phys_point)
             if switches['make_fv']:
-                if 'xpt' in model and 'FV' in model and 'PP' in model:
+                if 'xpt' in model and 'FV' in model and 'F' in model:
                     plots.plot_vs_ml()
 
         if switches['model_avg']:
