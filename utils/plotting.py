@@ -325,10 +325,10 @@ class ExtrapolationPlots:
     def plot_vs_ml(self):
         fv_dict = dict()
         fv_dict['p'] = dict()
-        fv_dict['p']['mpi']   = self.fit_result.p['a12m220L', 'mpi']
-        fv_dict['p']['mk']    = self.fit_result.p['a12m220L', 'mk']
-        fv_dict['p']['Lam_F'] = self.fit_result.p['a12m220L', 'Lam_F']
-        fv_dict['p']['aw0']   = self.fit_result.p['a12m220L', 'aw0']
+        fv_dict['p']['mpi']          = self.fit_result.p['a12m220L', 'mpi']
+        fv_dict['p']['mk']           = self.fit_result.p['a12m220L', 'mk']
+        fv_dict['p']['Lam_'+self.FF] = self.fit_result.p['a12m220L', 'Lam_'+self.FF]
+        fv_dict['p']['aw0']          = self.fit_result.p['a12m220L', 'aw0']
         fv_dict['x'] = dict()
         fv_dict['x'] = dict(self.fit_result.x['a12m220L'])
         for k in self.fit_result.p:
@@ -340,6 +340,7 @@ class ExtrapolationPlots:
         fv_pred = []
         x   = []
         fv_fit_func = chipt.FitModel(self.model_list, _fv=self.fv, _FF=self.FF)
+        #print(fv_dict['p'])
         for mL in np.arange(3.,10.1,.1):
             x.append(np.exp(-mL) / (mL)**1.5)
             fv_dict['x']['mpiL'] = mL

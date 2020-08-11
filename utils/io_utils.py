@@ -43,6 +43,15 @@ def format_h5_data(data_path, switches):
         except Exception as e:
             print(e)
 
+        if ens == 'a06m310L' and switches['deflate_a06']:
+            print('deflating a06m310L uncertainty')
+            print(data_dict['m_omega'].shape)
+            print(data_dict['m_omega'].mean(), data_dict['m_omega'].std())
+            dy = data_dict['m_omega'] - data_dict['m_omega'].mean()
+            dy = dy / np.sqrt(2)
+            data_dict['m_omega'] = data_dict['m_omega'].mean() + dy
+            print(data_dict['m_omega'].mean(), data_dict['m_omega'].std())
+
         if switches['bs_bias']:
             data_bs = dict()
             for d in data_dict:

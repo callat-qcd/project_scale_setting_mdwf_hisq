@@ -22,7 +22,7 @@ switches['ensembles_fit'] = [
 
 # FIT MODELS
 switches['ansatz'] = dict()
-switches['ansatz']['models'] = ['xpt_nlo','xpt_nnlo']
+switches['ansatz']['models'] = ['xpt_nlo_FV']#,'xpt_nnlo']
 '''
     The full list of models can be rather long.  The sys switches help loop
     over them.  Example other base models are
@@ -37,14 +37,15 @@ switches['sys'] = dict()     # these cause the fitter to loop over various optio
 switches['sys']['Lam_chi']   = False # FF = F, O
 switches['sys']['alphaS']    = False # include alphaS at NNLO?
 # OLDER SYSTEMATICS - still work, but not used
-switches['sys']['FV']        = True # turn on/off FV corrections
+switches['sys']['FV']        = False # turn on/off FV corrections
 switches['scales']           = ['F','O']
                                # scale is used when the loop over scales is not triggered
-switches['scale']            = 'F' # PP, PK, KK, LamChi = 4 * pi * sqrt(FA * FB)
+switches['scale']            = 'O' # PP, PK, KK, LamChi = 4 * pi * sqrt(FA * FB)
 
 switches['print_lattice']    = False # print data for paper - not fitting will occur
 
 # Fitting options
+switches['deflate_a06']      = False
 switches['bs_bias']          = True  # shift bs avg to b0?
 switches['print_fit']        = True # print lsqfit results?
 switches['report_phys']      = True  # report physical point for each fit?
