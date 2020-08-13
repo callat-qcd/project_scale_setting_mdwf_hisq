@@ -44,11 +44,20 @@ def format_h5_data(data_path, switches):
             print(e)
 
         if ens == 'a06m310L' and switches['deflate_a06']:
-            print('deflating a06m310L uncertainty')
+            print('deflating %s uncertainty' %ens)
             print(data_dict['m_omega'].shape)
             print(data_dict['m_omega'].mean(), data_dict['m_omega'].std())
             dy = data_dict['m_omega'] - data_dict['m_omega'].mean()
             dy = dy / np.sqrt(2)
+            data_dict['m_omega'] = data_dict['m_omega'].mean() + dy
+            print(data_dict['m_omega'].mean(), data_dict['m_omega'].std())
+
+        if ens == 'a12m220ms' and switches['deflate_a12m220ms']:
+            print('deflating %s uncertainty' %ens)
+            print(data_dict['m_omega'].shape)
+            print(data_dict['m_omega'].mean(), data_dict['m_omega'].std())
+            dy = data_dict['m_omega'] - data_dict['m_omega'].mean()
+            dy = dy / 3
             data_dict['m_omega'] = data_dict['m_omega'].mean() + dy
             print(data_dict['m_omega'].mean(), data_dict['m_omega'].std())
 

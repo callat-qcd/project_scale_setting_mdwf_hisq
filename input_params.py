@@ -22,7 +22,7 @@ switches['ensembles_fit'] = [
 
 # FIT MODELS
 switches['ansatz'] = dict()
-switches['ansatz']['models'] = ['xpt_nlo_FV']#,'xpt_nnlo']
+switches['ansatz']['models'] = ['xpt_nlo_FV']#,'xpt_nnlo_FV']#,'xpt_nnlo']
 '''
     The full list of models can be rather long.  The sys switches help loop
     over them.  Example other base models are
@@ -34,18 +34,19 @@ switches['w0'] = 'callat' # or milc
 
 # SYSTEMATIC SWITCHES
 switches['sys'] = dict()     # these cause the fitter to loop over various options
-switches['sys']['Lam_chi']   = False # FF = F, O
+switches['sys']['Lam_chi']   = True # FF = F, O
 switches['sys']['alphaS']    = False # include alphaS at NNLO?
 # OLDER SYSTEMATICS - still work, but not used
 switches['sys']['FV']        = False # turn on/off FV corrections
 switches['scales']           = ['F','O']
                                # scale is used when the loop over scales is not triggered
-switches['scale']            = 'O' # PP, PK, KK, LamChi = 4 * pi * sqrt(FA * FB)
+switches['scale']            = 'F' # PP, PK, KK, LamChi = 4 * pi * sqrt(FA * FB)
 
 switches['print_lattice']    = False # print data for paper - not fitting will occur
 
 # Fitting options
 switches['deflate_a06']      = False
+switches['deflate_a12m220ms'] = False
 switches['bs_bias']          = True  # shift bs avg to b0?
 switches['print_fit']        = True # print lsqfit results?
 switches['report_phys']      = True  # report physical point for each fit?
@@ -53,7 +54,7 @@ switches['save_fits']        = False  # save fits in pickle file?
 switches['model_avg']        = True # perform Bayes Model Avg
 switches['prior_search']     = False # perform a crude grid search to optimize
 switches['prior_verbose']    = False # NNLO and NNNLO prior widths
-switches['scipy']            = False # use scipy minimizer instead of gsl?
+switches['scipy']            = True # use scipy minimizer instead of gsl?
 
 switches['check_fit']        = False # print pieces of fit function - no fitting will occur
 

@@ -23,7 +23,7 @@ shapes = {'m400':'h', 'm350':'p', 'm310':'s', 'm220':'^', 'm130':'o', 'm135':'*'
 labels = {
     'a15m400' :'', 'a15m350':'', 'a15m310':'a15', 'a15m220':'','a15m135XL':'',
     'a12m400' :'', 'a12m350':'', 'a12m310':'a12', 'a12m220':'', 'a12m130':'',
-    'a12m220L':'', 'a12m220S':'',
+    'a12m220L':'', 'a12m220S':'','a12m220ms':'',
     'a09m400' :'', 'a09m350':'', 'a09m310':'a09', 'a09m220':'', 'a09m135':'',
     'a06m310L':'a06',
     }
@@ -33,7 +33,7 @@ dx_cont = {
     'a15m310'  :0.,     'a12m310' :0.,     'a09m310':0.,     'a06m310L':0.,
     'a15m220'  :-0.0025,'a12m220' :-0.0025,'a09m220':-0.0025,
     'a15m135XL':-0.0050,'a12m130' :-0.0050,'a09m135':-0.0050,
-    'a12m220L' :-0.0037,'a12m220S':-0.0012,
+    'a12m220L' :-0.0037,'a12m220S':-0.0012,'a12m220ms':+0.0012,
     }
 
 def plot_l_s(data,switches,phys_point):
@@ -103,6 +103,8 @@ class ExtrapolationPlots:
         self.og_fit     = chipt.FitModel(self.model_list, _fv=self.fv, _FF=self.FF)
         self.shift_list = list(model_list)
         self.shift_fit  = chipt.FitModel(self.shift_list, _fv=False, _FF=self.FF)
+        # which ensemble to get aw0 from
+        self.aw0_keys = {'a15':'a15m135XL','a12':'a12m130','a09':'a09m135','a06':'a06m310L'}
 
     def plot_vs_eps_asq(self,shift_points):
         self.shift_xp = copy.deepcopy(shift_points)
@@ -126,7 +128,7 @@ class ExtrapolationPlots:
         self.ax_cont  = plt.axes(plt_axes)
         self.ax_cont.fill_between(x, y-dy, y+dy, color='#b36ae2', alpha=0.4)
 
-        self.plot_data(p_type='ea')
+        self.plot_data(p_type='ea', ax=self.ax_cont)
         handles, labels = self.ax_cont.get_legend_handles_labels()
         labels, handles = zip(*sorted(zip(labels, handles), key=lambda t: t[0]))
         self.ax_cont.legend(handles, labels, ncol=4, fontsize=fs_leg)
@@ -143,9 +145,11 @@ class ExtrapolationPlots:
         if self.switches['save_figs']:
             plt.savefig('figures/'+'w0_mO_vs_ea_'+self.model+'.pdf',transparent=True)
 
-    def plot_vs_eps_pi(self,shift_points):
+    def plot_vs_eps_pi(self,shift_points,eps='l'):
         self.shift_xp = copy.deepcopy(shift_points)
         eps_pisq_phys = (gv.gvar(self.shift_xp['p']['mpi'] / self.shift_xp['p']['Lam_'+self.FF]))**2
+        eps_ksq_phys =  (gv.gvar(self.shift_xp['p']['mk'] / self.shift_xp['p']['Lam_'+self.FF]))**2
+        eps_ssq_phys = 2 * eps_ksq_phys - eps_pisq_phys
         for k in self.fit_result.p:
             if isinstance(k,str):
                 self.shift_xp['p'][k] = self.fit_result.p[k]
@@ -169,19 +173,22 @@ class ExtrapolationPlots:
         nnlo_fit  = chipt.FitModel(lo_lst+nlo_lst+nnlo_lst, _fv=False, _FF=self.FF)
         x_plot = []
         mpi_range = np.sqrt(np.arange(100, 411**2, 411**2/200))
-        for a_mpi in mpi_range:
-            x_plot.append(a_mpi**2 / (self.shift_xp['p']['Lam_'+self.FF])**2)
-            self.shift_xp['p']['mpi'] = a_mpi
+        ms_range  = np.sqrt(np.arange(500**2, 900**2, (900**2 - 500**2)/200))
+        m_range = {'l':mpi_range, 's':ms_range}
+
+        for a_m in m_range[eps]:
+            x_plot.append(a_m**2 / self.shift_xp['p']['Lam_'+self.FF]**2)
+            if eps == 'l':
+                self.shift_xp['p']['mpi'] = a_m
+            elif eps == 's':
+                self.shift_xp['p']['mk']  = np.sqrt(0.5* (a_m**2 + (self.shift_xp['p']['mpi']/self.shift_xp['p']['Lam_'+self.FF])**2))
             self.shift_xp['p']['aw0'] = 0
             y_plot['a00'].append(self.fitEnv._fit_function(self.shift_fit, self.shift_xp['x'], self.shift_xp['p']))
             y_conv['LO'].append(self.fitEnv._fit_function(lo_fit, self.shift_xp['x'], self.shift_xp['p']))
             y_conv['NLO'].append(self.fitEnv._fit_function(nlo_fit, self.shift_xp['x'], self.shift_xp['p']))
             y_conv['NNLO'].append(self.fitEnv._fit_function(nnlo_fit, self.shift_xp['x'], self.shift_xp['p']))
             for aa in ['a15','a12','a09','a06']:
-                if aa == 'a06':
-                    self.shift_xp['p']['aw0'] = self.fitEnv.p[(aa+'m310L','aw0')]
-                else:
-                    self.shift_xp['p']['aw0'] = self.fitEnv.p[(aa+'m310','aw0')]
+                self.shift_xp['p']['aw0'] = self.fitEnv.p[(self.aw0_keys[aa],'aw0')]
                 y_plot[aa].append(self.fitEnv._fit_function(self.shift_fit, self.shift_xp['x'], self.shift_xp['p']))
         x = np.array([k.mean for k in x_plot])
         y  = dict()
@@ -192,42 +199,56 @@ class ExtrapolationPlots:
             y[aa]  = np.array([k.mean for k in y_plot[aa]])
             dy[aa] = np.array([k.sdev for k in y_plot[aa]])
 
-        self.fig_x = plt.figure('w0_mO_vs_epi_'+self.model, figsize=fig_size)
-        self.ax_x  = plt.axes(plt_axes)
-        self.ax_x.fill_between(x, y['a00']-dy['a00'], y['a00']+dy['a00'], color='#b36ae2',alpha=0.4)
+        fig_name = 'w0_mO_vs_'+eps+'_'+self.model
+        fig_x      = plt.figure(fig_name, figsize=fig_size)
+        ax_x  = plt.axes(plt_axes)
+        ax_x.fill_between(x, y['a00']-dy['a00'], y['a00']+dy['a00'], color='#b36ae2',alpha=0.4)
         for aa in ['a15','a12','a09','a06']:
-            self.ax_x.plot(x, y[aa], color=colors[aa])
+            ax_x.plot(x, y[aa], color=colors[aa])
 
         # plot physical eps_pi**2
-        self.ax_x.axvline(eps_pisq_phys.mean,linestyle='--',color='#a6aaa9')
-        self.ax_x.axvspan(eps_pisq_phys.mean -eps_pisq_phys.sdev, eps_pisq_phys.mean +eps_pisq_phys.sdev,
-            alpha=0.4, color='#a6aaa9')
+        if eps == 'l':
+            ax_x.axvline(eps_pisq_phys.mean,linestyle='--',color='#a6aaa9')
+            ax_x.axvspan(eps_pisq_phys.mean -eps_pisq_phys.sdev, eps_pisq_phys.mean +eps_pisq_phys.sdev,
+                alpha=0.4, color='#a6aaa9')
+        elif eps == 's':
+            ax_x.axvline(eps_ssq_phys.mean,linestyle='--',color='#a6aaa9')
+            ax_x.axvspan(eps_ssq_phys.mean -eps_ssq_phys.sdev, eps_ssq_phys.mean +eps_ssq_phys.sdev,
+                alpha=0.4, color='#a6aaa9')
         # plot data
-        self.plot_data(p_type='epi')
-        handles, labels = self.ax_x.get_legend_handles_labels()
+        self.plot_data(p_type=eps, ax=ax_x)
+        handles, labels = ax_x.get_legend_handles_labels()
         labels, handles = zip(*sorted(zip(labels, handles), key=lambda t: t[0]))
         if self.FF == 'F':
-            loc=4
+            if eps == 'l':
+                loc=4
+            elif eps == 's':
+                loc=2
         else:
             loc=1
-        self.ax_x.legend(handles, labels, loc=loc, ncol=2, fontsize=fs_leg)
+        ax_x.legend(handles, labels, loc=loc, ncol=2, fontsize=fs_leg)
 
         # labels
-        eps_FF = {
-            'F':r'$l_F^2 = (m_\pi / 4\pi F_\pi)^2$',
-            'O':r'$l_\Omega^2 = (m_\pi / m_\Omega)^2$',
-        }
-        xlim_FF = {'F':.094, 'O':.061,}
-        self.ax_x.set_xlabel(eps_FF[self.FF],fontsize=fs_text)
-        self.ax_x.set_xlim(0,xlim_FF[self.FF])
-        self.ax_x.set_ylabel(r'$w_0 m_\Omega$',fontsize=fs_text)
-        self.ax_x.set_ylim(1.281, 1.499)
-        self.ax_x.text(0.0175, 1.3, r'%s' %(self.model.replace('_','\_')),\
+        if eps == 'l':
+            eps_FF = {'F':r'$l_F^2 = (m_\pi / 4\pi F_\pi)^2$', 'O':r'$l_\Omega^2 = (m_\pi / m_\Omega)^2$'}
+            xlim_FF = {'F':(0,0.094), 'O':(0,.061)}
+        elif eps == 's':
+            eps_FF = {'F':r'$s_F^2 = (2m_K^2 - m_\pi^2) / (4\pi F_\pi)^2$', 'O':r'$s_\Omega^2 = (2m_K^2 - m_\pi^2) / m_\Omega^2$'}
+            xlim_FF = {'F':(0.33,0.369), 'O':(0.16,0.234)}
+        ax_x.set_xlabel(eps_FF[self.FF],fontsize=fs_text)
+        ax_x.set_xlim(xlim_FF[self.FF])
+        ax_x.set_ylabel(r'$w_0 m_\Omega$',fontsize=fs_text)
+        ax_x.set_ylim(1.281, 1.499)
+        ax_x.text(0.0175, 1.3, r'%s' %(self.model.replace('_','\_')),\
             horizontalalignment='left', verticalalignment='center', \
             fontsize=fs_text, bbox={'facecolor':'None','boxstyle':'round'})
 
         if self.switches['save_figs']:
-            plt.savefig('figures/'+'w0_mO_vs_epi_'+self.model+'.pdf',transparent=True)
+            plt.savefig('figures/'+fig_name+'.pdf',transparent=True)
+        if eps == 'l':
+            self.ax_l = ax_x
+        elif eps == 's':
+            self.ax_s = ax_x
 
         # Convergence plot
         order_list = ['LO']
@@ -235,7 +256,7 @@ class ExtrapolationPlots:
             order_list = order_list + ['NLO','NNLO']
         elif 'nlo' in self.model:
             order_list = order_list + ['NLO']
-        self.fig_conv = plt.figure('w0_mO_vs_epi_convergence_'+self.model, figsize=fig_size)
+        self.fig_conv = plt.figure(fig_name+'_convergence_'+self.model, figsize=fig_size)
         self.ax_conv  = plt.axes(plt_axes)
         labels = {'LO':'LO', 'NLO':r'NLO','NNLO':r'N$^2$LO'}
         for order in order_list:
@@ -243,7 +264,7 @@ class ExtrapolationPlots:
             sdev = np.array([k.sdev for k in y_conv[order]])
             self.ax_conv.fill_between(x, mean-sdev, mean+sdev, alpha=.4, label=labels[order])
         self.ax_conv.set_xlabel(eps_FF[self.FF],fontsize=fs_text)
-        self.ax_conv.set_xlim(0,xlim_FF[self.FF])
+        self.ax_conv.set_xlim(xlim_FF[self.FF])
         self.ax_conv.set_ylabel(r'$w_0 m_\Omega$',fontsize=fs_text)
         self.ax_conv.set_ylim(1.281, 1.499)
         self.ax_conv.text(0.0175, 1.3, r'%s' %(self.model.replace('_','\_')),\
@@ -254,10 +275,10 @@ class ExtrapolationPlots:
             alpha=0.4, color='#a6aaa9')
         self.ax_conv.legend(ncol=3, fontsize=fs_leg)
         if self.switches['save_figs']:
-            plt.savefig('figures/'+'w0_mO_vs_epi_convergence_'+self.model+'.pdf',transparent=True)
+            plt.savefig('figures/'+fig_name+'_convergence_'+self.model+'.pdf',transparent=True)
 
 
-    def plot_data(self, p_type, offset=False, raw=False):
+    def plot_data(self, p_type, ax, offset=False, raw=False):
         y_shift = self.shift_data(p_type=p_type)
         for a_ens in self.switches['ensembles']:
             if a_ens in self.switches['ensembles_fit']:
@@ -270,8 +291,12 @@ class ExtrapolationPlots:
             if p_type == 'ea':
                 x  = (self.fitEnv.p[(a_ens, 'aw0')] / 2)**2
                 dx = dx_cont[a_ens]
-            elif p_type == 'epi':
+            elif p_type == 'l':
                 x  = (self.fitEnv.p[(a_ens, 'mpi')] / self.fitEnv.p[(a_ens, 'Lam_'+self.FF)])**2
+                dx = 0
+            elif p_type == 's':
+                x  = 2*(self.fitEnv.p[(a_ens, 'mk')]/self.fitEnv.p[(a_ens, 'Lam_'+self.FF)])**2
+                x += -(self.shift_xp['p']['mpi'] / self.shift_xp['p']['Lam_'+self.FF])**2
                 dx = 0
             label = labels[a_ens]
             if p_type == 'ea':
@@ -279,14 +304,17 @@ class ExtrapolationPlots:
                     mfc = c
                 else:
                     mfc = 'None'
-            elif p_type == 'epi':
+            elif p_type in ['l','s']:
                 mfc = 'None'
             y = self.fitEnv.y[a_ens] + y_shift[a_ens]
             if p_type == 'ea':
                 self.ax_cont.errorbar(x=x.mean+dx, y=y.mean,xerr=x.sdev, yerr=y.sdev,
                     marker=s, color=c, mfc=mfc, alpha=alpha, linestyle='None', label=label)
-            elif p_type == 'epi':
-                self.ax_x.errorbar(x=x.mean+dx, y=y.mean,xerr=x.sdev, yerr=y.sdev,
+            elif p_type == 'l':
+                ax.errorbar(x=x.mean+dx, y=y.mean,xerr=x.sdev, yerr=y.sdev,
+                    marker=s, color=c, mfc=mfc, alpha=alpha, linestyle='None', label=label)
+            elif p_type == 's':
+                ax.errorbar(x=x.mean+dx, y=y.mean,xerr=x.sdev, yerr=y.sdev,
                     marker=s, color=c, mfc=mfc, alpha=alpha, linestyle='None', label=label)
 
     def shift_data(self, p_type):
@@ -308,13 +336,18 @@ class ExtrapolationPlots:
             for k in self.fit_result.p:
                 if isinstance(k,str):# grab the LECs from the fit results
                     og_priors[k] = self.fit_result.p[k]    # the LECs of the fit
-            self.shift_xp['p']['aw0'] = self.fitEnv.p[(a_ens,'aw0')]
-            if p_type == 'epi':
-                self.shift_xp['p']['aw0'] = self.fitEnv.p[(a_ens,'aw0')]
-                self.shift_xp['p']['mpi'] = self.fitEnv.p[(a_ens,'mpi')] / self.fitEnv.p[(a_ens, 'Lam_'+self.FF)]
-                self.shift_xp['p']['mk']  = self.shift_xp['p']['mk'] / self.shift_xp['p']['Lam_'+self.FF]
+            aa = a_ens[0:3]
+            self.shift_xp['p']['aw0'] = self.fitEnv.p[(self.aw0_keys[aa],'aw0')]
+            self.shift_xp['x']['alphaS'] = self.fitEnv.x[a_ens]['alphaS']
+            if p_type in ['l','s']:
+                if p_type == 'l':
+                    self.shift_xp['p']['mpi'] = self.fitEnv.p[(a_ens,'mpi')] / self.fitEnv.p[(a_ens, 'Lam_'+self.FF)]
+                    self.shift_xp['p']['mk']  = self.shift_xp['p']['mk'] / self.shift_xp['p']['Lam_'+self.FF]
+                elif p_type == 's':
+                    self.shift_xp['p']['mpi'] = self.shift_xp['p']['mpi'] / self.shift_xp['p']['Lam_'+self.FF]
+                    s_sq = (2*self.fitEnv.p[(a_ens,'mk')]**2 - self.fitEnv.p[(a_ens,'mpi')]**2) / self.fitEnv.p[(a_ens, 'Lam_'+self.FF)]**2
+                    self.shift_xp['p']['mk']  = np.sqrt(0.5*(s_sq + self.shift_xp['p']['mpi']**2))
                 self.shift_xp['p']['Lam_'+self.FF] = 1
-                self.shift_xp['x']['alphaS'] = self.fitEnv.x[a_ens]['alphaS']
             og_y    = self.fitEnv._fit_function(self.og_fit,    self.fitEnv.x[a_ens], og_priors)
             shift_y = self.fitEnv._fit_function(self.shift_fit, self.shift_xp['x'],   self.shift_xp['p'])
             y_shift[a_ens] = shift_y - og_y
