@@ -7,7 +7,7 @@ import numpy as np
 import gvar as gv
 import lsqfit
 
-# FK / Fpi libraries
+# FK / Fpi libraries 
 sys.path.append('utils')
 import io_utils
 import chipt
