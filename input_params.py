@@ -6,18 +6,18 @@ switches = dict()
 switches['ensembles'] = [
     'a15m400'  ,'a12m400' ,'a09m400',
     'a15m350'  ,'a12m350' ,'a09m350',
-    'a15m310'  ,'a12m310' ,'a09m310','a06m310L',#'a15m310L',
+    'a15m310'  ,'a12m310' ,'a09m310','a06m310L','a15m310L',
     'a15m220'  ,'a12m220' ,'a09m220',
-    'a12m220S', 'a12m220L',#'a12m220ms',
-    #'a12m180L',
+    'a12m220S', 'a12m220L','a12m220ms',
+    'a12m180L',
     'a15m135XL','a12m130' ,'a09m135',]
 switches['ensembles_fit'] = [
     'a15m400'  ,'a12m400' ,'a09m400',
     'a15m350'  ,'a12m350' ,'a09m350',
-    'a15m310'  ,'a12m310' ,'a09m310','a06m310L',#'a15m310L',
+    'a15m310'  ,'a12m310' ,'a09m310','a06m310L','a15m310L',
     'a15m220'  ,'a12m220' ,'a09m220',
-    'a12m220S', 'a12m220L',#'a12m220ms',
-    #'a12m180L',
+    'a12m220S', 'a12m220L','a12m220ms',
+    'a12m180L',
     'a15m135XL','a12m130' ,'a09m135',]
 
 # FIT MODELS
@@ -34,7 +34,7 @@ switches['w0'] = 'callat' # or milc
 
 # SYSTEMATIC SWITCHES
 switches['sys'] = dict()     # these cause the fitter to loop over various options
-switches['sys']['Lam_chi']   = True # FF = F, O
+switches['sys']['Lam_chi']   = False # FF = F, O
 switches['sys']['alphaS']    = False # include alphaS at NNLO?
 # OLDER SYSTEMATICS - still work, but not used
 switches['sys']['FV']        = False # turn on/off FV corrections
