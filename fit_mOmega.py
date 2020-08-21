@@ -88,7 +88,9 @@ def main():
 
             do_fit = False
             if switches['save_fits'] or switches['debug_save_fit']:
-                pickled_fit = 'pickled_fits/'+model+'_n2lo'+str(ip.nnlo_x)+'_n3lo'+str(ip.n3lo_x)+'.p'
+                pickled_fit = 'pickled_fits/'+model+'_lo_x_'+str(ip.lo_x)+'_lo_a_'+str(ip.lo_a)
+                pickled_fit += '_nlo_x_'+str(ip.nlo_x)+'_nlo_a_'+str(ip.nlo_a)
+                pickled_fit += '_n2lo_x_'+str(ip.nnlo_x)+'_n2lo_a_'+str(ip.nnlo_a)+'.p'
                 if os.path.exists(pickled_fit):
                     print('reading %s' %pickled_fit)
                     fit_result = gv.load(pickled_fit)
