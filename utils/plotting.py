@@ -47,8 +47,8 @@ def plot_l_s(data,switches,phys_point):
     for ens in switches['ensembles']:
         a = ens.split('m')[0]
         m = ens[3:7]
-        lO_sq = data['p'][(ens,'mpi')]**2 / data['p'][(ens,'m_omega')]**2
-        sO_sq = (2*data['p'][(ens,'mk')]**2 - data['p'][(ens,'mpi')]**2) / data['p'][(ens,'m_omega')]**2
+        lO_sq = data['p'][(ens,'mpi')]**2 / data['p'][(ens,'Lam_O')]**2
+        sO_sq = (2*data['p'][(ens,'mk')]**2 - data['p'][(ens,'mpi')]**2) / data['p'][(ens,'Lam_O')]**2
         axO.errorbar(lO_sq.mean,sO_sq.mean, xerr=lO_sq.sdev,yerr=sO_sq.sdev,
             color=colors[a],marker=shapes[m],label=labels[ens],linestyle='None')
         lF_sq = data['p'][(ens,'mpi')]**2 / data['p'][(ens,'Lam_F')]**2

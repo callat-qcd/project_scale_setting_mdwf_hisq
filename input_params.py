@@ -22,7 +22,7 @@ switches['ensembles_fit'] = [
 
 # FIT MODELS
 switches['ansatz'] = dict()
-switches['ansatz']['models'] = ['xpt_nlo_FV']#,'xpt_nnlo_FV']#,'xpt_nnlo']
+switches['ansatz']['models'] = ['xpt_nnlo_FV']#,'xpt_nnlo_FV']#,'xpt_nnlo']
 '''
     The full list of models can be rather long.  The sys switches help loop
     over them.  Example other base models are
@@ -34,7 +34,7 @@ switches['w0'] = 'callat' # or milc
 
 # SYSTEMATIC SWITCHES
 switches['sys'] = dict()     # these cause the fitter to loop over various options
-switches['sys']['Lam_chi']   = False # FF = F, O
+switches['sys']['Lam_chi']   = True # FF = F, O
 switches['sys']['alphaS']    = False # include alphaS at NNLO?
 # OLDER SYSTEMATICS - still work, but not used
 switches['sys']['FV']        = False # turn on/off FV corrections
@@ -62,7 +62,7 @@ switches['check_fit']        = False # print pieces of fit function - no fitting
 switches['save_figs']        = True  # save figures
 switches['make_extrap']      = True # make plots
 switches['make_hist']        = False # make plots
-switches['make_fv']          = True
+switches['make_fv']          = False
 switches['plot_ls']          = False # report fitted Li values
 
 # DEBUGGING
@@ -77,10 +77,12 @@ priors = dict()
 priors['c0']   = gv.gvar(1.,0.5)
 priors['t_fv'] = gv.gvar(0,100)
 
-priors['c_l'] = gv.gvar(0.1,1)
-priors['c_s'] = gv.gvar(0.1,1)
-priors['d_2'] = gv.gvar(0.1,1)
-priors['daS_2'] = gv.gvar(0.1,1)
+lo_x = 2
+lo_a = 2
+priors['c_l'] = gv.gvar(0.1,lo_x)
+priors['c_s'] = gv.gvar(0.1,lo_x)
+priors['d_2'] = gv.gvar(0.1,lo_a)
+priors['daS_2'] = gv.gvar(0.1,lo_a)
 
 nlo_x = 1
 nlo_a = 1
