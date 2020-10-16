@@ -63,8 +63,12 @@ def main():
 
     # l s plots
     if switches['plot_ls']:
+        plt.ion()
         plotting.plot_l_s(gv_data, switches, phys_point)
-
+        plotting.plot_lF_a(gv_data, switches, phys_point)
+        plt.ioff()
+        plt.show()
+        sys.exit()
 
     models = analysis.sys_models(switches)
     if switches['prior_search']:

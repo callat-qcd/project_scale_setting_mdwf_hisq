@@ -37,7 +37,6 @@ dx_cont = {
     }
 
 def plot_l_s(data,switches,phys_point):
-    plt.ion()
     if not os.path.exists('figures'):
         os.makedirs('figures')
     figO = plt.figure('ls_O', figsize=fig_size)
@@ -83,8 +82,29 @@ def plot_l_s(data,switches,phys_point):
         plt.savefig('figures/ls_F.pdf',transparent=True)
 
 
-    plt.ioff()
-    plt.show()
+def plot_lF_a(data,switches,phys_point):
+    if not os.path.exists('figures'):
+        os.makedirs('figures')
+    fig = plt.figure('lF_a', figsize=fig_size)
+    ax  = plt.axes(plt_axes)
+    for ens in switches['ensembles']:
+        a = ens.split('m')[0]
+        m = ens[3:7]
+        lF_sq = data['p'][(ens,'mpi')]**2 / data['p'][(ens,'Lam_F')]**2
+        ea_sq = data['p'][(ens,'aw0')]**2 / 4
+        ax.errorbar(ea_sq.mean,lF_sq.mean, xerr=ea_sq.sdev,yerr=lF_sq.sdev,
+            color=colors[a],marker='o',markersize=8,label=labels[ens],linestyle='None')
+
+    handles, lbls = ax.get_legend_handles_labels()
+    ax.legend(handles[::-1], lbls[::-1], loc=1, fontsize=fs_leg, ncol=4)
+    ax.set_ylabel(r'$l_F^2 = m_\pi^2 / (4\pi F_\pi)^2$', fontsize=fs_text)
+    ax.set_xlabel(r'$\epsilon_a^2 = (a / 2 w_0)^2$', fontsize=fs_text)
+    ax.axis([0,.21, 0.001,0.114])
+    lF_phys = phys_point['p']['mpi']**2 / phys_point['p']['Lam_F']**2
+    ax.axhspan(lF_phys.mean-lF_phys.sdev, lF_phys.mean+lF_phys.sdev,color='k',alpha=0.3)
+    ax.tick_params(direction='in',labelsize=tick_size)
+    if switches['save_figs']:
+        plt.savefig('figures/lF_a.pdf',transparent=True)
 
 class ExtrapolationPlots:
 
