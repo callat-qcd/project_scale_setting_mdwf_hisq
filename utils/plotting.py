@@ -95,6 +95,11 @@ def plot_lF_a(data,switches,phys_point):
         ax.errorbar(ea_sq.mean,lF_sq.mean, xerr=ea_sq.sdev,yerr=lF_sq.sdev,
             color=colors[a],marker='o',markersize=8,label=labels[ens],linestyle='None')
 
+    mt = {'m400':0.0888, 'm350': 0.0726, 'm310':0.0605, 'm220':0.0331, 'm180':0.0228, 'm135':0.0135}
+    for m in mt:
+        if m != 'm135':
+            ax.axhline(mt[m], linestyle='--', color='k', alpha=.2)
+        ax.text(0.09, mt[m], m, fontsize=fs_leg, verticalalignment='bottom')
     handles, lbls = ax.get_legend_handles_labels()
     ax.legend(handles[::-1], lbls[::-1], loc=1, fontsize=fs_leg, ncol=4)
     ax.set_ylabel(r'$l_F^2 = m_\pi^2 / (4\pi F_\pi)^2$', fontsize=fs_text)
