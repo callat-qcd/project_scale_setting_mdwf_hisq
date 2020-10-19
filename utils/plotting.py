@@ -111,6 +111,29 @@ def plot_lF_a(data,switches,phys_point):
     if switches['save_figs']:
         plt.savefig('figures/lF_a.pdf',transparent=True)
 
+def plot_raw_data(data,switches,phys_point):
+    if not os.path.exists('figures'):
+        os.makedirs('figures')
+    fig = plt.figure('wm_lF', figsize=fig_size)
+    ax  = plt.axes(plt_axes)
+    for ens in switches['ensembles']:
+        a = ens.split('m')[0]
+        m = ens[3:7]
+        lF_sq = data['p'][(ens,'mpi')]**2 / data['p'][(ens,'Lam_F')]**2
+        wm    = data['y'][ens]
+        ax.errorbar(lF_sq.mean,wm.mean, xerr=lF_sq.sdev,yerr=wm.sdev,
+            color=colors[a],marker='o',markersize=8,label=labels[ens],linestyle='None')
+
+    ax.legend(loc=1, fontsize=fs_leg, ncol=4)
+    ax.set_ylabel(r'$w_0 m_\Omega$', fontsize=fs_text)
+    ax.set_xlabel(r'$l_F^2 = m_\pi^2 / (4\pi F_\pi)^2$', fontsize=fs_text)
+    ax.axis([0,0.094, 1.351,1.499])
+    lF_phys = phys_point['p']['mpi']**2 / phys_point['p']['Lam_F']**2
+    ax.axvspan(lF_phys.mean-lF_phys.sdev, lF_phys.mean+lF_phys.sdev,color='k',alpha=0.3)
+    ax.tick_params(direction='in',labelsize=tick_size)
+    if switches['save_figs']:
+        plt.savefig('figures/wmO_lFsq.pdf',transparent=True)
+
 class ExtrapolationPlots:
 
     def __init__(self, model, model_list, fitEnv, fit_result, switches):
@@ -315,7 +338,7 @@ class ExtrapolationPlots:
             s = shapes['m'+a_ens.split('m')[1][0:3]]
             if p_type == 'ea':
                 x  = (self.fitEnv.p[(a_ens, 'aw0')] / 2)**2
-                dx = dx_cont[a_ens]
+                dx = 0
             elif p_type == 'l':
                 x  = (self.fitEnv.p[(a_ens, 'mpi')] / self.fitEnv.p[(a_ens, 'Lam_'+self.FF)])**2
                 dx = 0
