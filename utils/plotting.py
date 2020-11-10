@@ -194,6 +194,7 @@ class ExtrapolationPlots:
             plt.savefig('figures/'+'w0_mO_vs_ea_'+self.model+'.pdf',transparent=True)
 
     def plot_vs_eps_pi(self,shift_points,eps='l'):
+        self.shift    = shift_points
         self.shift_xp = copy.deepcopy(shift_points)
         eps_pisq_phys = (gv.gvar(self.shift_xp['p']['mpi'] / self.shift_xp['p']['Lam_'+self.FF]))**2
         eps_ksq_phys =  (gv.gvar(self.shift_xp['p']['mk'] / self.shift_xp['p']['Lam_'+self.FF]))**2
@@ -228,6 +229,12 @@ class ExtrapolationPlots:
             x_plot.append(a_m**2 / self.shift_xp['p']['Lam_'+self.FF]**2)
             if eps == 'l':
                 self.shift_xp['p']['mpi'] = a_m
+                # the fitter builds m_ss^2 = 2mK^2 - mpi^2
+                # so we need to trick it by moving mK^2 away from the phys value
+                mkSq  = shift_points['p']['mk']**2
+                mkSq += 0.5*a_m**2
+                mkSq -= 0.5*shift_points['p']['mpi']**2
+                self.shift_xp['p']['mk']  = np.sqrt(mkSq)
             elif eps == 's':
                 self.shift_xp['p']['mk']  = np.sqrt(0.5* (a_m**2 + (self.shift_xp['p']['mpi']/self.shift_xp['p']['Lam_'+self.FF])**2))
             self.shift_xp['p']['aw0'] = 0
@@ -286,7 +293,7 @@ class ExtrapolationPlots:
         ax_x.set_xlabel(eps_FF[self.FF],fontsize=fs_text)
         ax_x.set_xlim(xlim_FF[self.FF])
         ax_x.set_ylabel(r'$w_0 m_\Omega$',fontsize=fs_text)
-        ax_x.set_ylim(1.281, 1.499)
+        ax_x.set_ylim(1.351, 1.559)
         ax_x.text(0.0175, 1.3, r'%s' %(self.model.replace('_','\_')),\
             horizontalalignment='left', verticalalignment='center', \
             fontsize=fs_text, bbox={'facecolor':'None','boxstyle':'round'})
@@ -314,7 +321,7 @@ class ExtrapolationPlots:
         self.ax_conv.set_xlabel(eps_FF[self.FF],fontsize=fs_text)
         self.ax_conv.set_xlim(xlim_FF[self.FF])
         self.ax_conv.set_ylabel(r'$w_0 m_\Omega$',fontsize=fs_text)
-        self.ax_conv.set_ylim(1.281, 1.499)
+        self.ax_conv.set_ylim(1.351, 1.559)
         self.ax_conv.text(0.0175, 1.3, r'%s' %(self.model.replace('_','\_')),\
             horizontalalignment='left', verticalalignment='center', \
             fontsize=fs_text, bbox={'facecolor':'None','boxstyle':'round'})
@@ -390,7 +397,10 @@ class ExtrapolationPlots:
             if p_type in ['l','s']:
                 if p_type == 'l':
                     self.shift_xp['p']['mpi'] = self.fitEnv.p[(a_ens,'mpi')] / self.fitEnv.p[(a_ens, 'Lam_'+self.FF)]
-                    self.shift_xp['p']['mk']  = self.shift_xp['p']['mk'] / self.shift_xp['p']['Lam_'+self.FF]
+                    mkSq  = self.shift['p']['mk']**2 / self.shift['p']['Lam_'+self.FF]**2
+                    mkSq += 0.5*self.shift_xp['p']['mpi']**2
+                    mkSq -= 0.5*self.shift['p']['mpi']**2 / self.shift['p']['Lam_'+self.FF]**2
+                    self.shift_xp['p']['mk']  = np.sqrt(mkSq)
                 elif p_type == 's':
                     self.shift_xp['p']['mpi'] = self.shift_xp['p']['mpi'] / self.shift_xp['p']['Lam_'+self.FF]
                     s_sq = (2*self.fitEnv.p[(a_ens,'mk')]**2 - self.fitEnv.p[(a_ens,'mpi')]**2) / self.fitEnv.p[(a_ens, 'Lam_'+self.FF)]**2
@@ -474,7 +484,7 @@ class ExtrapolationPlots:
         dy = (fL_ens['a12m220S'] - fL_ens['a12m220']) / (self.ax_fv.get_ylim()[1]-self.ax_fv.get_ylim()[0])
         angle = 180/np.pi * np.arctan(dy / dx / gr) # remember the golden ratio scaling
         self.ax_fv.text(x_text, y_text - 0.0003, \
-            r'a12m220: $\delta_{\rm FV}^{{\rm NLO}\ \chi{\rm PT}}(\epsilon_\pi^2, m_\pi L)$', \
+            r'a12m220: $\delta_{\rm FV}^{{\rm N^2LO}\ \chi{\rm PT}}(\epsilon_\pi^2, m_\pi L)$', \
             horizontalalignment='center', verticalalignment='center', \
             rotation=angle, fontsize=fs_text-1)
 
