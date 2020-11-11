@@ -35,6 +35,8 @@ dx_cont = {
     'a15m135XL':-0.0050,'a12m130' :-0.0050,'a09m135':-0.0050,
     'a12m220L' :-0.0037,'a12m220S':-0.0012,'a12m220ms':+0.0012, 'a15m310L'  :0., 'a12m180L':0.,
     }
+# for a06, use MILC physical pion mass value
+aw0_a06 = 1 / gv.gvar('3.0119(19)')
 
 def plot_l_s(data,switches,phys_point):
     if not os.path.exists('figures'):
@@ -152,7 +154,7 @@ class ExtrapolationPlots:
         self.shift_list = list(model_list)
         self.shift_fit  = chipt.FitModel(self.shift_list, _fv=False, _FF=self.FF)
         # which ensemble to get aw0 from
-        self.aw0_keys = {'a15':'a15m135XL','a12':'a12m130','a09':'a09m135','a06':'a06m310L'}
+        self.aw0_keys = {'a15':'a15m135XL','a12':'a12m130','a09':'a09m135'}
 
     def plot_vs_eps_asq(self,shift_points):
         self.shift_xp = copy.deepcopy(shift_points)
@@ -183,8 +185,8 @@ class ExtrapolationPlots:
 
         self.ax_cont.set_xlabel(r'$\epsilon_a^2 = a^2 / (2 w_0)^2$',fontsize=fs_text)
         self.ax_cont.set_ylabel(r'$w_0 m_\Omega$',fontsize=fs_text)
-        self.ax_cont.set_ylim(1.321, 1.471)
-        self.ax_cont.text(0.0175, 1.34, r'%s' %(self.model.replace('_','\_')),\
+        self.ax_cont.set_ylim(1.351, 1.559)
+        self.ax_cont.text(0.0175, 1.375, r'%s' %(self.model.replace('_','\_')),\
             horizontalalignment='left', verticalalignment='center', \
             fontsize=fs_text, bbox={'facecolor':'None','boxstyle':'round'})
         self.ax_cont.set_xlim(0,.21)
@@ -222,12 +224,12 @@ class ExtrapolationPlots:
         nnlo_fit  = chipt.FitModel(lo_lst+nlo_lst+nnlo_lst, _fv=False, _FF=self.FF)
         x_plot = []
         mpi_range = np.sqrt(np.arange(100, 411**2, 411**2/200))
-        ms_range  = np.sqrt(np.arange(500**2, 900**2, (900**2 - 500**2)/200))
-        m_range = {'l':mpi_range, 's':ms_range}
+        ms_range  = np.sqrt(np.arange(400**2, 900**2, (900**2 - 400**2)/200))
+        m_range   = {'l':mpi_range, 's':ms_range}
 
         for a_m in m_range[eps]:
-            x_plot.append(a_m**2 / self.shift_xp['p']['Lam_'+self.FF]**2)
             if eps == 'l':
+                x_plot.append(a_m**2 / self.shift_xp['p']['Lam_'+self.FF]**2)
                 self.shift_xp['p']['mpi'] = a_m
                 # the fitter builds m_ss^2 = 2mK^2 - mpi^2
                 # so we need to trick it by moving mK^2 away from the phys value
@@ -236,15 +238,22 @@ class ExtrapolationPlots:
                 mkSq -= 0.5*shift_points['p']['mpi']**2
                 self.shift_xp['p']['mk']  = np.sqrt(mkSq)
             elif eps == 's':
-                self.shift_xp['p']['mk']  = np.sqrt(0.5* (a_m**2 + (self.shift_xp['p']['mpi']/self.shift_xp['p']['Lam_'+self.FF])**2))
+                # for s, we shift the kaon mass
+                self.shift_xp['p']['mk']  = a_m
+                self.shift_xp['p']['mpi'] = shift_points['p']['mpi']
+                mssSq = 2 * a_m**2 - shift_points['p']['mpi']
+                x_plot.append(mssSq / self.shift_xp['p']['Lam_'+self.FF]**2)
             self.shift_xp['p']['aw0'] = 0
             y_plot['a00'].append(self.fitEnv._fit_function(self.shift_fit, self.shift_xp['x'], self.shift_xp['p']))
             y_conv['LO'].append(self.fitEnv._fit_function(lo_fit, self.shift_xp['x'], self.shift_xp['p']))
             y_conv['NLO'].append(self.fitEnv._fit_function(nlo_fit, self.shift_xp['x'], self.shift_xp['p']))
             y_conv['NNLO'].append(self.fitEnv._fit_function(nnlo_fit, self.shift_xp['x'], self.shift_xp['p']))
-            for aa in ['a15','a12','a09','a06']:
+            for aa in ['a15','a12','a09']:
                 self.shift_xp['p']['aw0'] = self.fitEnv.p[(self.aw0_keys[aa],'aw0')]
                 y_plot[aa].append(self.fitEnv._fit_function(self.shift_fit, self.shift_xp['x'], self.shift_xp['p']))
+            self.shift_xp['p']['aw0'] = aw0_a06
+            y_plot['a06'].append(self.fitEnv._fit_function(self.shift_fit, self.shift_xp['x'], self.shift_xp['p']))
+
         x = np.array([k.mean for k in x_plot])
         y  = dict()
         dy = dict()
@@ -266,6 +275,10 @@ class ExtrapolationPlots:
             ax_x.axvline(eps_pisq_phys.mean,linestyle='--',color='#a6aaa9')
             ax_x.axvspan(eps_pisq_phys.mean -eps_pisq_phys.sdev, eps_pisq_phys.mean +eps_pisq_phys.sdev,
                 alpha=0.4, color='#a6aaa9')
+            ax_x.text(0.016, 1.53, r'%s' %(self.model.replace('_','\_')),\
+                horizontalalignment='left', verticalalignment='center', \
+                fontsize=fs_text, bbox={'facecolor':'None','boxstyle':'round'})
+
         elif eps == 's':
             ax_x.axvline(eps_ssq_phys.mean,linestyle='--',color='#a6aaa9')
             ax_x.axvspan(eps_ssq_phys.mean -eps_ssq_phys.sdev, eps_ssq_phys.mean +eps_ssq_phys.sdev,
@@ -392,7 +405,10 @@ class ExtrapolationPlots:
                 if isinstance(k,str):# grab the LECs from the fit results
                     og_priors[k] = self.fit_result.p[k]    # the LECs of the fit
             aa = a_ens[0:3]
-            self.shift_xp['p']['aw0'] = self.fitEnv.p[(self.aw0_keys[aa],'aw0')]
+            if aa != 'a06':
+                self.shift_xp['p']['aw0'] = self.fitEnv.p[(self.aw0_keys[aa],'aw0')]
+            else:
+                self.shift_xp['p']['aw0'] = aw0_a06
             self.shift_xp['x']['alphaS'] = self.fitEnv.x[a_ens]['alphaS']
             if p_type in ['l','s']:
                 if p_type == 'l':
@@ -402,9 +418,12 @@ class ExtrapolationPlots:
                     mkSq -= 0.5*self.shift['p']['mpi']**2 / self.shift['p']['Lam_'+self.FF]**2
                     self.shift_xp['p']['mk']  = np.sqrt(mkSq)
                 elif p_type == 's':
-                    self.shift_xp['p']['mpi'] = self.shift_xp['p']['mpi'] / self.shift_xp['p']['Lam_'+self.FF]
-                    s_sq = (2*self.fitEnv.p[(a_ens,'mk')]**2 - self.fitEnv.p[(a_ens,'mpi')]**2) / self.fitEnv.p[(a_ens, 'Lam_'+self.FF)]**2
-                    self.shift_xp['p']['mk']  = np.sqrt(0.5*(s_sq + self.shift_xp['p']['mpi']**2))
+                    self.shift_xp['p']['mpi'] = self.shift['p']['mpi'] / self.shift['p']['Lam_'+self.FF]
+                    mkSq  = (self.fitEnv.p[(a_ens,'mk')] / self.fitEnv.p[(a_ens, 'Lam_'+self.FF)])**2
+                    mkSq -= 0.5*(self.fitEnv.p[(a_ens,'mpi')] / self.fitEnv.p[(a_ens, 'Lam_'+self.FF)])**2
+                    mkSq += 0.5*self.shift_xp['p']['mpi']**2
+                    self.shift_xp['p']['mk']  = self.fitEnv.p[(a_ens,'mk')] / self.fitEnv.p[(a_ens, 'Lam_'+self.FF)]
+                    self.shift_xp['p']['mk'] = np.sqrt(mkSq)
                 self.shift_xp['p']['Lam_'+self.FF] = 1
             og_y    = self.fitEnv._fit_function(self.og_fit,    self.fitEnv.x[a_ens], og_priors)
             shift_y = self.fitEnv._fit_function(self.shift_fit, self.shift_xp['x'],   self.shift_xp['p'])

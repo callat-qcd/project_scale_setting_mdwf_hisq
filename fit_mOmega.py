@@ -135,10 +135,10 @@ def main():
             if switches['make_extrap'] or switches['make_fv']:
                 plots = plotting.ExtrapolationPlots(model, model_list, fitEnv, fit_result, switches)
             if switches['make_extrap']:
+                plots.plot_vs_eps_pi(phys_point,eps='l')
+                #plots.plot_vs_eps_pi(phys_point,eps='s')
                 if 'alphaS' not in model and 'ma' not in model:
                     plots.plot_vs_eps_asq(phys_point)
-                plots.plot_vs_eps_pi(phys_point,eps='l')
-                plots.plot_vs_eps_pi(phys_point,eps='s')
             if switches['make_fv']:
                 if 'xpt' in model and 'FV' in model and 'F' in model:
                     plots.plot_vs_ml()
