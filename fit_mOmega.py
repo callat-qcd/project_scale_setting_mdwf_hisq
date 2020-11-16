@@ -178,13 +178,15 @@ class FitEnv:
         self.pruned_x   = {ens : { k : v for k, v in xyp_dict['x'][ens].items()}
                                 for ens in self.ensembles}
         self.y          = xyp_dict['y']
+        self.y_w0       = {ens: xyp_dict['p'][(ens,'w0a')] for ens in self.ensembles}
         self.pruned_y   = {ens : xyp_dict['y'][ens] for ens in self.ensembles}
         required_params = model.get_required_parameters()
         self.p          = xyp_dict['p']
         self.pruned_p   = {(ens, k) : v for (ens, k), v in xyp_dict['p'].items()
                                 if k in required_params and ens in self.ensembles}
         self.model      = model
-
+        print('DEBUG:',self.y_w0 )
+        sys.exit()
     # create a callable function that acts on a single x and p (not all ensembles)
     @classmethod
     def _fit_function(cls, a_model, x, p):

@@ -43,6 +43,10 @@ def format_h5_data(data_path, switches):
         except Exception as e:
             print(e)
 
+        if ens == 'a06m310L' and switches['reweight']:
+            for q in ['mpi','mk', 'm_omega']:
+                data_dict[q] = data.get_node('/'+ens+'/'+q+'_reweight').read()
+
         if ens == 'a06m310L' and switches['deflate_a06']:
             print('deflating %s uncertainty' %ens)
             print(data_dict['m_omega'].shape)

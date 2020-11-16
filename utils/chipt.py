@@ -7,20 +7,9 @@ import warnings # supress divide by zero warning in fakeData determination of te
 import scipy.special as spsp # Bessel functions
 import gvar as gv
 
-@functools.lru_cache(maxsize=lru_cache_size)
-def chironFF(aFloat):
-    return chiron.FF(aFloat)
-
-def FF(x):
-    if isinstance(x, gv.GVar):
-        f = chironFF(x.mean)
-        stepSize = 1e-7# * chiron.FF(x.mean)
-        dfdx = 0.5*(chiron.FF(x.mean+stepSize) - chiron.FF(x.mean-stepSize))/stepSize
-        return gv.gvar_function(x, f, dfdx)
-    else:
-        return chiron.FF(x)
-
 pi = np.pi
+
+#@functools.lru_cache(maxsize=lru_cache_size)
 
 '''
 lazily evaluated dictionary that will compute convenience observables
@@ -156,3 +145,9 @@ class FitModel:
         # note - Ip = p2 * log(p2)
         #        p2 * Ip**2 = p2**3 * log(p2)**2
         return p['c_llln2'] * cP['p2'] * cP['Ip']**2 + p['c_llln'] * cP['p2']**2 * cP['Ip']
+
+    def w0_a15_lo(self, x,p,cP):
+        return p['w0_a15_0']
+
+    def w0_a15_nlo(self, x,p,CP):
+        return p['w0_a15_0'] * p['k_l'] * cP['p2']

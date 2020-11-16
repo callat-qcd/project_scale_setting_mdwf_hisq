@@ -34,7 +34,7 @@ switches['w0'] = 'callat' # or milc
 
 # SYSTEMATIC SWITCHES
 switches['sys'] = dict()     # these cause the fitter to loop over various options
-switches['sys']['Lam_chi']   = True # FF = F, O
+switches['sys']['Lam_chi']   = False # FF = F, O
 switches['sys']['alphaS']    = False # include alphaS at NNLO?
 # OLDER SYSTEMATICS - still work, but not used
 switches['sys']['FV']        = False # turn on/off FV corrections
@@ -45,16 +45,17 @@ switches['scale']            = 'F' # PP, PK, KK, LamChi = 4 * pi * sqrt(FA * FB)
 switches['print_lattice']    = False # print data for paper - not fitting will occur
 
 # Fitting options
-switches['deflate_a06']      = False
+switches['reweight']          = False
+switches['deflate_a06']       = False
 switches['deflate_a12m220ms'] = False
-switches['bs_bias']          = True  # shift bs avg to b0?
-switches['print_fit']        = True # print lsqfit results?
-switches['report_phys']      = True  # report physical point for each fit?
-switches['save_fits']        = False  # save fits in pickle file?
-switches['model_avg']        = True # perform Bayes Model Avg
-switches['prior_search']     = False # perform a crude grid search to optimize
-switches['prior_verbose']    = False # NNLO and NNNLO prior widths
-switches['scipy']            = True # use scipy minimizer instead of gsl?
+switches['bs_bias']           = True  # shift bs avg to b0?
+switches['print_fit']         = True # print lsqfit results?
+switches['report_phys']       = True  # report physical point for each fit?
+switches['save_fits']         = False  # save fits in pickle file?
+switches['model_avg']         = True # perform Bayes Model Avg
+switches['prior_search']      = False # perform a crude grid search to optimize
+switches['prior_verbose']     = False # NNLO and NNNLO prior widths
+switches['scipy']             = True # use scipy minimizer instead of gsl?
 
 switches['check_fit']        = False # print pieces of fit function - no fitting will occur
 
@@ -74,15 +75,15 @@ switches['debug_bs']         = False # debug shape of bs lists
 
 # Taylor priors - beyond NLO - use "XPT" NiLO priors
 priors = dict()
-priors['c0']   = gv.gvar(1.,0.5)
+priors['c0']   = gv.gvar(1.5,1)
 priors['t_fv'] = gv.gvar(0,100)
 
-lo_x = 2
-lo_a = 2
-priors['c_l'] = gv.gvar(0.1,lo_x)
-priors['c_s'] = gv.gvar(0.1,lo_x)
-priors['d_2'] = gv.gvar(0.1,lo_a)
-priors['daS_2'] = gv.gvar(0.1,lo_a)
+lo_x = 1
+lo_a = 1
+priors['c_l'] = gv.gvar(1,lo_x)
+priors['c_s'] = gv.gvar(1,lo_x)
+priors['d_2'] = gv.gvar(-0.5,lo_a)
+priors['daS_2'] = gv.gvar(0,lo_a)
 
 nlo_x = 1
 nlo_a = 1
