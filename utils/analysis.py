@@ -280,6 +280,21 @@ def gather_model_elements(model):
 
     return model_elements, FF, fv
 
+def gather_w0_elements(model):
+    aa     = model.split('_')[-1]
+    order  = model.split('_')[1]
+    fv     = 'FV' in model
+    FF     = 'F'
+    alphaS = 'alphaS' in model
+
+    if aa == 'all':
+        aa_lst = ['a15','a12','a09','a06']
+    else:
+        aa_lst = [aa]
+    model_elements = ['w0_lo','w0_nlo']
+
+    return model_elements, FF, fv, aa_lst
+
 def prior_width_scan(model, fitEnv, fit_model, priors, switches):
     new_priors = dict(priors)
     p1_vals = [0.5, 1, 1.5, 2, 5]

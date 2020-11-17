@@ -146,8 +146,10 @@ class FitModel:
         #        p2 * Ip**2 = p2**3 * log(p2)**2
         return p['c_llln2'] * cP['p2'] * cP['Ip']**2 + p['c_llln'] * cP['p2']**2 * cP['Ip']
 
-    def w0_a15_lo(self, x,p,cP):
-        return p['w0_a15_0']
+    ''' w0/a extrapolation functions
+    '''
+    def w0_lo(self, x,p,cP):
+        return p['w0_0']
 
-    def w0_a15_nlo(self, x,p,CP):
-        return p['w0_a15_0'] * p['k_l'] * cP['p2']
+    def w0_nlo(self, x,p,cP):
+        return p['w0_0'] * (p['k_l'] * cP['p2'] + p['k_s'] * cP['s2'])

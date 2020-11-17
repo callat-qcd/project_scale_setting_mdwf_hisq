@@ -60,8 +60,8 @@ switches['scipy']             = True # use scipy minimizer instead of gsl?
 switches['check_fit']        = False # print pieces of fit function - no fitting will occur
 
 # Plotting options
-switches['save_figs']        = True  # save figures
-switches['make_extrap']      = True # make plots
+switches['save_figs']        = False  # save figures
+switches['make_extrap']      = False # make plots
 switches['make_hist']        = False # make plots
 switches['make_fv']          = False
 switches['plot_ls']          = False # report fitted Li values
@@ -109,6 +109,18 @@ priors['d_s6']    = gv.gvar(0., nnlo_a)
 priors['d_ll6']   = gv.gvar(0., nnlo_a)
 priors['d_ls6']   = gv.gvar(0., nnlo_a)
 priors['d_ss6']   = gv.gvar(0., nnlo_a)
+
+
+priors[('a15','w0_0')] = gv.gvar(1.15,.2)
+priors[('a12','w0_0')] = gv.gvar(1.5,.2)
+priors[('a09','w0_0')] = gv.gvar(1.95,.2)
+priors[('a06','w0_0')] = gv.gvar(3.0,.2)
+
+priors['k_l'] = gv.gvar(0,1)
+priors['k_s'] = gv.gvar(0,1)
+
+#priors['k_l'] = gv.gvar(0,100)
+#priors['k_s'] = gv.gvar(0,100)
 
 
 ''' Physical point extrapolation
