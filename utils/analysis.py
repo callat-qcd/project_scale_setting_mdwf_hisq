@@ -293,6 +293,14 @@ def gather_w0_elements(model):
         aa_lst = [aa]
     model_elements = ['w0_lo','w0_nlo']
 
+    if aa == 'all':
+        model_elements += ['w0_nlo_a']
+
+    if order in ['nnlo', 'nnnlo']:
+        model_elements += ['w0_nnlo']
+        if aa == 'all':
+            model_elements += ['w0_nnlo_a']
+
     return model_elements, FF, fv, aa_lst
 
 def prior_width_scan(model, fitEnv, fit_model, priors, switches):

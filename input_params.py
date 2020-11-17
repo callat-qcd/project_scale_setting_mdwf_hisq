@@ -119,8 +119,13 @@ priors[('a06','w0_0')] = gv.gvar(3.0,.2)
 priors['k_l'] = gv.gvar(0,1)
 priors['k_s'] = gv.gvar(0,1)
 
-#priors['k_l'] = gv.gvar(0,100)
-#priors['k_s'] = gv.gvar(0,100)
+priors['k_ll']  = gv.gvar(0,1)
+priors['k_lln'] = gv.gvar(0,1)
+priors['k_ls']  = gv.gvar(0,1)
+priors['k_ss']  = gv.gvar(0,1)
+
+priors['k_la'] = gv.gvar(0,1)
+priors['k_sa'] = gv.gvar(0,1)
 
 
 ''' Physical point extrapolation

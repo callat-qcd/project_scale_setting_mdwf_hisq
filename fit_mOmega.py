@@ -86,8 +86,26 @@ def main():
         w0_results  = dict()
 
         if True:
-            model_list, FF, fv, aa = analysis.gather_w0_elements('w0_nlo_all')
+            model_list, FF, fv, aa = analysis.gather_w0_elements('w0_nnlo_all')
             fit_model  = chipt.FitModel(model_list, _fv=fv, _FF=FF)
+            switches['w0_aa_lst'] = aa
+            fitEnv     = FitEnv(gv_data, fit_model, switches)
+            tmp_w0_result = fitEnv.fit_w0(priors)
+            phys_data = copy.deepcopy(phys_point)
+            for k in tmp_w0_result.p:
+                if isinstance(k,str):
+                    phys_data['p'][k] = tmp_w0_result.p[k]
+            tmp_w0_result.phys = dict()
+            aw0_keys = {'a15':'a15m135XL','a12':'a12m130','a09':'a09m135'}
+            for a in aa:
+                phys_data['p']['w0_0'] = tmp_w0_result.p[(a,'w0_0')]
+                if a in ['a15','a12','a09']:
+                    phys_data['p']['aw0'] = tmp_w0_result.p[(aw0_keys[a],'aw0')]
+                else:
+                    phys_data['p']['aw0'] = 1 / gv.gvar('3.0119(19)')
+                tmp_w0_result.phys['w0_a_'+a] = FitEnv._w0_function(fit_model, phys_data['x'], phys_data['p'])
+            w0_results['all'] = tmp_w0_result
+            '''
             for a in aa:
                 switches['w0_aa_lst'] = [a]
                 fitEnv     = FitEnv(gv_data, fit_model, switches)
@@ -100,7 +118,7 @@ def main():
                 phys_data['p']['w0_0'] = tmp_w0_result.p[(a,'w0_0')]
                 tmp_w0_result.phys['w0_'+a] = FitEnv._w0_function(fit_model, phys_data['x'], phys_data['p'])
                 w0_results[a] = tmp_w0_result
-
+            '''
         plt.ion()
         for model in models:
             print('===============================================================')
@@ -146,7 +164,8 @@ def main():
             report_phys_point(fit_result, phys_point, model_list, FF, report=switches['report_phys'])
             print('DEBUG: correlation between w0/a and w0_mO')
             for a in aa:
-                print("%s = %s fm" %(a,fit_result.phys['w0'] / w0_results[a].phys['w0_'+a]))
+                print("%s = %s fm" %(a,fit_result.phys['w0'] / w0_results['all'].phys['w0_a_'+a]))
+            print(w0_results['all'])
             fit_results[model] = fit_result
             if switches['save_fits']:
                 gv.dump(fit_result, pickled_fit, add_dependencies=True)
