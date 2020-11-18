@@ -154,19 +154,30 @@ class FitModel:
     def w0_nlo(self, x,p,cP):
         return p['w0_0'] * (p['k_l'] * cP['p2'] + p['k_s'] * cP['s2'])
 
+    def w0_nlo_a0(self, x, p, cP):
+        return p['w0_0'] /(2 * p['w0_0'])**2
+
     def w0_nlo_a(self, x, p, cP):
         return p['w0_0'] * cP['a2']
 
     def w0_nnlo(self, x, p, cP):
-        a_result  = p['w0_0'] * p['k_ll'] * cP['p2']**2
-        a_result += p['w0_0'] * p['k_ls'] * cP['p2']*cP['s2']
-        a_result += p['w0_0'] * p['k_ss'] * cP['s2']**2
+        a_result  = p['w0_0'] * p['k_ll']  * cP['p2']**2
+        a_result += p['w0_0'] * p['k_ls']  * cP['p2']*cP['s2']
+        a_result += p['w0_0'] * p['k_ss']  * cP['s2']**2
         a_result += p['w0_0'] * p['k_lln'] * cP['p2']**2 * cP['Ip']
 
         return a_result
 
+    def w0_nnlo_a0(self, x, p, cP):
+        a_result  = p['w0_0'] * p['k_aa'] / (2*p['w0_0'])**4
+        a_result += p['w0_0'] * p['k_la'] * cP['p2'] / (2*p['w0_0'])**2
+        a_result += p['w0_0'] * p['k_sa'] * cP['s2'] / (2*p['w0_0'])**2
+
+        return a_result
+
     def w0_nnlo_a(self, x, p, cP):
-        a_result  = p['w0_0'] * p['k_la'] * cP['p2'] * cP['a2']
-        a_result += p['w0_0'] * p['k_la'] * cP['s2'] * cP['a2']
+        a_result  = p['w0_0'] * p['k_aa'] * cP['a2']**2
+        a_result += p['w0_0'] * p['k_la'] * cP['p2'] * cP['a2']
+        a_result += p['w0_0'] * p['k_sa'] * cP['s2'] * cP['a2']
 
         return a_result

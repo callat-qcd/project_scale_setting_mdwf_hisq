@@ -283,6 +283,7 @@ def gather_model_elements(model):
 def gather_w0_elements(model):
     aa     = model.split('_')[-1]
     order  = model.split('_')[1]
+    a0     = 'a0' in model
     fv     = 'FV' in model
     FF     = 'F'
     alphaS = 'alphaS' in model
@@ -294,12 +295,18 @@ def gather_w0_elements(model):
     model_elements = ['w0_lo','w0_nlo']
 
     if aa == 'all':
-        model_elements += ['w0_nlo_a']
+        if a0:
+            model_elements += ['w0_nlo_a0']
+        else:
+            model_elements += ['w0_nlo_a']
 
     if order in ['nnlo', 'nnnlo']:
         model_elements += ['w0_nnlo']
         if aa == 'all':
-            model_elements += ['w0_nnlo_a']
+            if a0:
+                model_elements += ['w0_nnlo_a0']
+            else:
+                model_elements += ['w0_nnlo_a']
 
     return model_elements, FF, fv, aa_lst
 

@@ -86,11 +86,13 @@ def main():
         w0_results  = dict()
 
         if True:
-            model_list, FF, fv, aa = analysis.gather_w0_elements('w0_nnlo_all')
+            model = 'w0_nnlo_a0_FV_all'
+            model_list, FF, fv, aa = analysis.gather_w0_elements(model)
             fit_model  = chipt.FitModel(model_list, _fv=fv, _FF=FF)
             switches['w0_aa_lst'] = aa
             fitEnv     = FitEnv(gv_data, fit_model, switches)
-            tmp_w0_result = fitEnv.fit_w0(priors)
+            p_copy = copy.deepcopy(priors)
+            tmp_w0_result = fitEnv.fit_w0(p_copy)
             phys_data = copy.deepcopy(phys_point)
             for k in tmp_w0_result.p:
                 if isinstance(k,str):
@@ -99,26 +101,41 @@ def main():
             aw0_keys = {'a15':'a15m135XL','a12':'a12m130','a09':'a09m135'}
             for a in aa:
                 phys_data['p']['w0_0'] = tmp_w0_result.p[(a,'w0_0')]
-                if a in ['a15','a12','a09']:
+                if a in ['a15','a12','a09'] and 'a0' not in model:
                     phys_data['p']['aw0'] = tmp_w0_result.p[(aw0_keys[a],'aw0')]
-                else:
+                elif a == 'a06' and 'a0' not in model:
                     phys_data['p']['aw0'] = 1 / gv.gvar('3.0119(19)')
-                tmp_w0_result.phys['w0_a_'+a] = FitEnv._w0_function(fit_model, phys_data['x'], phys_data['p'])
+                fit_model_tmp = chipt.FitModel(model_list, _fv=False, _FF=FF)
+                tmp_w0_result.phys['w0_a_'+a] = FitEnv._w0_function(fit_model_tmp, phys_data['x'], phys_data['p'])
+
             w0_results['all'] = tmp_w0_result
-            '''
-            for a in aa:
-                switches['w0_aa_lst'] = [a]
-                fitEnv     = FitEnv(gv_data, fit_model, switches)
-                tmp_w0_result = fitEnv.fit_w0(priors)
-                phys_data = copy.deepcopy(phys_point)
-                for k in tmp_w0_result.p:
-                    if isinstance(k,str):
-                        phys_data['p'][k] = tmp_w0_result.p[k]
-                tmp_w0_result.phys = dict()
-                phys_data['p']['w0_0'] = tmp_w0_result.p[(a,'w0_0')]
-                tmp_w0_result.phys['w0_'+a] = FitEnv._w0_function(fit_model, phys_data['x'], phys_data['p'])
-                w0_results[a] = tmp_w0_result
-            '''
+            if 'a0' in model:
+                plt.ion()
+                plotting.plot_w0(model, model_list, fitEnv, tmp_w0_result, switches, phys_data)
+                plt.ioff()
+                plt.show()
+            if True: # if do individual also
+                for a in aa:
+                    model_a = model.replace('all',a)
+                    model_list, FF, fv, a_a = analysis.gather_w0_elements(model_a)
+                    print(a,model_list)
+                    switches['w0_aa_lst'] = a_a
+                    fit_model  = chipt.FitModel(model_list, _fv=fv, _FF=FF)
+                    fitEnv     = FitEnv(gv_data, fit_model, switches)
+                    p_copy = copy.deepcopy(priors)
+                    tmp_w0_result = fitEnv.fit_w0(p_copy)
+                    phys_data = copy.deepcopy(phys_point)
+                    for k in tmp_w0_result.p:
+                        if isinstance(k,str):
+                            phys_data['p'][k] = tmp_w0_result.p[k]
+                    tmp_w0_result.phys = dict()
+                    phys_data['p']['w0_0'] = tmp_w0_result.p[(a,'w0_0')]
+                    fit_model_tmp = chipt.FitModel(model_list, _fv=False, _FF=FF)
+                    tmp_w0_result.phys['w0_'+a] = FitEnv._w0_function(fit_model_tmp, phys_data['x'], phys_data['p'])
+                    w0_results[a] = tmp_w0_result
+                switches['w0_aa_lst'] = aa
+
+
         plt.ion()
         for model in models:
             print('===============================================================')
@@ -162,10 +179,15 @@ def main():
             fit_result.phys_point.update({k:v for k,v in phys_point['p'].items() if ('Lchi' in k) or k in ['mpi','mk','mkp']})
             fit_result.ensembles_fit = switches['ensembles_fit']
             report_phys_point(fit_result, phys_point, model_list, FF, report=switches['report_phys'])
-            print('DEBUG: correlation between w0/a and w0_mO')
+            print(w0_results['all'].format(maxline=True))
+            print('---------------------------------------')
+            print('a        global         individual     ')
+            print('---------------------------------------')
             for a in aa:
-                print("%s = %s fm" %(a,fit_result.phys['w0'] / w0_results['all'].phys['w0_a_'+a]))
-            print(w0_results['all'])
+                print("%s = %11s fm  %11s fm" %(a, \
+                    fit_result.phys['w0'] / w0_results['all'].phys['w0_a_'+a],
+                    fit_result.phys['w0'] / w0_results[a].phys['w0_'+a]))
+            print('---------------------------------------')
             fit_results[model] = fit_result
             if switches['save_fits']:
                 gv.dump(fit_result, pickled_fit, add_dependencies=True)
@@ -287,10 +309,6 @@ class FitEnv:
         x = self.pruned_x
         y = {k:v for k,v in self.y_w0.items() for aa in self.switches['w0_aa_lst'] if aa in k}
         p = self.pruned_p
-        for k in self.w0_function(x,p):
-            print(k, self.w0_function(x,p)[k])
-        #print(p)
-        #sys.exit()
         if self.switches['scipy']:
             fitter='scipy_least_squares'
         else:
