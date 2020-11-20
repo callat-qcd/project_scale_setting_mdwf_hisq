@@ -22,7 +22,7 @@ switches['ensembles_fit'] = [
 
 # FIT MODELS
 switches['ansatz'] = dict()
-switches['ansatz']['models'] = ['xpt_nnlo_FV']#,'xpt_nnlo_FV']#,'xpt_nnlo']
+switches['ansatz']['models'] = ['xpt_nnlo_FV','taylor_nnlo_FV']#,'xpt_nnlo_FV']#,'xpt_nnlo']
 '''
     The full list of models can be rather long.  The sys switches help loop
     over them.  Example other base models are
@@ -35,21 +35,25 @@ switches['w0'] = 'callat' # or milc
 # SYSTEMATIC SWITCHES
 switches['sys'] = dict()     # these cause the fitter to loop over various options
 switches['sys']['Lam_chi']   = False # FF = F, O
-switches['sys']['alphaS']    = False # include alphaS at NNLO?
+switches['sys']['alphaS']    = False # include alphaS at NLO?
+switches['scales']           = ['F','O']
 # OLDER SYSTEMATICS - still work, but not used
 switches['sys']['FV']        = False # turn on/off FV corrections
-switches['scales']           = ['F','O']
                                # scale is used when the loop over scales is not triggered
-switches['scale']            = 'F' # PP, PK, KK, LamChi = 4 * pi * sqrt(FA * FB)
+switches['scale']            = 'F' # F: Lam = 4pi Fpi; O: Lam = m_O
 
-switches['print_lattice']    = False # print data for paper - not fitting will occur
+switches['print_lattice']    = False # print data for paper - no fitting will occur
 
 # Fitting options
+switches['w0_interpolate']    = True
+switches['w0_a_model']        = 'w0_nnlo_a0_FV_all' # w0_nnlo_a0_FV_all, w0_nnlo_FV_all
+switches['print_w0_interp']   = False
 switches['reweight']          = False
 switches['deflate_a06']       = False
+switches['deflate_a09']       = False
 switches['deflate_a12m220ms'] = False
 switches['bs_bias']           = True  # shift bs avg to b0?
-switches['print_fit']         = True # print lsqfit results?
+switches['print_fit']         = False # print lsqfit results?
 switches['report_phys']       = True  # report physical point for each fit?
 switches['save_fits']         = False  # save fits in pickle file?
 switches['model_avg']         = True # perform Bayes Model Avg
@@ -62,6 +66,7 @@ switches['check_fit']        = False # print pieces of fit function - no fitting
 # Plotting options
 switches['save_figs']        = True  # save figures
 switches['make_extrap']      = False # make plots
+switches['make_interp']      = False
 switches['make_hist']        = False # make plots
 switches['make_fv']          = False
 switches['plot_ls']          = False # report fitted Li values
@@ -111,13 +116,14 @@ priors['d_ls6']   = gv.gvar(0., nnlo_a)
 priors['d_ss6']   = gv.gvar(0., nnlo_a)
 
 
-priors[('a15','w0_0')] = gv.gvar(1.1,.5)
-priors[('a12','w0_0')] = gv.gvar(1.5,.5)
-priors[('a09','w0_0')] = gv.gvar(1.95,.5)
-priors[('a06','w0_0')] = gv.gvar(3.0,.5)
+priors[('a15','w0_0')] = gv.gvar(1.0,1)
+priors[('a12','w0_0')] = gv.gvar(1.5,1)
+priors[('a09','w0_0')] = gv.gvar(2.0,1)
+priors[('a06','w0_0')] = gv.gvar(3.0,1)
 
 priors['k_l'] = gv.gvar(0,2)
 priors['k_s'] = gv.gvar(0,2)
+priors['k_a'] = gv.gvar(2,2)
 
 priors['k_ll']  = gv.gvar(0,2)
 priors['k_lln'] = gv.gvar(0,2)
@@ -147,6 +153,7 @@ phys_point = {
         'mpi'     : gv.gvar(134.8, 0.3), #FLAG 2017 (16)
         'mk'      : gv.gvar(494.2, 0.3), #FLAG 2017 (16) isospin symmetric
         'm_omega' : m_omega_phys,
+        'hbar_c'  : 197.327,
         'mk+'     : gv.gvar(491.2, 0.5), #FLAG 2017 (15) strong isospin breaking only
         'mk0'     : gv.gvar(497.2, 0.4), #FLAG 2017 (15) strong isospin breaking only
         'aw0'     : gv.gvar(0,0),

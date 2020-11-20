@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+import matplotlib as mpl
 import matplotlib.pyplot as plt
 import numpy as np
 from scipy.optimize import minimize_scalar
@@ -22,14 +23,29 @@ mrk_size  = '5' # marker size
 tick_size = 20 # tick size
 lw        = 1 # line width
 
-colors = {'a15':'#ec5d57', 'a12':'#70bf41', 'a09':'#51a7f9', 'a06':'#00FFFF'}
+colors = {'a15':'#ec5d57', 'a12':'#70bf41', 'a09':'#51a7f9', 'a06':'#6a5acd'}
+
+def colorFader(c1,c2,mix=0):
+    ''' fade (linear interpolate) from color c1 (at mix=0) to c2 (mix=1)
+        taken from Markus Dutschke answer at stack overflow
+        https://stackoverflow.com/questions/25668828/how-to-create-colour-gradient-in-python
+    '''
+    c1=np.array(mpl.colors.to_rgb(c1))
+    c2=np.array(mpl.colors.to_rgb(c2))
+    return mpl.colors.to_hex((1-mix)*c1 + mix*c2)
+
 shapes = {'m400':'h', 'm350':'p', 'm310':'s', 'm220':'^', 'm180':'d', 'm130':'o', 'm135':'*'}
-labels = {
-    'a15m400' :'', 'a15m350':'', 'a15m310':'a15', 'a15m220':'','a15m135XL':'',
-    'a12m400' :'', 'a12m350':'', 'a12m310':'a12', 'a12m220':'', 'a12m130':'',
-    'a12m220L':'', 'a12m220S':'','a12m220ms':'',  'a15m310L':'', 'a12m180L':'',
-    'a09m400' :'', 'a09m350':'', 'a09m310':'a09', 'a09m220':'', 'a09m135':'',
-    'a06m310L':'a06',
+l_labels = {
+    'a15m310' :r'$a_{15}(l_F,s_F^{\rm phys})$',
+    'a12m310' :r'$a_{12}(l_F,s_F^{\rm phys})$',
+    'a09m310' :r'$a_{09}(l_F,s_F^{\rm phys})$',
+    'a06m310L':r'$a_{06}(l_F,s_F^{\rm phys})$',
+    }
+eps_a_labels = {
+    'a15m310' :r'$a_{15}(l_F^{\rm phys},s_F^{\rm phys})$',
+    'a12m310' :r'$a_{12}(l_F^{\rm phys},s_F^{\rm phys})$',
+    'a09m310' :r'$a_{09}(l_F^{\rm phys},s_F^{\rm phys})$',
+    'a06m310L':r'$a_{06}(l_F^{\rm phys},s_F^{\rm phys})$',
     }
 dx_cont = {
     'a15m400'  :0.0050, 'a12m400' :0.0050, 'a09m400':0.0050,
@@ -166,24 +182,44 @@ class ExtrapolationPlots:
         y_plot = []
         x_plot = []
         a_range = np.sqrt(np.arange(0, .16**2, .16**2 / 50))
-        for a_fm in a_range:
-            self.shift_xp['p']['aw0'] = a_fm / self.shift_xp['p']['w0']
-            x_plot.append((self.shift_xp['p']['aw0'] / 2)**2)
+        eps_aSq_range = np.arange(0,.21,.21/500)
+        for aa in eps_aSq_range:
+            #self.shift_xp['p']['aw0'] = a_fm / self.shift_xp['p']['w0']
+            #x_plot.append((self.shift_xp['p']['aw0'] / 2)**2)
+            self.shift_xp['p']['aw0'] = gv.gvar(2,0)*np.sqrt(aa)
+            x_plot.append(gv.gvar(aa,0))
             y_a = self.fitEnv._fit_function(self.shift_fit, self.shift_xp['x'], self.shift_xp['p'])
             y_plot.append(y_a)
         x  = np.array([k.mean for k in x_plot])
+        i06 = np.where(x > ((self.fitEnv.p[('a06m310L', 'aw0')] / 2)**2).mean)[0][0]
+        i09 = np.where(x > ((self.fitEnv.p[('a09m310',  'aw0')] / 2)**2).mean)[0][0]
+        i12 = np.where(x > ((self.fitEnv.p[('a12m310',  'aw0')] / 2)**2).mean)[0][0]
+        i15 = np.where(x > ((self.fitEnv.p[('a15m400',  'aw0')] / 2)**2).mean)[0][0]
         y  = np.array([k.mean for k in y_plot])
         dy = np.array([k.sdev for k in y_plot])
 
         figsize = fig_size
         self.fig_cont = plt.figure('w0_mO_vs_ea_'+self.model,figsize=figsize)
         self.ax_cont  = plt.axes(plt_axes)
-        self.ax_cont.fill_between(x, y-dy, y+dy, color='#b36ae2', alpha=0.4)
+        #self.ax_cont.fill_between(x, y-dy, y+dy, facecolor='None',edgecolor='k', hatch='\\')
+
+        for i in range(i06):
+            self.ax_cont.fill_between(x[i:i+2], (y-dy)[i:i+2], (y+dy)[i:i+2],
+                color=colorFader('k','#6a5acd',i/i06),alpha=.3)
+        for ii,i in enumerate(range(i06,i09)):
+            self.ax_cont.fill_between(x[i:i+2], (y-dy)[i:i+2], (y+dy)[i:i+2],
+                color=colorFader('#6a5acd','#51a7f9',ii/(i09-i06)),alpha=.3)
+        for ii,i in enumerate(range(i09,i12)):
+            self.ax_cont.fill_between(x[i:i+2], (y-dy)[i:i+2], (y+dy)[i:i+2],
+                color=colorFader('#51a7f9','#70bf41',ii/(i12-i09)),alpha=.3)
+        for ii,i in enumerate(range(i12,i15)):
+            self.ax_cont.fill_between(x[i:i+2], (y-dy)[i:i+2], (y+dy)[i:i+2],
+                color=colorFader('#70bf41','#ec5d57',ii/(i15-i12)),alpha=.3)
 
         self.plot_data(p_type='ea', ax=self.ax_cont)
         handles, labels = self.ax_cont.get_legend_handles_labels()
         labels, handles = zip(*sorted(zip(labels, handles), key=lambda t: t[0]))
-        self.ax_cont.legend(handles, labels, ncol=4, fontsize=fs_leg)
+        self.ax_cont.legend(handles, labels, ncol=2, columnspacing=0, handletextpad=0.1, fontsize=fs_leg)
 
         self.ax_cont.set_xlabel(r'$\epsilon_a^2 = a^2 / (2 w_0)^2$',fontsize=fs_text)
         self.ax_cont.set_ylabel(r'$w_0 m_\Omega$',fontsize=fs_text)
@@ -268,18 +304,23 @@ class ExtrapolationPlots:
         fig_name = 'w0_mO_vs_'+eps+'_'+self.model
         fig_x      = plt.figure(fig_name, figsize=fig_size)
         ax_x  = plt.axes(plt_axes)
-        ax_x.fill_between(x, y['a00']-dy['a00'], y['a00']+dy['a00'], color='#b36ae2',alpha=0.4)
+        ax_x.fill_between(x, y['a00']-dy['a00'], y['a00']+dy['a00'],
+            #facecolor='None',edgecolor='#b36ae2',hatch='/')
+            facecolor='None',edgecolor='k',hatch='/')
         for aa in ['a15','a12','a09','a06']:
-            ax_x.plot(x, y[aa], color=colors[aa])
+            ax_x.fill_between(x, y[aa]-dy[aa], y[aa]+dy[aa],
+                color=colors[aa],alpha=.3)
+            #ax_x.plot(x, y[aa], color=colors[aa])
 
         # plot physical eps_pi**2
         if eps == 'l':
             ax_x.axvline(eps_pisq_phys.mean,linestyle='--',color='#a6aaa9')
             ax_x.axvspan(eps_pisq_phys.mean -eps_pisq_phys.sdev, eps_pisq_phys.mean +eps_pisq_phys.sdev,
                 alpha=0.4, color='#a6aaa9')
-            ax_x.text(0.016, 1.53, r'%s' %(self.model.replace('_','\_')),\
+            ax_x.text(0.06, 1.375, r'%s' %(self.model.replace('_','\_')),\
                 horizontalalignment='left', verticalalignment='center', \
                 fontsize=fs_text, bbox={'facecolor':'None','boxstyle':'round'})
+
 
         elif eps == 's':
             ax_x.axvline(eps_ssq_phys.mean,linestyle='--',color='#a6aaa9')
@@ -291,12 +332,12 @@ class ExtrapolationPlots:
         labels, handles = zip(*sorted(zip(labels, handles), key=lambda t: t[0]))
         if self.FF == 'F':
             if eps == 'l':
-                loc=4
+                loc=2
             elif eps == 's':
                 loc=2
         else:
             loc=1
-        ax_x.legend(handles, labels, loc=loc, ncol=2, fontsize=fs_leg)
+        ax_x.legend(handles, labels, loc=loc, ncol=2, columnspacing=0, handletextpad=0.1, fontsize=fs_leg)
 
         # labels
         if eps == 'l':
@@ -309,9 +350,6 @@ class ExtrapolationPlots:
         ax_x.set_xlim(xlim_FF[self.FF])
         ax_x.set_ylabel(r'$w_0 m_\Omega$',fontsize=fs_text)
         ax_x.set_ylim(1.351, 1.559)
-        ax_x.text(0.0175, 1.3, r'%s' %(self.model.replace('_','\_')),\
-            horizontalalignment='left', verticalalignment='center', \
-            fontsize=fs_text, bbox={'facecolor':'None','boxstyle':'round'})
 
         if self.switches['save_figs']:
             plt.savefig('figures/'+fig_name+'.pdf',transparent=True)
@@ -351,6 +389,7 @@ class ExtrapolationPlots:
     def plot_data(self, p_type, ax, offset=False, raw=False):
         y_shift = self.shift_data(p_type=p_type)
         for a_ens in self.switches['ensembles']:
+            label = ''
             if a_ens in self.switches['ensembles_fit']:
                 c = colors[a_ens.split('m')[0]]
                 alpha = 1
@@ -368,14 +407,14 @@ class ExtrapolationPlots:
                 x  = 2*(self.fitEnv.p[(a_ens, 'mk')]/self.fitEnv.p[(a_ens, 'Lam_'+self.FF)])**2
                 x += -(self.shift_xp['p']['mpi'] / self.shift_xp['p']['Lam_'+self.FF])**2
                 dx = 0
-            label = labels[a_ens]
-            if p_type == 'ea':
-                if a_ens in self.switches['ensembles_fit']:
-                    mfc = c
-                else:
-                    mfc = 'None'
-            elif p_type in ['l','s']:
+            if a_ens in self.switches['ensembles_fit']:
+                mfc = 'white'
+            else:
                 mfc = 'None'
+            if p_type == 'ea' and a_ens in eps_a_labels:
+                label = eps_a_labels[a_ens]
+            elif p_type in ['l','s'] and a_ens in l_labels:
+                label = l_labels[a_ens]
             y = self.fitEnv.y[a_ens] + y_shift[a_ens]
             if p_type == 'ea':
                 self.ax_cont.errorbar(x=x.mean+dx, y=y.mean,xerr=x.sdev, yerr=y.sdev,
@@ -538,9 +577,9 @@ def plot_w0(model, model_list, fitEnv, fit_result, switches, shift_point):
     mpi_range = np.sqrt(np.arange(100, 411**2, 411**2/100))
 
     fig = plt.figure('w0_a',figsize=fig_size2)
-    ylim = {'a15':(1.081,1.159), 'a12':(1.321,1.429), 'a09':(1.781,1.979), 'a06':(2.701,3.049)}
+    ylim = {'a15':(1.081,1.159), 'a12':(1.301,1.434), 'a09':(1.701,1.999), 'a06':(2.51,3.09)}
     for i_a, aa in enumerate(switches['w0_aa_lst']):
-        ax = plt.axes([0.1,.07+i_a*.2325,.895,.2325])
+        ax = plt.axes([0.1,.07+i_a*.232,.895,.232])
         # fit band
         shift_xp = copy.deepcopy(shift_point)
         shift_xp['p']['w0_0'] = fit_result.p[(aa,'w0_0')]
@@ -609,11 +648,11 @@ def plot_w0(model, model_list, fitEnv, fit_result, switches, shift_point):
         y  = [k.mean for k in y_og]
         dy = [k.sdev for k in y_og]
         ax.errorbar(x,y,yerr=dy, linestyle='None',
-            marker='o',c=colors[aa],mfc='None',label=r'$w_0 / a_{%s}(l_F,s_F)$' %aa[1:])
+            marker='o',c='k',mfc='None',alpha=0.5,label=r'$w_0 / a_{%s}(l_F^{\rm ens},s_F^{\rm ens})$' %aa[1:])
         y  = [k.mean for k in yy]
         dy = [k.sdev for k in yy]
         ax.errorbar(x,y,yerr=dy, linestyle='None',
-            marker='s',c=colors[aa],label=r'$w_0 / a_{%s}(l_F,s_F^{\rm phys})$' %aa[1:])
+            marker='s',c=colors[aa],label=r'$w_0 / a_{%s}(l_F^{\rm ens},s_F^{\rm phys})$' %aa[1:])
         ax.legend(loc=3,fontsize=fs_leg)
         if i_a == 0:
             ax.tick_params(bottom=True, labelbottom=True, top=True, direction='in')

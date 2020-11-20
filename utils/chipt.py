@@ -155,7 +155,7 @@ class FitModel:
         return p['w0_0'] * (p['k_l'] * cP['p2'] + p['k_s'] * cP['s2'])
 
     def w0_nlo_a0(self, x, p, cP):
-        return p['w0_0'] /(2 * p['w0_0'])**2
+        return p['w0_0'] * p['k_a'] / (2 * p['w0_0'])**2
 
     def w0_nlo_a(self, x, p, cP):
         return p['w0_0'] * cP['a2']
