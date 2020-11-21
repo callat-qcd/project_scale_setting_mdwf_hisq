@@ -48,8 +48,6 @@ class BayesModelAvg:
         self.tick_size = 20 # tick size
         self.lw        = 1 # line width
 
-
-
     def get_weights(self):
         weights = []
         for a_res in self.r_list:
@@ -74,7 +72,7 @@ class BayesModelAvg:
             print(r'%25s &  %.3f   &  %.3f&  %.3f&  %.3f&  %s  & %s\\'
                 %(a_model.replace('_','\_'), chi2/dof, Q, logGBF, w_i, phys, phys_w0))
 
-    def bayes_model_avg(self):
+    def bayes_model_avg(self,to_fm):
         self.pdf_x = np.arange(1.15,1.2301,.0001)
         avg = {k:0. for k in ['w0_mO']}
         pdf = 0.
@@ -120,13 +118,13 @@ class BayesModelAvg:
         for k in var_avg:
             e = '%.4f' %np.sqrt(var_avg[k])
             print('%25s           %9s     %s' %('',e[-2:],k))
-        '''
-        #print('-----------------------------------------------------------------------------------')
-        self.avg['FK+/Fpi+'] = self.avg['FKFpi'] + self.avg['dF_iso_avg']
-        print('                      ----------------------------------------------------')
-        print('%37s           %s +- %.4f     |' %('| FK+/Fpi+    =', self.avg['FK+/Fpi+'], np.sqrt(self.model_var)))
-        print('                      ----------------------------------------------------')
-        '''
+        print('%25s &         %s +- %.4f' %('w0/fm', self.avg['w0_mO']*to_fm, np.sqrt(self.model_var)*to_fm.mean))
+        for k in var_avg:
+            e = '%.4f' %(np.sqrt(var_avg[k])*to_fm.mean)
+            print('%25s           %9s     %s' %('',e[-2:],k))
+
+        return self.avg['w0_mO'], np.sqrt(self.model_var)
+
     def plot_bma_hist(self,hist_type,save_fig=False):
         hist = plt.figure('hist_'+hist_type, figsize=self.fig_size)
         ax   = plt.axes(self.plt_axes)
@@ -279,6 +277,36 @@ def gather_model_elements(model):
             model_elements += ['nnlo_log']
 
     return model_elements, FF, fv
+
+def gather_w0_elements(model):
+    aa     = model.split('_')[-1]
+    order  = model.split('_')[1]
+    a0     = 'a0' in model
+    fv     = 'FV' in model
+    FF     = 'F'
+    alphaS = 'alphaS' in model
+
+    if aa == 'all':
+        aa_lst = ['a15','a12','a09','a06']
+    else:
+        aa_lst = [aa]
+    model_elements = ['w0_lo','w0_nlo']
+
+    if aa == 'all':
+        if a0:
+            model_elements += ['w0_nlo_a0']
+        else:
+            model_elements += ['w0_nlo_a']
+
+    if order in ['nnlo', 'nnnlo']:
+        model_elements += ['w0_nnlo']
+        if aa == 'all':
+            if a0:
+                model_elements += ['w0_nnlo_a0']
+            else:
+                model_elements += ['w0_nnlo_a']
+
+    return model_elements, FF, fv, aa_lst
 
 def prior_width_scan(model, fitEnv, fit_model, priors, switches):
     new_priors = dict(priors)

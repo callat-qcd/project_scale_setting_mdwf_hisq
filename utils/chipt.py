@@ -7,20 +7,9 @@ import warnings # supress divide by zero warning in fakeData determination of te
 import scipy.special as spsp # Bessel functions
 import gvar as gv
 
-@functools.lru_cache(maxsize=lru_cache_size)
-def chironFF(aFloat):
-    return chiron.FF(aFloat)
-
-def FF(x):
-    if isinstance(x, gv.GVar):
-        f = chironFF(x.mean)
-        stepSize = 1e-7# * chiron.FF(x.mean)
-        dfdx = 0.5*(chiron.FF(x.mean+stepSize) - chiron.FF(x.mean-stepSize))/stepSize
-        return gv.gvar_function(x, f, dfdx)
-    else:
-        return chiron.FF(x)
-
 pi = np.pi
+
+#@functools.lru_cache(maxsize=lru_cache_size)
 
 '''
 lazily evaluated dictionary that will compute convenience observables
@@ -156,3 +145,39 @@ class FitModel:
         # note - Ip = p2 * log(p2)
         #        p2 * Ip**2 = p2**3 * log(p2)**2
         return p['c_llln2'] * cP['p2'] * cP['Ip']**2 + p['c_llln'] * cP['p2']**2 * cP['Ip']
+
+    ''' w0/a extrapolation functions
+    '''
+    def w0_lo(self, x,p,cP):
+        return p['w0_0']
+
+    def w0_nlo(self, x,p,cP):
+        return p['w0_0'] * (p['k_l'] * cP['p2'] + p['k_s'] * cP['s2'])
+
+    def w0_nlo_a0(self, x, p, cP):
+        return p['w0_0'] * p['k_a'] / (2 * p['w0_0'])**2
+
+    def w0_nlo_a(self, x, p, cP):
+        return p['w0_0'] * cP['a2']
+
+    def w0_nnlo(self, x, p, cP):
+        a_result  = p['w0_0'] * p['k_ll']  * cP['p2']**2
+        a_result += p['w0_0'] * p['k_ls']  * cP['p2']*cP['s2']
+        a_result += p['w0_0'] * p['k_ss']  * cP['s2']**2
+        a_result += p['w0_0'] * p['k_lln'] * cP['p2']**2 * cP['Ip']
+
+        return a_result
+
+    def w0_nnlo_a0(self, x, p, cP):
+        a_result  = p['w0_0'] * p['k_aa'] / (2*p['w0_0'])**4
+        a_result += p['w0_0'] * p['k_la'] * cP['p2'] / (2*p['w0_0'])**2
+        a_result += p['w0_0'] * p['k_sa'] * cP['s2'] / (2*p['w0_0'])**2
+
+        return a_result
+
+    def w0_nnlo_a(self, x, p, cP):
+        a_result  = p['w0_0'] * p['k_aa'] * cP['a2']**2
+        a_result += p['w0_0'] * p['k_la'] * cP['p2'] * cP['a2']
+        a_result += p['w0_0'] * p['k_sa'] * cP['s2'] * cP['a2']
+
+        return a_result

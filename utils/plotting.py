@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+import matplotlib as mpl
 import matplotlib.pyplot as plt
 import numpy as np
 from scipy.optimize import minimize_scalar
@@ -7,25 +8,44 @@ import gvar as gv
 # import chipt lib for fit functions
 import chipt
 
+if not os.path.exists('figures'):
+    os.makedirs('figures')
+
 fig_width = 6.75 # in inches, 2x as wide as APS column
 gr        = 1.618034333 # golden ratio
 fig_size  = (fig_width, fig_width / gr)
-fig_size2 = (fig_width, fig_width * 1.49)
+fig_size2 = (fig_width, 2 * fig_width / gr)
 plt_axes  = [0.145,0.145,0.85,0.85]
+plt_axes2 = [0.145,0.07,0.85,0.92]
 fs_text   = 20 # font size of text
 fs_leg    = 16 # legend font size
 mrk_size  = '5' # marker size
 tick_size = 20 # tick size
 lw        = 1 # line width
 
-colors = {'a15':'#ec5d57', 'a12':'#70bf41', 'a09':'#51a7f9', 'a06':'#00FFFF'}
+colors = {'a15':'#ec5d57', 'a12':'#70bf41', 'a09':'#51a7f9', 'a06':'#6a5acd'}
+
+def colorFader(c1,c2,mix=0):
+    ''' fade (linear interpolate) from color c1 (at mix=0) to c2 (mix=1)
+        taken from Markus Dutschke answer at stack overflow
+        https://stackoverflow.com/questions/25668828/how-to-create-colour-gradient-in-python
+    '''
+    c1=np.array(mpl.colors.to_rgb(c1))
+    c2=np.array(mpl.colors.to_rgb(c2))
+    return mpl.colors.to_hex((1-mix)*c1 + mix*c2)
+
 shapes = {'m400':'h', 'm350':'p', 'm310':'s', 'm220':'^', 'm180':'d', 'm130':'o', 'm135':'*'}
-labels = {
-    'a15m400' :'', 'a15m350':'', 'a15m310':'a15', 'a15m220':'','a15m135XL':'',
-    'a12m400' :'', 'a12m350':'', 'a12m310':'a12', 'a12m220':'', 'a12m130':'',
-    'a12m220L':'', 'a12m220S':'','a12m220ms':'',  'a15m310L':'', 'a12m180L':'',
-    'a09m400' :'', 'a09m350':'', 'a09m310':'a09', 'a09m220':'', 'a09m135':'',
-    'a06m310L':'a06',
+l_labels = {
+    'a15m310' :r'$a_{15}(l_F,s_F^{\rm phys})$',
+    'a12m310' :r'$a_{12}(l_F,s_F^{\rm phys})$',
+    'a09m310' :r'$a_{09}(l_F,s_F^{\rm phys})$',
+    'a06m310L':r'$a_{06}(l_F,s_F^{\rm phys})$',
+    }
+eps_a_labels = {
+    'a15m310' :r'$a_{15}(l_F^{\rm phys},s_F^{\rm phys})$',
+    'a12m310' :r'$a_{12}(l_F^{\rm phys},s_F^{\rm phys})$',
+    'a09m310' :r'$a_{09}(l_F^{\rm phys},s_F^{\rm phys})$',
+    'a06m310L':r'$a_{06}(l_F^{\rm phys},s_F^{\rm phys})$',
     }
 dx_cont = {
     'a15m400'  :0.0050, 'a12m400' :0.0050, 'a09m400':0.0050,
@@ -85,8 +105,6 @@ def plot_l_s(data,switches,phys_point):
 
 
 def plot_lF_a(data,switches,phys_point):
-    if not os.path.exists('figures'):
-        os.makedirs('figures')
     fig = plt.figure('lF_a', figsize=fig_size)
     ax  = plt.axes(plt_axes)
     for ens in switches['ensembles']:
@@ -164,24 +182,44 @@ class ExtrapolationPlots:
         y_plot = []
         x_plot = []
         a_range = np.sqrt(np.arange(0, .16**2, .16**2 / 50))
-        for a_fm in a_range:
-            self.shift_xp['p']['aw0'] = a_fm / self.shift_xp['p']['w0']
-            x_plot.append((self.shift_xp['p']['aw0'] / 2)**2)
+        eps_aSq_range = np.arange(0,.21,.21/500)
+        for aa in eps_aSq_range:
+            #self.shift_xp['p']['aw0'] = a_fm / self.shift_xp['p']['w0']
+            #x_plot.append((self.shift_xp['p']['aw0'] / 2)**2)
+            self.shift_xp['p']['aw0'] = gv.gvar(2,0)*np.sqrt(aa)
+            x_plot.append(gv.gvar(aa,0))
             y_a = self.fitEnv._fit_function(self.shift_fit, self.shift_xp['x'], self.shift_xp['p'])
             y_plot.append(y_a)
         x  = np.array([k.mean for k in x_plot])
+        i06 = np.where(x > ((self.fitEnv.p[('a06m310L', 'aw0')] / 2)**2).mean)[0][0]
+        i09 = np.where(x > ((self.fitEnv.p[('a09m310',  'aw0')] / 2)**2).mean)[0][0]
+        i12 = np.where(x > ((self.fitEnv.p[('a12m310',  'aw0')] / 2)**2).mean)[0][0]
+        i15 = np.where(x > ((self.fitEnv.p[('a15m400',  'aw0')] / 2)**2).mean)[0][0]
         y  = np.array([k.mean for k in y_plot])
         dy = np.array([k.sdev for k in y_plot])
 
         figsize = fig_size
         self.fig_cont = plt.figure('w0_mO_vs_ea_'+self.model,figsize=figsize)
         self.ax_cont  = plt.axes(plt_axes)
-        self.ax_cont.fill_between(x, y-dy, y+dy, color='#b36ae2', alpha=0.4)
+        #self.ax_cont.fill_between(x, y-dy, y+dy, facecolor='None',edgecolor='k', hatch='\\')
+
+        for i in range(i06):
+            self.ax_cont.fill_between(x[i:i+2], (y-dy)[i:i+2], (y+dy)[i:i+2],
+                color=colorFader('k','#6a5acd',i/i06),alpha=.3)
+        for ii,i in enumerate(range(i06,i09)):
+            self.ax_cont.fill_between(x[i:i+2], (y-dy)[i:i+2], (y+dy)[i:i+2],
+                color=colorFader('#6a5acd','#51a7f9',ii/(i09-i06)),alpha=.3)
+        for ii,i in enumerate(range(i09,i12)):
+            self.ax_cont.fill_between(x[i:i+2], (y-dy)[i:i+2], (y+dy)[i:i+2],
+                color=colorFader('#51a7f9','#70bf41',ii/(i12-i09)),alpha=.3)
+        for ii,i in enumerate(range(i12,i15)):
+            self.ax_cont.fill_between(x[i:i+2], (y-dy)[i:i+2], (y+dy)[i:i+2],
+                color=colorFader('#70bf41','#ec5d57',ii/(i15-i12)),alpha=.3)
 
         self.plot_data(p_type='ea', ax=self.ax_cont)
         handles, labels = self.ax_cont.get_legend_handles_labels()
         labels, handles = zip(*sorted(zip(labels, handles), key=lambda t: t[0]))
-        self.ax_cont.legend(handles, labels, ncol=4, fontsize=fs_leg)
+        self.ax_cont.legend(handles, labels, ncol=2, columnspacing=0, handletextpad=0.1, fontsize=fs_leg)
 
         self.ax_cont.set_xlabel(r'$\epsilon_a^2 = a^2 / (2 w_0)^2$',fontsize=fs_text)
         self.ax_cont.set_ylabel(r'$w_0 m_\Omega$',fontsize=fs_text)
@@ -266,18 +304,23 @@ class ExtrapolationPlots:
         fig_name = 'w0_mO_vs_'+eps+'_'+self.model
         fig_x      = plt.figure(fig_name, figsize=fig_size)
         ax_x  = plt.axes(plt_axes)
-        ax_x.fill_between(x, y['a00']-dy['a00'], y['a00']+dy['a00'], color='#b36ae2',alpha=0.4)
+        ax_x.fill_between(x, y['a00']-dy['a00'], y['a00']+dy['a00'],
+            #facecolor='None',edgecolor='#b36ae2',hatch='/')
+            facecolor='None',edgecolor='k',hatch='/')
         for aa in ['a15','a12','a09','a06']:
-            ax_x.plot(x, y[aa], color=colors[aa])
+            ax_x.fill_between(x, y[aa]-dy[aa], y[aa]+dy[aa],
+                color=colors[aa],alpha=.3)
+            #ax_x.plot(x, y[aa], color=colors[aa])
 
         # plot physical eps_pi**2
         if eps == 'l':
             ax_x.axvline(eps_pisq_phys.mean,linestyle='--',color='#a6aaa9')
             ax_x.axvspan(eps_pisq_phys.mean -eps_pisq_phys.sdev, eps_pisq_phys.mean +eps_pisq_phys.sdev,
                 alpha=0.4, color='#a6aaa9')
-            ax_x.text(0.016, 1.53, r'%s' %(self.model.replace('_','\_')),\
+            ax_x.text(0.06, 1.375, r'%s' %(self.model.replace('_','\_')),\
                 horizontalalignment='left', verticalalignment='center', \
                 fontsize=fs_text, bbox={'facecolor':'None','boxstyle':'round'})
+
 
         elif eps == 's':
             ax_x.axvline(eps_ssq_phys.mean,linestyle='--',color='#a6aaa9')
@@ -289,12 +332,12 @@ class ExtrapolationPlots:
         labels, handles = zip(*sorted(zip(labels, handles), key=lambda t: t[0]))
         if self.FF == 'F':
             if eps == 'l':
-                loc=4
+                loc=2
             elif eps == 's':
                 loc=2
         else:
             loc=1
-        ax_x.legend(handles, labels, loc=loc, ncol=2, fontsize=fs_leg)
+        ax_x.legend(handles, labels, loc=loc, ncol=2, columnspacing=0, handletextpad=0.1, fontsize=fs_leg)
 
         # labels
         if eps == 'l':
@@ -307,9 +350,6 @@ class ExtrapolationPlots:
         ax_x.set_xlim(xlim_FF[self.FF])
         ax_x.set_ylabel(r'$w_0 m_\Omega$',fontsize=fs_text)
         ax_x.set_ylim(1.351, 1.559)
-        ax_x.text(0.0175, 1.3, r'%s' %(self.model.replace('_','\_')),\
-            horizontalalignment='left', verticalalignment='center', \
-            fontsize=fs_text, bbox={'facecolor':'None','boxstyle':'round'})
 
         if self.switches['save_figs']:
             plt.savefig('figures/'+fig_name+'.pdf',transparent=True)
@@ -349,6 +389,7 @@ class ExtrapolationPlots:
     def plot_data(self, p_type, ax, offset=False, raw=False):
         y_shift = self.shift_data(p_type=p_type)
         for a_ens in self.switches['ensembles']:
+            label = ''
             if a_ens in self.switches['ensembles_fit']:
                 c = colors[a_ens.split('m')[0]]
                 alpha = 1
@@ -366,14 +407,14 @@ class ExtrapolationPlots:
                 x  = 2*(self.fitEnv.p[(a_ens, 'mk')]/self.fitEnv.p[(a_ens, 'Lam_'+self.FF)])**2
                 x += -(self.shift_xp['p']['mpi'] / self.shift_xp['p']['Lam_'+self.FF])**2
                 dx = 0
-            label = labels[a_ens]
-            if p_type == 'ea':
-                if a_ens in self.switches['ensembles_fit']:
-                    mfc = c
-                else:
-                    mfc = 'None'
-            elif p_type in ['l','s']:
+            if a_ens in self.switches['ensembles_fit']:
+                mfc = 'white'
+            else:
                 mfc = 'None'
+            if p_type == 'ea' and a_ens in eps_a_labels:
+                label = eps_a_labels[a_ens]
+            elif p_type in ['l','s'] and a_ens in l_labels:
+                label = l_labels[a_ens]
             y = self.fitEnv.y[a_ens] + y_shift[a_ens]
             if p_type == 'ea':
                 self.ax_cont.errorbar(x=x.mean+dx, y=y.mean,xerr=x.sdev, yerr=y.sdev,
@@ -509,3 +550,121 @@ class ExtrapolationPlots:
 
         if self.switches['save_figs']:
             plt.savefig('figures/'+'w0_mO_vs_mL_'+self.model+'.pdf',transparent=True)
+
+class w0Plots:
+
+    def __init__(self, model, model_list, fitEnv, fit_result, switches):
+        self.model      = model
+        self.FF         = model.split('_')[-1]
+        self.fv         = 'FV' in model
+        self.model_list = model_list
+        self.fitEnv     = fitEnv
+        self.fit_result = fit_result
+        self.switches   = switches
+
+        # create fit functions for original and shifted points
+        self.og_fit     = chipt.FitModel(self.model_list, _fv=self.fv, _FF=self.FF)
+        self.shift_list = list(model_list)
+        self.shift_fit  = chipt.FitModel(self.shift_list, _fv=False, _FF=self.FF)
+        # which ensemble to get aw0 from
+        self.aw0_keys = {'a15':'a15m135XL','a12':'a12m130','a09':'a09m135'}
+
+def plot_w0(model, model_list, fitEnv, fit_result, switches, shift_point):
+    eps_pisq_phys = (gv.gvar(shift_point['p']['mpi'] / shift_point['p']['Lam_F']))**2
+    og_fit    = chipt.FitModel(model_list, _fv=('FV' in model), _FF='F')
+    shift_fit = chipt.FitModel(model_list, _fv=False, _FF='F')
+
+    mpi_range = np.sqrt(np.arange(100, 411**2, 411**2/100))
+
+    fig = plt.figure('w0_a',figsize=fig_size2)
+    ylim = {'a15':(1.081,1.159), 'a12':(1.301,1.434), 'a09':(1.701,1.999), 'a06':(2.51,3.09)}
+    for i_a, aa in enumerate(switches['w0_aa_lst']):
+        ax = plt.axes([0.1,.07+i_a*.232,.895,.232])
+        # fit band
+        shift_xp = copy.deepcopy(shift_point)
+        shift_xp['p']['w0_0'] = fit_result.p[(aa,'w0_0')]
+        x_plot = []
+        y_plot = []
+        for a_m in mpi_range:
+            l_FSq = (a_m / shift_xp['p']['Lam_F'])**2
+            mkSq = shift_xp['p']['mk'] **2
+            # shift mkSq so that m_ssSq is constant
+            mkSq += 0.5 * a_m**2
+            mkSq -= 0.5* shift_xp['p']['mpi'] **2
+            shift_xp['p']['mpi'] = a_m
+            shift_xp['p']['mk']  = np.sqrt(mkSq)
+            x_plot.append(l_FSq)
+            y_plot.append(fitEnv._w0_function(shift_fit, shift_xp['x'], shift_xp['p']))
+        #print(x_plot)
+        y  = np.array([k.mean for k in y_plot])
+        dy = np.array([k.sdev for k in y_plot])
+        x  = np.array([k.mean for k in x_plot])
+        ax.fill_between(x, y-dy, y+dy, color=colors[aa],alpha=0.4)
+        # data
+        xx   = []
+        yy   = []
+        y_og = []
+        for ens in switches['ensembles']:
+            if aa in ens:
+                shift_xp = copy.deepcopy(shift_point)
+                shift_xp['p']['w0_0'] = fit_result.p[(aa,'w0_0')]
+                # compute shift from s_F to s_F^phys
+                og_priors = dict()
+                for k, v in fitEnv.p.items():
+                    if type(k) == tuple and k[0] == ens:
+                        if k in fit_result.p:
+                            og_priors[k[1]] = fit_result.p[k]
+                        else:
+                            og_priors[k[1]] = v
+                for k in fit_result.p:
+                    if isinstance(k,str):
+                        og_priors[k] = fit_result.p[k]
+                    elif type(k) == tuple and k[0] == aa:
+                        og_priors[k[1]] = fit_result.p[(aa,'w0_0')]
+                # mpi from ensemble
+                l_FSq = (fitEnv.p[(ens,'mpi')] / fitEnv.p[(ens, 'Lam_F')])**2
+                # shift mK to phys
+                K_FSq  = (shift_xp['p']['mk'] / shift_xp['p']['Lam_F'])**2
+                # shift kaon so that l_S is at physical value
+                # s_F^2 = 2*K_F^2 - l_F^2
+                K_FSq -= 0.5 * shift_xp['p']['mpi']**2 / shift_xp['p']['Lam_F']**2
+                K_FSq += 0.5 * l_FSq
+
+                s_FSq  = 2*K_FSq - (shift_xp['p']['mpi'] / shift_xp['p']['Lam_F'])**2
+                s_FSq2 = 2*K_FSq - l_FSq
+                #print(ens,'mss^2',s_FSq,s_FSq2)
+
+                shift_xp['p']['mpi'] = np.sqrt(l_FSq)
+                shift_xp['p']['mk']  = np.sqrt(K_FSq)
+                shift_xp['p']['Lam_F'] = 1
+
+                y_fit   = fitEnv._w0_function(og_fit, fitEnv.x[ens], og_priors)
+                y_shift = fitEnv._w0_function(shift_fit, shift_xp['x'], shift_xp['p'])
+                # get data
+                xx.append(l_FSq)
+                y_og.append(fit_result.y[ens])
+                yy.append(fit_result.y[ens] + y_shift - y_fit)
+        x  = [k.mean for k in xx]
+        y  = [k.mean for k in y_og]
+        dy = [k.sdev for k in y_og]
+        ax.errorbar(x,y,yerr=dy, linestyle='None',
+            marker='o',c='k',mfc='None',alpha=0.5,label=r'$w_0 / a_{%s}(l_F^{\rm ens},s_F^{\rm ens})$' %aa[1:])
+        y  = [k.mean for k in yy]
+        dy = [k.sdev for k in yy]
+        ax.errorbar(x,y,yerr=dy, linestyle='None',
+            marker='s',c=colors[aa],label=r'$w_0 / a_{%s}(l_F^{\rm ens},s_F^{\rm phys})$' %aa[1:])
+        ax.legend(loc=3,fontsize=fs_leg)
+        if i_a == 0:
+            ax.tick_params(bottom=True, labelbottom=True, top=True, direction='in')
+            ax.set_xlabel(r'$l_F^2 = m_\pi^2 / (4\pi F_\pi)^2$',fontsize=fs_text)
+        else:
+            ax.tick_params(bottom=True, labelbottom=False, top=True, direction='in')
+        ax.set_ylabel(r'$w_0 / a_{%s}$' %aa[1:],fontsize=fs_text)
+        ax.set_xlim(0,0.094)
+        ax.set_ylim(ylim[aa])
+        ax.axvline(eps_pisq_phys.mean,linestyle='--',color='#a6aaa9')
+        ax.axvspan(eps_pisq_phys.mean -eps_pisq_phys.sdev, eps_pisq_phys.mean +eps_pisq_phys.sdev,
+            alpha=0.4, color='#a6aaa9')
+
+    if switches['save_figs']:
+        plt.savefig('figures/w0_a_vs_lFSq.pdf',transparent=True)
