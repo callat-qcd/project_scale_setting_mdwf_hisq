@@ -23,7 +23,7 @@ switches['ensembles_fit'] = [
 # FIT MODELS
 switches['ansatz'] = dict()
 switches['ansatz']['models'] = [
-        'xpt_nnnlo_FV'
+        'xpt_nnnlo_FV', 'taylor_nnnlo_FV'
         #'xpt_nlo','xpt_nnlo', 'xpt_nnnlo',
         #'taylor_nlo', 'taylor_nnlo', 'taylor_nnnlo'
         #'xpt_nlo_FV','xpt_nnlo_FV', 'xpt_nnnlo_FV',
@@ -64,7 +64,7 @@ switches['w0_interpolate']    = True
 switches['w0_a_model']        = 'w0_nnlo_a0_FV_all' # w0_nnlo_a0_FV_all, w0_nnlo_FV_all
 switches['print_w0_interp']   = False
 
-switches['check_fit']         = False # print pieces of fit function - no fitting will occur
+switches['check_fit']         = True # print pieces of fit function - no fitting will occur
 # check reweighting and stochastic uncertainty improvement
 switches['reweight']          = False
 switches['deflate_a06']       = False
@@ -181,45 +181,44 @@ FK_check  = 110.
 mpi_check = 135.0
 mk_check  = 495.5
 me_check  = np.sqrt(4./3*mk_check**2 - 1./3*mpi_check**2)
+mO_check  = 1670
 L_check   = 3.5 / mpi_check
 check_fit = {
     'p':{
         'mpi'    : mpi_check,
         'mk'     : mk_check,
+        'm_omega': mO_check,
         'Fpi'    : Fpi_check,
-        'FK'     : FK_check,
-        'Lam_PP': 4 * np.pi * Fpi_check,
-        'L1'     :  0.000372,
-        'L2'     :  0.000493,
-        'L3'     : -0.003070,
-        'L4'     :  0.000089,
-        'L5'     :  0.000377,
-        'L6'     :  0.000011,
-        'L7'     : -0.000340,
-        'L8'     :  0.000294,
-        'k_4'    : -3.0,
-        'p_4'    :  4.0,
+        'aw0'    : 0.6,
+        'Lam_F'  : 4 * np.pi * Fpi_check,
+        'Lam_O'  : mO_check,
+        # chiral LECs
+        'c0'     : 1.2,
+        'c_l'    : 1.1,
+        'c_s'    : 1.3,
+        'c_ll'   : 0.5,
+        't_fv'   : 0.19,
+        'c_lln'  : 0.2,
+        'c_ls'   : 0.6,
+        'c_ss'   : 0.7,
+        'c_lll'  : 0.2,
+        'c_llln' : 0.4,
+        'c_llln2': 0.9,
+        'c_lls'  : 0.3,
+        'c_lss'  : 0.45,
+        'c_sss'  : 0.53,
         # discretization
-        'aw0'    : 0.8,
-        's_4'    : 1.5,
-        'saS_4'  : 2.5,
-        'kp_6'   : 2.1,
-        'k_6'    : 2.2,
-        'p_6'    : 2.3,
-        's_6'    : 2.4,
-        'sk_6'   : 2.5,
-        'sp_6'   : 2.6,
-        # mixed action
-        'mss'    : 520.,
-        'mju'    : 200.,
-        'mjs'    : 510.,
-        'mru'    : 505.,
-        'mrs'    : 525.,
-        'a2DI'   : 400.**2,
+        'd_a'    : -0.6,
+        'd_a_aS' : -0.4,
+        'd_aa'   : 0.11,
+        'd_al'   : 0.22,
+        'd_as'   : 0.33,
+        'd_aaa'  : 0.44,
+        'd_aal'  : 0.12,
+        'd_aas'  : 0.13,
+        'd_all'  : 0.14,
+        'd_als'  : 0.16,
+        'd_ass'  : 0.25,
     },
-    'x':{'alphaS':0.2, 'meL':me_check*L_check}
+    'x':{'alphaS':0.2, 'meL':me_check*L_check,'mpiL':mpi_check*L_check, 'mkL':mk_check*L_check}
 }
-for mphi in ['mpi','mk', 'mju', 'mjs', 'mru', 'mrs', 'mss']:
-    if mphi in check_fit['p']:
-        check_fit['x'][mphi+'L'] = check_fit['p'][mphi] * L_check
-check_fit['x']['mxL'] = L_check * np.sqrt(4./3*mk_check**2 - 1./3*mpi_check**2 + check_fit['p']['a2DI'])

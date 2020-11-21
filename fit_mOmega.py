@@ -379,13 +379,13 @@ def debug_fit_function(check_fit, model_list, FF, fv):
         fit_model_fv = chipt.FitModel(model_list, _fv=True, _FF=FF)
         cP_FV        = chipt.ConvenienceDict(fit_model_fv, x, p)
         for term in model_list:
-            if '_nlo' in term:
+            if term in ['nnlo_log','nnnlo_log','nnlo_ct_fv']:
                 t_FV = getattr(chipt.FitModel, term)(fit_model_fv, x, p, cP_FV)
                 t    = getattr(chipt.FitModel, term)(fit_model, x, p, cP)
                 result    += t
                 result_FV += t_FV
-                print('%16s   ' %(term+'_FV'), t_FV)
                 print('%16s   ' %(term), t)
+                print('%16s   ' %(term+'_FV'), t_FV)
             else:
                 t = getattr(chipt.FitModel, term)(fit_model, x, p, cP)
                 result_FV += t
