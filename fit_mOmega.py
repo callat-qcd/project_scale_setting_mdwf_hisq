@@ -80,6 +80,10 @@ def main():
             model_list, FF, fv = analysis.gather_model_elements(model)
             fit_model  = chipt.FitModel(model_list, _fv=fv, _FF=FF)
             fitEnv     = FitEnv(gv_data, fit_model, switches)
+            if FF == 'F':
+                priors = ip.make_priors(priors,1)
+            elif FF == 'O':
+                priors = ip.make_priors(priors,2)
             analysis.prior_width_scan(model, fitEnv, fit_model, priors, switches)
         sys.exit()
     # do analysis
@@ -137,6 +141,10 @@ def main():
         print('===============================================================')
         print(model)
         model_list, FF, fv = analysis.gather_model_elements(model)
+        if FF == 'F':
+            priors = ip.make_priors(priors,1)
+        elif FF == 'O':
+            priors = ip.make_priors(priors,2)
         fit_model  = chipt.FitModel(model_list, _fv=fv, _FF=FF)
         fitEnv     = FitEnv(gv_data, fit_model, switches)
 

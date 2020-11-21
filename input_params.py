@@ -22,7 +22,7 @@ switches['ensembles_fit'] = [
 
 # FIT MODELS
 switches['ansatz'] = dict()
-switches['ansatz']['models'] = ['xpt_nnlo_FV','taylor_nnlo_FV']#,'xpt_nnlo_FV']#,'xpt_nnlo']
+switches['ansatz']['models'] = ['xpt_nnlo_FV']#,'xpt_nnlo_FV']#,'xpt_nnlo']
 '''
     The full list of models can be rather long.  The sys switches help loop
     over them.  Example other base models are
@@ -34,7 +34,7 @@ switches['w0'] = 'callat' # or milc
 
 # SYSTEMATIC SWITCHES
 switches['sys'] = dict()     # these cause the fitter to loop over various options
-switches['sys']['Lam_chi']   = False # FF = F, O
+switches['sys']['Lam_chi']   = True # FF = F, O
 switches['sys']['alphaS']    = False # include alphaS at NLO?
 switches['scales']           = ['F','O']
 # OLDER SYSTEMATICS - still work, but not used
@@ -53,7 +53,7 @@ switches['deflate_a06']       = False
 switches['deflate_a09']       = False
 switches['deflate_a12m220ms'] = False
 switches['bs_bias']           = True  # shift bs avg to b0?
-switches['print_fit']         = False # print lsqfit results?
+switches['print_fit']         = True # print lsqfit results?
 switches['report_phys']       = True  # report physical point for each fit?
 switches['save_fits']         = False  # save fits in pickle file?
 switches['model_avg']         = True # perform Bayes Model Avg
@@ -83,38 +83,40 @@ priors = dict()
 priors['c0']   = gv.gvar(1.5,1)
 priors['t_fv'] = gv.gvar(0,100)
 
-lo_x = 1
-lo_a = 1
-priors['c_l'] = gv.gvar(1,lo_x)
-priors['c_s'] = gv.gvar(1,lo_x)
-priors['d_2'] = gv.gvar(-0.5,lo_a)
-priors['daS_2'] = gv.gvar(0,lo_a)
+def make_priors(priors, s):
+    nlo_x = 1
+    nlo_a = 1
+    priors['c_l'] = gv.gvar(1   ,nlo_x * s)
+    priors['c_s'] = gv.gvar(1   ,nlo_x * s)
+    priors['d_2'] = gv.gvar(-0.5,nlo_a)
+    priors['daS_2'] = gv.gvar(0 ,nlo_a)
 
-nlo_x = 1
-nlo_a = 1
-priors['c_ll']  = gv.gvar(0., nlo_x)
-priors['c_ls']  = gv.gvar(0., nlo_x)
-priors['c_ss']  = gv.gvar(0., nlo_x)
-priors['c_lln'] = gv.gvar(0., nlo_x)
-priors['d_4']   = gv.gvar(0., nlo_a)
-priors['d_l4']  = gv.gvar(0., nlo_a)
-priors['d_s4']  = gv.gvar(0., nlo_a)
+    nnlo_x = 1
+    nnlo_a = 1
+    priors['c_ll']  = gv.gvar(0., nnlo_x * s**2)
+    priors['c_ls']  = gv.gvar(0., nnlo_x * s**2)
+    priors['c_ss']  = gv.gvar(0., nnlo_x * s**2)
+    priors['c_lln'] = gv.gvar(0., nnlo_x * s**2)
+    priors['d_4']   = gv.gvar(0., nnlo_a)
+    priors['d_l4']  = gv.gvar(0., nnlo_a * s)
+    priors['d_s4']  = gv.gvar(0., nnlo_a * s)
 
-nnlo_x = 1
-nnlo_a = 1
-priors['c_lll']   = gv.gvar(0., nnlo_x)
-priors['c_lls']   = gv.gvar(0., nnlo_x)
-priors['c_lss']   = gv.gvar(0., nnlo_x)
-priors['c_sss']   = gv.gvar(0., nnlo_x)
-priors['c_llln2'] = gv.gvar(0., nnlo_x)
-priors['c_llln']  = gv.gvar(0., nnlo_x)
-priors['d_6']     = gv.gvar(0., nnlo_a)
-priors['d_l6']    = gv.gvar(0., nnlo_a)
-priors['d_s6']    = gv.gvar(0., nnlo_a)
-priors['d_ll6']   = gv.gvar(0., nnlo_a)
-priors['d_ls6']   = gv.gvar(0., nnlo_a)
-priors['d_ss6']   = gv.gvar(0., nnlo_a)
+    nnnlo_x = 1
+    nnnlo_a = 1
+    priors['c_lll']   = gv.gvar(0., nnnlo_x * s**3)
+    priors['c_lls']   = gv.gvar(0., nnnlo_x * s**3)
+    priors['c_lss']   = gv.gvar(0., nnnlo_x * s**3)
+    priors['c_sss']   = gv.gvar(0., nnnlo_x * s**3)
+    priors['c_llln2'] = gv.gvar(0., nnnlo_x * s**3)
+    priors['c_llln']  = gv.gvar(0., nnnlo_x * s**3)
+    priors['d_6']     = gv.gvar(0., nnnlo_a)
+    priors['d_l6']    = gv.gvar(0., nnnlo_a * s)
+    priors['d_s6']    = gv.gvar(0., nnnlo_a * s)
+    priors['d_ll6']   = gv.gvar(0., nnnlo_a * s**2)
+    priors['d_ls6']   = gv.gvar(0., nnnlo_a * s**2)
+    priors['d_ss6']   = gv.gvar(0., nnnlo_a * s**2)
 
+    return priors
 
 priors[('a15','w0_0')] = gv.gvar(1.0,1)
 priors[('a12','w0_0')] = gv.gvar(1.5,1)
