@@ -6,7 +6,7 @@ switches = dict()
 switches['ensembles'] = [
     'a15m400'  ,'a12m400' ,'a09m400',
     'a15m350'  ,'a12m350' ,'a09m350',
-    'a15m310'  ,'a12m310' ,'a09m310','a06m310L','a15m310L',
+    'a15m310'  ,'a12m310' ,'a09m310','a06m310L','a15m310L','a12m310XL',
     'a15m220'  ,'a12m220' ,'a09m220',
     'a12m220S', 'a12m220L','a12m220ms',
     'a12m180L',
@@ -14,7 +14,7 @@ switches['ensembles'] = [
 switches['ensembles_fit'] = [
     'a15m400'  ,'a12m400' ,'a09m400',
     'a15m350'  ,'a12m350' ,'a09m350',
-    'a15m310'  ,'a12m310' ,'a09m310','a06m310L','a15m310L',
+    'a15m310'  ,'a12m310' ,'a09m310','a06m310L','a15m310L','a12m310XL',
     'a15m220'  ,'a12m220' ,'a09m220',
     'a12m220S', 'a12m220L','a12m220ms',
     'a12m180L',
@@ -23,7 +23,7 @@ switches['ensembles_fit'] = [
 # FIT MODELS
 switches['ansatz'] = dict()
 switches['ansatz']['models'] = [
-        'xpt_nnnlo_alphaS_FV', 'taylor_nnnlo_alphaS_FV'
+        'xpt_nnnlo_alphaS_FV'
         #'xpt_nlo','xpt_nnlo', 'xpt_nnnlo',
         #'taylor_nlo', 'taylor_nnlo', 'taylor_nnnlo'
         #'xpt_nlo_FV','xpt_nnlo_FV', 'xpt_nnnlo_FV',
@@ -64,7 +64,7 @@ switches['w0_interpolate']    = True
 switches['w0_a_model']        = 'w0_nnlo_a0_FV_all' # w0_nnlo_a0_FV_all, w0_nnlo_FV_all
 switches['print_w0_interp']   = False
 
-switches['check_fit']         = False # print pieces of fit function - no fitting will occur
+switches['check_fit']         = True # print pieces of fit function - no fitting will occur
 # check reweighting and stochastic uncertainty improvement
 switches['reweight']          = False
 switches['deflate_a06']       = False
@@ -77,7 +77,7 @@ switches['make_extrap']      = True # make plots
 switches['make_interp']      = False
 switches['make_hist']        = False # make plots
 switches['make_fv']          = False
-switches['plot_ls']          = True # make parameter space plots
+switches['plot_ls']          = False # make parameter space plots
 
 # DEBUGGING
 switches['debug_models']     = False # print list of models being generated
@@ -117,6 +117,7 @@ def make_priors(priors, s):
     priors['c_sss']   = gv.gvar(0., nnnlo_x * s**3)
     priors['c_llln2'] = gv.gvar(0., nnnlo_x * s**3)
     priors['c_llln']  = gv.gvar(0., nnnlo_x * s**3)
+    priors['c_lsln']  = gv.gvar(0., nnnlo_x * s**3)
     priors['d_aaa']   = gv.gvar(0., nnnlo_a)
     priors['d_aal']   = gv.gvar(0., nnnlo_a * s)
     priors['d_aas']   = gv.gvar(0., nnnlo_a * s)
@@ -202,8 +203,9 @@ check_fit = {
         'c_ls'   : 0.6,
         'c_ss'   : 0.7,
         'c_lll'  : 0.2,
-        'c_llln' : 0.4,
-        'c_llln2': 0.9,
+        'c_llln' : 0.4,#4
+        'c_lsln' : 0.7,#7
+        'c_llln2': 0.9,#9
         'c_lls'  : 0.3,
         'c_lss'  : 0.45,
         'c_sss'  : 0.53,

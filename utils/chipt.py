@@ -128,7 +128,8 @@ class FitModel:
         return a_result
 
     def nnlo_log(self,x,p,cP):
-        return p['c_lln'] * cP['p2']**2 * cP['Ip']
+        # note - Ip = p2 * log(p2)
+        return p['c_lln'] * cP['p2'] * cP['Ip']
 
     def nnlo_ct_fv(self,x,p,cP):
         return cP['p2']**2 * cP['ITp'] #NOTE, ITp contains t_fv
@@ -138,9 +139,9 @@ class FitModel:
                     + p['c_lls'] * cP['p2']**2 * cP['s2']\
                     + p['c_lss'] * cP['p2']    * cP['s2']**2\
                     + p['c_sss'] * cP['s2']**3\
-                    + p['d_aaa']   * cP['a2']**3\
-                    + p['d_aal']  * cP['a2']**2 * cP['p2']\
-                    + p['d_aas']  * cP['a2']**2 * cP['s2']\
+                    + p['d_aaa'] * cP['a2']**3\
+                    + p['d_aal'] * cP['a2']**2 * cP['p2']\
+                    + p['d_aas'] * cP['a2']**2 * cP['s2']\
                     + p['d_all'] * cP['a2']    * cP['p2']**2\
                     + p['d_als'] * cP['a2']    * cP['p2']*cP['s2']\
                     + p['d_ass'] * cP['a2']    * cP['s2']**2
@@ -149,7 +150,10 @@ class FitModel:
     def nnnlo_log(self,x,p,cP):
         # note - Ip = p2 * log(p2)
         #        p2 * Ip**2 = p2**3 * log(p2)**2
-        return p['c_llln2'] * cP['p2'] * cP['Ip']**2 + p['c_llln'] * cP['p2']**2 * cP['Ip']
+        a_result  =   p['c_llln']  * cP['p2']**2 * cP['Ip'] \
+                    + p['c_llln2'] * cP['p2'] * cP['Ip']**2 \
+                    + p['c_lsln']  * cP['p2'] * cP['s2'] * cP['Ip']
+        return a_result
 
     ''' w0/a extrapolation functions
     '''
