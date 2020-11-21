@@ -251,15 +251,15 @@ class ExtrapolationPlots:
         y_plot['a00'] = []
         # xpt convergence - these are summed to a given order
         y_conv = dict()
-        y_conv['LO']    = []
-        y_conv['NLO']   = []
-        y_conv['NNLO']  = []
-        lo_lst    = [t for t in self.model_list if 'lo' in t and not any(n in t for n in ['nlo', 'nnlo'])]
-        nlo_lst   = [t for t in self.model_list if 'nlo' in t and not any(n in t for n in ['nnlo'])]
-        nnlo_lst  = [t for t in self.model_list if 'nnlo' in t]
-        lo_fit    = chipt.FitModel(lo_lst, _fv=False, _FF=self.FF)
-        nlo_fit   = chipt.FitModel(lo_lst+nlo_lst, _fv=False, _FF=self.FF)
-        nnlo_fit  = chipt.FitModel(lo_lst+nlo_lst+nnlo_lst, _fv=False, _FF=self.FF)
+        y_conv['NLO']    = []
+        y_conv['NNLO']   = []
+        y_conv['NNNLO']  = []
+        nlo_lst    = [t for t in self.model_list if 'nlo' in t and not any(n in t for n in ['nnlo', 'nnnlo'])]
+        nnlo_lst   = [t for t in self.model_list if 'nnlo' in t and not any(n in t for n in ['nnnlo'])]
+        nnnlo_lst  = [t for t in self.model_list if 'nnnlo' in t]
+        nlo_fit    = chipt.FitModel(nlo_lst, _fv=False, _FF=self.FF)
+        nnlo_fit   = chipt.FitModel(nlo_lst+nnlo_lst, _fv=False, _FF=self.FF)
+        nnnlo_fit  = chipt.FitModel(nlo_lst+nnlo_lst+nnnlo_lst, _fv=False, _FF=self.FF)
         x_plot = []
         mpi_range = np.sqrt(np.arange(100, 411**2, 411**2/200))
         ms_range  = np.sqrt(np.arange(400**2, 900**2, (900**2 - 400**2)/200))
@@ -283,9 +283,9 @@ class ExtrapolationPlots:
                 x_plot.append(mssSq / self.shift_xp['p']['Lam_'+self.FF]**2)
             self.shift_xp['p']['aw0'] = 0
             y_plot['a00'].append(self.fitEnv._fit_function(self.shift_fit, self.shift_xp['x'], self.shift_xp['p']))
-            y_conv['LO'].append(self.fitEnv._fit_function(lo_fit, self.shift_xp['x'], self.shift_xp['p']))
             y_conv['NLO'].append(self.fitEnv._fit_function(nlo_fit, self.shift_xp['x'], self.shift_xp['p']))
             y_conv['NNLO'].append(self.fitEnv._fit_function(nnlo_fit, self.shift_xp['x'], self.shift_xp['p']))
+            y_conv['NNNLO'].append(self.fitEnv._fit_function(nnnlo_fit, self.shift_xp['x'], self.shift_xp['p']))
             for aa in ['a15','a12','a09']:
                 self.shift_xp['p']['aw0'] = self.fitEnv.p[(self.aw0_keys[aa],'aw0')]
                 y_plot[aa].append(self.fitEnv._fit_function(self.shift_fit, self.shift_xp['x'], self.shift_xp['p']))
@@ -359,14 +359,16 @@ class ExtrapolationPlots:
             self.ax_s = ax_x
 
         # Convergence plot
-        order_list = ['LO']
-        if 'nnlo' in self.model:
+        order_list = []
+        if 'nnnlo' in self.model:
+            order_list = order_list + ['NLO','NNLO','NNNLO']
+        elif 'nnlo' in self.model:
             order_list = order_list + ['NLO','NNLO']
         elif 'nlo' in self.model:
             order_list = order_list + ['NLO']
         self.fig_conv = plt.figure(fig_name+'_convergence_'+self.model, figsize=fig_size)
         self.ax_conv  = plt.axes(plt_axes)
-        labels = {'LO':'LO', 'NLO':r'NLO','NNLO':r'N$^2$LO'}
+        labels = {'NLO':'NLO', 'NNLO':r'N$^2$LO', 'NNNLO':r'N$^3$LO'}
         for order in order_list:
             mean = np.array([k.mean for k in y_conv[order]])
             sdev = np.array([k.sdev for k in y_conv[order]])

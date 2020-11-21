@@ -23,9 +23,9 @@ switches['ensembles_fit'] = [
 # FIT MODELS
 switches['ansatz'] = dict()
 switches['ansatz']['models'] = [
-        #'xpt_nnlo_alphaS'
-        'xpt_nlo','xpt_nnlo', 'xpt_nnnlo',
-        'taylor_nlo', 'taylor_nnlo', 'taylor_nnnlo'
+        'xpt_nnnlo_FV'
+        #'xpt_nlo','xpt_nnlo', 'xpt_nnnlo',
+        #'taylor_nlo', 'taylor_nnlo', 'taylor_nnnlo'
         #'xpt_nlo_FV','xpt_nnlo_FV', 'xpt_nnnlo_FV',
         #'taylor_nlo_FV', 'taylor_nnlo_FV', 'taylor_nnnlo_FV'
     ]
@@ -40,8 +40,8 @@ switches['w0'] = 'callat' # or milc
 
 # SYSTEMATIC SWITCHES
 switches['sys'] = dict()     # these cause the fitter to loop over various options
-switches['sys']['Lam_chi']   = True # FF = F, O
-switches['sys']['alphaS']    = True # include alphaS at NLO?
+switches['sys']['Lam_chi']   = False # FF = F, O
+switches['sys']['alphaS']    = False # include alphaS at NLO?
 switches['scales']           = ['F','O']
 # OLDER SYSTEMATICS - still work, but not used
 switches['sys']['FV']        = True # turn on/off FV corrections
@@ -73,7 +73,7 @@ switches['deflate_a12m220ms'] = False
 
 # Plotting options
 switches['save_figs']        = True  # save figures
-switches['make_extrap']      = False # make plots
+switches['make_extrap']      = True # make plots
 switches['make_interp']      = False
 switches['make_hist']        = False # make plots
 switches['make_fv']          = False
