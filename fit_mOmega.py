@@ -118,7 +118,6 @@ def main():
         for a in aa:
             model_a = model.replace('all',a)
             model_list, FF, fv, a_a = analysis.gather_w0_elements(model_a)
-            print(a,model_list)
             switches['w0_aa_lst'] = a_a
             fit_model  = chipt.FitModel(model_list, _fv=fv, _FF=FF)
             fitEnv     = FitEnv(gv_data, fit_model, switches)

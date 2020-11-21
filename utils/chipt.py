@@ -105,7 +105,7 @@ class FitModel:
         fit function.
     '''
     # Fit functions
-    def xpt_lo(self,x,p,cP):
+    def xpt_nlo(self,x,p,cP):
         #print('DEBUG p:',p)
         a_result  = p['c0']
         a_result +=   p['c_l'] * cP['p2']\
@@ -114,21 +114,21 @@ class FitModel:
         #print('DEBUG: p2',cP['p2'], 's2', cP['s2'])
         return a_result
 
-    def taylor_lo(self,x,p,cP):
-        return self.xpt_lo(x,p,cP)
+    def taylor_nlo(self,x,p,cP):
+        return self.xpt_nlo(x,p,cP)
 
-    def lo_alphaS(self,x,p,cP):
+    def nlo_alphaS(self,x,p,cP):
         return p['daS_2'] * x['alphaS'] * cP['a2']
 
-    def nlo_ct(self,x,p,cP):
+    def nnlo_ct(self,x,p,cP):
         a_result  = p['c_ll'] * cP['p2']**2 + p['c_ls'] * cP['p2'] * cP['s2'] + p['c_ss'] * cP['s2']**2
         a_result += cP['a2'] *( p['d_4'] * cP['a2'] + p['d_l4'] * cP['p2'] + p['d_s4'] * cP['s2'])
         return a_result
 
-    def nlo_log(self,x,p,cP):
+    def nnlo_log(self,x,p,cP):
         return p['c_lln'] * cP['p2'] * cP['Ip']
 
-    def nnlo_ct(self,x,p,cP):
+    def nnnlo_ct(self,x,p,cP):
         a_result  =   p['c_lll'] * cP['p2']**3\
                     + p['c_lls'] * cP['p2']**2 * cP['s2']\
                     + p['c_lss'] * cP['p2']    * cP['s2']**2\
@@ -141,7 +141,7 @@ class FitModel:
                     + p['d_ss6'] * cP['a2']    * cP['s2']**2
         return a_result
 
-    def nnlo_log(self,x,p,cP):
+    def nnnlo_log(self,x,p,cP):
         # note - Ip = p2 * log(p2)
         #        p2 * Ip**2 = p2**3 * log(p2)**2
         return p['c_llln2'] * cP['p2'] * cP['Ip']**2 + p['c_llln'] * cP['p2']**2 * cP['Ip']

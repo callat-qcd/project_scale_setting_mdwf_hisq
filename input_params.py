@@ -22,7 +22,12 @@ switches['ensembles_fit'] = [
 
 # FIT MODELS
 switches['ansatz'] = dict()
-switches['ansatz']['models'] = ['xpt_nnlo_FV']#,'xpt_nnlo_FV']#,'xpt_nnlo']
+switches['ansatz']['models'] = [
+        'xpt_nlo','xpt_nnlo', 'xpt_nnnlo',
+        'taylor_nlo', 'taylor_nnlo', 'taylor_nnnlo'
+        #'xpt_nlo_FV','xpt_nnlo_FV', 'xpt_nnnlo_FV',
+        #'taylor_nlo_FV', 'taylor_nnlo_FV', 'taylor_nnnlo_FV'
+    ]
 '''
     The full list of models can be rather long.  The sys switches help loop
     over them.  Example other base models are
@@ -35,10 +40,10 @@ switches['w0'] = 'callat' # or milc
 # SYSTEMATIC SWITCHES
 switches['sys'] = dict()     # these cause the fitter to loop over various options
 switches['sys']['Lam_chi']   = True # FF = F, O
-switches['sys']['alphaS']    = False # include alphaS at NLO?
+switches['sys']['alphaS']    = True # include alphaS at NLO?
 switches['scales']           = ['F','O']
 # OLDER SYSTEMATICS - still work, but not used
-switches['sys']['FV']        = False # turn on/off FV corrections
+switches['sys']['FV']        = True # turn on/off FV corrections
                                # scale is used when the loop over scales is not triggered
 switches['scale']            = 'F' # F: Lam = 4pi Fpi; O: Lam = m_O
 
@@ -53,7 +58,7 @@ switches['deflate_a06']       = False
 switches['deflate_a09']       = False
 switches['deflate_a12m220ms'] = False
 switches['bs_bias']           = True  # shift bs avg to b0?
-switches['print_fit']         = True # print lsqfit results?
+switches['print_fit']         = False # print lsqfit results?
 switches['report_phys']       = True  # report physical point for each fit?
 switches['save_fits']         = False  # save fits in pickle file?
 switches['model_avg']         = True # perform Bayes Model Avg

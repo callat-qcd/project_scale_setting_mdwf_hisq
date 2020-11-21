@@ -59,7 +59,7 @@ class BayesModelAvg:
 
     def print_weighted_models(self):
         i_weights = np.argsort(self.weights)[::-1]
-        print(r"%25s & chi2/dof &   $Q$ &  logGBF& weight& $w_0 m_O$& w_0\\" %'model')
+        print(r"%28s & chi2/dof &   $Q$ &  logGBF& weight& $w_0 m_O$& w_0\\" %'model')
         print(r'\hline')
         for a_i, a_model in enumerate(np.array(self.r_list)[i_weights]):
             chi2    = self.results[a_model].chi2
@@ -69,7 +69,7 @@ class BayesModelAvg:
             w_i     = self.weights[i_weights][a_i]
             phys    = self.results[a_model].phys['w0_mO']
             phys_w0 = self.results[a_model].phys['w0']
-            print(r'%25s &  %.3f   &  %.3f&  %.3f&  %.3f&  %s  & %s\\'
+            print(r'%28s &  %.3f   &  %.3f&  %.3f&  %.3f&  %10s  & %s\\'
                 %(a_model.replace('_','\_'), chi2/dof, Q, logGBF, w_i, phys, phys_w0))
 
     def bayes_model_avg(self,to_fm):
@@ -221,19 +221,19 @@ def check_for_duplicates(list_of_elems):
 def sys_models(switches):
     def check_model(sys_val,models,nnlo=False,nnnlo=False):
         for model in models:
-            if 'taylor' not in model:
-                new_model = model+sys_val
-                if nnlo:
-                    if (sys_val not in model) and (new_model not in models):
-                        if nnnlo:
-                            if 'nnlo' in model and 'nnnlo' not in model:
-                                models.append(new_model)
-                        else:
-                            if 'nnlo' in model:
-                                models.append(new_model)
-                else:
-                    if (sys_val not in model) and (new_model not in models):
-                        models.append(new_model)
+            #if 'taylor' not in model:
+            new_model = model+sys_val
+            if nnlo:
+                if (sys_val not in model) and (new_model not in models):
+                    if nnnlo:
+                        if 'nnlo' in model and 'nnnlo' not in model:
+                            models.append(new_model)
+                    else:
+                        if 'nnlo' in model:
+                            models.append(new_model)
+            else:
+                if (sys_val not in model) and (new_model not in models):
+                    models.append(new_model)
 
     models = switches['ansatz']['models'].copy()
     if switches['sys']['FV']:
@@ -264,17 +264,17 @@ def gather_model_elements(model):
     if FF not in ['F','O']:
         sys.exit('unrecognized Lam choice [F, O]: '+FF)
 
-    model_elements = [eft+'_lo']
+    model_elements = [eft+'_nlo']
     if alphaS:
-        model_elements += ['lo_alphaS']
-    if order in ['nlo', 'nnlo']:
-        model_elements += ['nlo_ct']
-        if eft == 'xpt':
-            model_elements += ['nlo_log']
-    if order in ['nnlo']:
+        model_elements += ['nlo_alphaS']
+    if order in ['nnlo', 'nnnlo']:
         model_elements += ['nnlo_ct']
         if eft == 'xpt':
             model_elements += ['nnlo_log']
+    if order in ['nnnlo']:
+        model_elements += ['nnnlo_ct']
+        if eft == 'xpt':
+            model_elements += ['nnnlo_log']
 
     return model_elements, FF, fv
 
