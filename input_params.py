@@ -23,7 +23,7 @@ switches['ensembles_fit'] = [
 # FIT MODELS
 switches['ansatz'] = dict()
 switches['ansatz']['models'] = [
-        'xpt_nnnlo_FV', 'taylor_nnnlo_FV'
+        'xpt_nnnlo_alphaS_FV', 'taylor_nnnlo_alphaS_FV'
         #'xpt_nlo','xpt_nnlo', 'xpt_nnnlo',
         #'taylor_nlo', 'taylor_nnlo', 'taylor_nnnlo'
         #'xpt_nlo_FV','xpt_nnlo_FV', 'xpt_nnnlo_FV',
@@ -64,7 +64,7 @@ switches['w0_interpolate']    = True
 switches['w0_a_model']        = 'w0_nnlo_a0_FV_all' # w0_nnlo_a0_FV_all, w0_nnlo_FV_all
 switches['print_w0_interp']   = False
 
-switches['check_fit']         = True # print pieces of fit function - no fitting will occur
+switches['check_fit']         = False # print pieces of fit function - no fitting will occur
 # check reweighting and stochastic uncertainty improvement
 switches['reweight']          = False
 switches['deflate_a06']       = False
@@ -77,7 +77,7 @@ switches['make_extrap']      = True # make plots
 switches['make_interp']      = False
 switches['make_hist']        = False # make plots
 switches['make_fv']          = False
-switches['plot_ls']          = False # report fitted Li values
+switches['plot_ls']          = True # make parameter space plots
 
 # DEBUGGING
 switches['debug_models']     = False # print list of models being generated

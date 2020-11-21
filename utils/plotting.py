@@ -35,6 +35,12 @@ def colorFader(c1,c2,mix=0):
     return mpl.colors.to_hex((1-mix)*c1 + mix*c2)
 
 shapes = {'m400':'h', 'm350':'p', 'm310':'s', 'm220':'^', 'm180':'d', 'm130':'o', 'm135':'*'}
+ls_labels = {
+    'a15m310' :r'$a_{15}$',
+    'a12m310' :r'$a_{12}$',
+    'a09m310' :r'$a_{09}$',
+    'a06m310L':r'$a_{06}$',
+    }
 l_labels = {
     'a15m310' :r'$a_{15}(l_F,s_F^{\rm phys})$',
     'a12m310' :r'$a_{12}(l_F,s_F^{\rm phys})$',
@@ -68,14 +74,17 @@ def plot_l_s(data,switches,phys_point):
     for ens in switches['ensembles']:
         a = ens.split('m')[0]
         m = ens[3:7]
+        lbl = ''
+        if ens in ls_labels:
+            lbl = ls_labels[ens]
         lO_sq = data['p'][(ens,'mpi')]**2 / data['p'][(ens,'Lam_O')]**2
         sO_sq = (2*data['p'][(ens,'mk')]**2 - data['p'][(ens,'mpi')]**2) / data['p'][(ens,'Lam_O')]**2
         axO.errorbar(lO_sq.mean,sO_sq.mean, xerr=lO_sq.sdev,yerr=sO_sq.sdev,
-            color=colors[a],marker=shapes[m],label=labels[ens],linestyle='None')
+            color=colors[a],marker=shapes[m],label=lbl,linestyle='None')
         lF_sq = data['p'][(ens,'mpi')]**2 / data['p'][(ens,'Lam_F')]**2
         sF_sq = (2*data['p'][(ens,'mk')]**2 -data['p'][(ens,'mpi')]**2) / data['p'][(ens,'Lam_F')]**2
         axF.errorbar(lF_sq.mean,sF_sq.mean, xerr=lF_sq.sdev,yerr=sF_sq.sdev,
-            color=colors[a],marker=shapes[m],label=labels[ens],linestyle='None')
+            color=colors[a],marker=shapes[m],label=lbl,linestyle='None')
 
     axO.legend(loc=1,fontsize=fs_leg)
     axO.set_xlabel(r'$l_\Omega^2 = m_\pi^2 / m_\Omega^2$', fontsize=fs_text)
@@ -110,10 +119,13 @@ def plot_lF_a(data,switches,phys_point):
     for ens in switches['ensembles']:
         a = ens.split('m')[0]
         m = ens[3:7]
+        lbl = ''
+        if ens in ls_labels:
+            lbl = ls_labels[ens]
         lF_sq = data['p'][(ens,'mpi')]**2 / data['p'][(ens,'Lam_F')]**2
         ea_sq = data['p'][(ens,'aw0')]**2 / 4
         ax.errorbar(ea_sq.mean,lF_sq.mean, xerr=ea_sq.sdev,yerr=lF_sq.sdev,
-            color=colors[a],marker='o',markersize=8,label=labels[ens],linestyle='None')
+            color=colors[a],marker='o',markersize=8,label=lbl,linestyle='None')
 
     mt = {'m400':0.0888, 'm350': 0.0726, 'm310':0.0605, 'm220':0.0331, 'm180':0.0228, 'm135':0.0135}
     for m in mt:
@@ -139,10 +151,13 @@ def plot_raw_data(data,switches,phys_point):
     for ens in switches['ensembles']:
         a = ens.split('m')[0]
         m = ens[3:7]
+        lbl = ''
+        if ens in ls_labels:
+            lbl = ls_labels[ens]
         lF_sq = data['p'][(ens,'mpi')]**2 / data['p'][(ens,'Lam_F')]**2
         wm    = data['y'][ens]
         ax.errorbar(lF_sq.mean,wm.mean, xerr=lF_sq.sdev,yerr=wm.sdev,
-            color=colors[a],marker='o',markersize=8,label=labels[ens],linestyle='None')
+            color=colors[a],marker='o',markersize=8,label=lbl,linestyle='None')
 
     ax.legend(loc=1, fontsize=fs_leg, ncol=4)
     ax.set_ylabel(r'$w_0 m_\Omega$', fontsize=fs_text)
