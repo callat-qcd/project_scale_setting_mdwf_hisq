@@ -271,6 +271,8 @@ def gather_model_elements(model):
         model_elements += ['nnlo_ct']
         if eft == 'xpt':
             model_elements += ['nnlo_log']
+        elif eft == 'taylor' and fv:
+            model_elements += ['nnlo_ct_fv']
     if order in ['nnnlo']:
         model_elements += ['nnnlo_ct']
         if eft == 'xpt':

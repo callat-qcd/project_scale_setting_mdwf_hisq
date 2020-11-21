@@ -23,6 +23,7 @@ switches['ensembles_fit'] = [
 # FIT MODELS
 switches['ansatz'] = dict()
 switches['ansatz']['models'] = [
+        #'xpt_nnlo_alphaS'
         'xpt_nlo','xpt_nnlo', 'xpt_nnnlo',
         'taylor_nlo', 'taylor_nnlo', 'taylor_nnnlo'
         #'xpt_nlo_FV','xpt_nnlo_FV', 'xpt_nnnlo_FV',
@@ -50,23 +51,25 @@ switches['scale']            = 'F' # F: Lam = 4pi Fpi; O: Lam = m_O
 switches['print_lattice']    = False # print data for paper - no fitting will occur
 
 # Fitting options
+switches['model_avg']         = True # perform Bayes Model Avg
+switches['print_fit']         = False # print lsqfit results?
+switches['report_phys']       = False  # report physical point for each fit?
+switches['bs_bias']           = True  # shift bs avg to b0?
+switches['save_fits']         = False  # save fits in pickle file?
+switches['prior_search']      = False # perform a crude grid search to optimize
+switches['prior_verbose']     = False # NNLO and NNNLO prior widths
+switches['scipy']             = True # use scipy minimizer instead of gsl?
+# w0 interpolation fit options
 switches['w0_interpolate']    = True
 switches['w0_a_model']        = 'w0_nnlo_a0_FV_all' # w0_nnlo_a0_FV_all, w0_nnlo_FV_all
 switches['print_w0_interp']   = False
+
+switches['check_fit']         = False # print pieces of fit function - no fitting will occur
+# check reweighting and stochastic uncertainty improvement
 switches['reweight']          = False
 switches['deflate_a06']       = False
 switches['deflate_a09']       = False
 switches['deflate_a12m220ms'] = False
-switches['bs_bias']           = True  # shift bs avg to b0?
-switches['print_fit']         = False # print lsqfit results?
-switches['report_phys']       = True  # report physical point for each fit?
-switches['save_fits']         = False  # save fits in pickle file?
-switches['model_avg']         = True # perform Bayes Model Avg
-switches['prior_search']      = False # perform a crude grid search to optimize
-switches['prior_verbose']     = False # NNLO and NNNLO prior widths
-switches['scipy']             = True # use scipy minimizer instead of gsl?
-
-switches['check_fit']        = False # print pieces of fit function - no fitting will occur
 
 # Plotting options
 switches['save_figs']        = True  # save figures
@@ -86,15 +89,14 @@ switches['debug_bs']         = False # debug shape of bs lists
 # Taylor priors - beyond NLO - use "XPT" NiLO priors
 priors = dict()
 priors['c0']   = gv.gvar(1.5,1)
-priors['t_fv'] = gv.gvar(0,100)
 
 def make_priors(priors, s):
     nlo_x = 1
     nlo_a = 1
-    priors['c_l'] = gv.gvar(1   ,nlo_x * s)
-    priors['c_s'] = gv.gvar(1   ,nlo_x * s)
-    priors['d_2'] = gv.gvar(-0.5,nlo_a)
-    priors['daS_2'] = gv.gvar(0 ,nlo_a)
+    priors['c_l']    = gv.gvar(1   ,nlo_x * s)
+    priors['c_s']    = gv.gvar(1   ,nlo_x * s)
+    priors['d_a']    = gv.gvar(-0.5,nlo_a)
+    priors['d_a_aS'] = gv.gvar(0 ,nlo_a)
 
     nnlo_x = 1
     nnlo_a = 1
@@ -102,9 +104,10 @@ def make_priors(priors, s):
     priors['c_ls']  = gv.gvar(0., nnlo_x * s**2)
     priors['c_ss']  = gv.gvar(0., nnlo_x * s**2)
     priors['c_lln'] = gv.gvar(0., nnlo_x * s**2)
-    priors['d_4']   = gv.gvar(0., nnlo_a)
-    priors['d_l4']  = gv.gvar(0., nnlo_a * s)
-    priors['d_s4']  = gv.gvar(0., nnlo_a * s)
+    priors['d_aa']  = gv.gvar(0., nnlo_a)
+    priors['d_al']  = gv.gvar(0., nnlo_a * s)
+    priors['d_as']  = gv.gvar(0., nnlo_a * s)
+    priors['t_fv']  = gv.gvar(0,nnlo_a * s)
 
     nnnlo_x = 1
     nnnlo_a = 1
@@ -114,12 +117,12 @@ def make_priors(priors, s):
     priors['c_sss']   = gv.gvar(0., nnnlo_x * s**3)
     priors['c_llln2'] = gv.gvar(0., nnnlo_x * s**3)
     priors['c_llln']  = gv.gvar(0., nnnlo_x * s**3)
-    priors['d_6']     = gv.gvar(0., nnnlo_a)
-    priors['d_l6']    = gv.gvar(0., nnnlo_a * s)
-    priors['d_s6']    = gv.gvar(0., nnnlo_a * s)
-    priors['d_ll6']   = gv.gvar(0., nnnlo_a * s**2)
-    priors['d_ls6']   = gv.gvar(0., nnnlo_a * s**2)
-    priors['d_ss6']   = gv.gvar(0., nnnlo_a * s**2)
+    priors['d_aaa']   = gv.gvar(0., nnnlo_a)
+    priors['d_aal']   = gv.gvar(0., nnnlo_a * s)
+    priors['d_aas']   = gv.gvar(0., nnnlo_a * s)
+    priors['d_all']   = gv.gvar(0., nnnlo_a * s**2)
+    priors['d_als']   = gv.gvar(0., nnnlo_a * s**2)
+    priors['d_ass']   = gv.gvar(0., nnnlo_a * s**2)
 
     return priors
 
