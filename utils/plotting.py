@@ -64,6 +64,7 @@ dx_cont = {
 # for a06, use MILC physical pion mass value
 aw0_a06 = 1 / gv.gvar('3.0119(19)')
 
+# LANDSCAPE plots
 def plot_l_s(data,switches,phys_point):
     if not os.path.exists('figures'):
         os.makedirs('figures')
@@ -238,15 +239,19 @@ class ExtrapolationPlots:
 
         self.ax_cont.set_xlabel(r'$\epsilon_a^2 = a^2 / (2 w_0)^2$',fontsize=fs_text)
         self.ax_cont.set_ylabel(r'$w_0 m_\Omega$',fontsize=fs_text)
-        self.ax_cont.set_ylim(1.351, 1.559)
         self.ax_cont.text(0.0175, 1.375, r'%s' %(self.model.replace('_','\_')),\
             horizontalalignment='left', verticalalignment='center', \
             fontsize=fs_text, bbox={'facecolor':'None','boxstyle':'round'})
         self.ax_cont.set_xlim(0,.21)
+        self.ax_cont.set_ylim(1.351, 1.474)
 
 
         if self.switches['save_figs']:
+            plt.savefig('figures/'+'w0_mO_vs_ea_'+self.model+'_zoom.pdf',transparent=True)
+            self.ax_cont.set_ylim(1.351, 1.559)
             plt.savefig('figures/'+'w0_mO_vs_ea_'+self.model+'.pdf',transparent=True)
+            self.ax_cont.set_ylim(1.351, 1.474)
+
 
     def plot_vs_eps_pi(self,shift_points,eps='l'):
         self.shift    = shift_points
@@ -269,12 +274,12 @@ class ExtrapolationPlots:
         y_conv['NLO']    = []
         y_conv['NNLO']   = []
         y_conv['NNNLO']  = []
-        nlo_lst    = [t for t in self.model_list if 'nlo' in t and not any(n in t for n in ['nnlo', 'nnnlo'])]
-        nnlo_lst   = [t for t in self.model_list if 'nnlo' in t and not any(n in t for n in ['nnnlo'])]
-        nnnlo_lst  = [t for t in self.model_list if 'nnnlo' in t]
+        nlo_lst    = [t for t in self.model_list if 'nlo' in t and not any(n in t for n in ['n2lo', 'n3lo'])]
+        n2lo_lst   = [t for t in self.model_list if 'n2lo' in t and not any(n in t for n in ['n3lo'])]
+        n3lo_lst  = [t for t in self.model_list if 'n3lo' in t]
         nlo_fit    = chipt.FitModel(nlo_lst, _fv=False, _FF=self.FF)
-        nnlo_fit   = chipt.FitModel(nlo_lst+nnlo_lst, _fv=False, _FF=self.FF)
-        nnnlo_fit  = chipt.FitModel(nlo_lst+nnlo_lst+nnnlo_lst, _fv=False, _FF=self.FF)
+        n2lo_fit   = chipt.FitModel(nlo_lst+n2lo_lst, _fv=False, _FF=self.FF)
+        n3lo_fit  = chipt.FitModel(nlo_lst+n2lo_lst+n3lo_lst, _fv=False, _FF=self.FF)
         x_plot = []
         mpi_range = np.sqrt(np.arange(100, 411**2, 411**2/200))
         ms_range  = np.sqrt(np.arange(400**2, 900**2, (900**2 - 400**2)/200))
@@ -299,8 +304,8 @@ class ExtrapolationPlots:
             self.shift_xp['p']['aw0'] = 0
             y_plot['a00'].append(self.fitEnv._fit_function(self.shift_fit, self.shift_xp['x'], self.shift_xp['p']))
             y_conv['NLO'].append(self.fitEnv._fit_function(nlo_fit, self.shift_xp['x'], self.shift_xp['p']))
-            y_conv['NNLO'].append(self.fitEnv._fit_function(nnlo_fit, self.shift_xp['x'], self.shift_xp['p']))
-            y_conv['NNNLO'].append(self.fitEnv._fit_function(nnnlo_fit, self.shift_xp['x'], self.shift_xp['p']))
+            y_conv['NNLO'].append(self.fitEnv._fit_function(n2lo_fit, self.shift_xp['x'], self.shift_xp['p']))
+            y_conv['NNNLO'].append(self.fitEnv._fit_function(n3lo_fit, self.shift_xp['x'], self.shift_xp['p']))
             for aa in ['a15','a12','a09']:
                 self.shift_xp['p']['aw0'] = self.fitEnv.p[(self.aw0_keys[aa],'aw0')]
                 y_plot[aa].append(self.fitEnv._fit_function(self.shift_fit, self.shift_xp['x'], self.shift_xp['p']))
@@ -375,9 +380,9 @@ class ExtrapolationPlots:
 
         # Convergence plot
         order_list = []
-        if 'nnnlo' in self.model:
+        if 'n3lo' in self.model:
             order_list = order_list + ['NLO','NNLO','NNNLO']
-        elif 'nnlo' in self.model:
+        elif 'n2lo' in self.model:
             order_list = order_list + ['NLO','NNLO']
         elif 'nlo' in self.model:
             order_list = order_list + ['NLO']
@@ -669,7 +674,7 @@ def plot_w0(model, model_list, fitEnv, fit_result, switches, shift_point):
         y  = [k.mean for k in yy]
         dy = [k.sdev for k in yy]
         ax.errorbar(x,y,yerr=dy, linestyle='None',
-            marker='s',c=colors[aa],label=r'$w_0 / a_{%s}(l_F^{\rm ens},s_F^{\rm phys})$' %aa[1:])
+            marker='s',c=colors[aa],mfc='None',label=r'$w_0 / a_{%s}(l_F^{\rm ens},s_F^{\rm phys})$' %aa[1:])
         ax.legend(loc=3,fontsize=fs_leg)
         if i_a == 0:
             ax.tick_params(bottom=True, labelbottom=True, top=True, direction='in')

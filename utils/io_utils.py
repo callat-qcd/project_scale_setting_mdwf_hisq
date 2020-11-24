@@ -80,13 +80,15 @@ def format_h5_data(data_path, switches):
                 data_bs[d] = data_dict[d][1:]
             gvdata = gv.dataset.avg_data(data_bs,bstrap=True)
             if switches['debug_bs']:
-                print('data set | full mean | bs bias corrected mean')
-                print('---------|-----------|-----------------------')
+                print('-----------------------------------------------')
+                print(ens)
+                print('data set  | bs mean    | bs bias corrected mean')
+                print('----------|------------|-----------------------')
                 gvdata_copy = dict(gvdata)
             for d in data_bs:
                 gvdata[d] = gvdata[d] + (data_dict[d][0] - gvdata[d].mean)
                 if switches['debug_bs']:
-                    print(d,gvdata[d].mean,gvdata_copy[d].mean)
+                    print("%7s    %.10f  %.10f" %(d, gvdata_copy[d].mean, gvdata[d].mean))
         else:
             gvdata = gv.dataset.avg_data(data_dict,bstrap=True)
 
@@ -108,6 +110,7 @@ def format_h5_data(data_path, switches):
         # MASSES
         p[(ens,'mpi')]     = gvdata['mpi']
         p[(ens,'mk')]      = gvdata['mk']
+        x[ens]['Lam_Of']   = gvdata['m_omega'].mean
         p[(ens,'Lam_O')]   = gvdata['m_omega']
         if 'Fpi' in gvdata:
             p[(ens,'Lam_F')] = 4 * np.pi * gvdata['Fpi']

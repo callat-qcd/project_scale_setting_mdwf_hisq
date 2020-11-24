@@ -51,7 +51,7 @@ def main():
             print('DEBUGGING Terms in ',model)
             print('---------------------------------------------------------------')
             model_list, FF, fv = analysis.gather_model_elements(model)
-            debug_fit_function(check_fit, model_list, FF, fv)
+            analysis.debug_fit_function(check_fit, model_list, FF, fv)
         sys.exit()
 
     if switches['save_fits']:
@@ -74,7 +74,7 @@ def main():
     models = analysis.sys_models(switches)
     if switches['prior_search']:
         print('Performing Prior Width Scan')
-        print(r'%33s &  nnlo_x &  nnlo_a &  n3lo_x &  n3lo_a & logGBF_max' %'model')
+        print(r'%33s &  n2lo_x &  n2lo_a &  n3lo_x &  n3lo_a & logGBF_max' %'model')
         print('======================================================================================')
         for model in models:
             model_list, FF, fv = analysis.gather_model_elements(model)
@@ -97,21 +97,21 @@ def main():
         fitEnv     = FitEnv(gv_data, fit_model, switches)
         p_copy = copy.deepcopy(priors)
         tmp_w0_result = fitEnv.fit_w0(p_copy)
-        phys_data = copy.deepcopy(phys_point)
+        phys_point = copy.deepcopy(phys_point)
         for k in tmp_w0_result.p:
             if isinstance(k,str):
-                phys_data['p'][k] = tmp_w0_result.p[k]
+                phys_point['p'][k] = tmp_w0_result.p[k]
         tmp_w0_result.phys = dict()
-        tmp_w0_result.phys_data = phys_data
+        tmp_w0_result.phys_point = phys_point
         aw0_keys = {'a15':'a15m135XL','a12':'a12m130','a09':'a09m135'}
         for a in aa:
-            phys_data['p']['w0_0'] = tmp_w0_result.p[(a,'w0_0')]
+            phys_point['p']['w0_0'] = tmp_w0_result.p[(a,'w0_0')]
             if a in ['a15','a12','a09'] and 'a0' not in model:
-                phys_data['p']['aw0'] = tmp_w0_result.p[(aw0_keys[a],'aw0')]
+                phys_point['p']['aw0'] = tmp_w0_result.p[(aw0_keys[a],'aw0')]
             elif a == 'a06' and 'a0' not in model:
-                phys_data['p']['aw0'] = 1 / gv.gvar('3.0119(19)')
+                phys_point['p']['aw0'] = 1 / gv.gvar('3.0119(19)')
             fit_model_tmp = chipt.FitModel(model_list, _fv=False, _FF=FF)
-            tmp_w0_result.phys['w0_a_'+a] = FitEnv._w0_function(fit_model_tmp, phys_data['x'], phys_data['p'])
+            tmp_w0_result.phys['w0_a_'+a] = FitEnv._w0_function(fit_model_tmp, phys_point['x'], phys_point['p'])
 
         w0_results['all'] = tmp_w0_result
         ''' do fit to each a separately to compare '''
@@ -123,14 +123,14 @@ def main():
             fitEnv     = FitEnv(gv_data, fit_model, switches)
             p_copy = copy.deepcopy(priors)
             tmp_w0_result = fitEnv.fit_w0(p_copy)
-            phys_data = copy.deepcopy(phys_point)
+            phys_point = copy.deepcopy(phys_point)
             for k in tmp_w0_result.p:
                 if isinstance(k,str):
-                    phys_data['p'][k] = tmp_w0_result.p[k]
+                    phys_point['p'][k] = tmp_w0_result.p[k]
             tmp_w0_result.phys = dict()
-            phys_data['p']['w0_0'] = tmp_w0_result.p[(a,'w0_0')]
+            phys_point['p']['w0_0'] = tmp_w0_result.p[(a,'w0_0')]
             fit_model_tmp = chipt.FitModel(model_list, _fv=False, _FF=FF)
-            tmp_w0_result.phys['w0_'+a] = FitEnv._w0_function(fit_model_tmp, phys_data['x'], phys_data['p'])
+            tmp_w0_result.phys['w0_'+a] = FitEnv._w0_function(fit_model_tmp, phys_point['x'], phys_point['p'])
             w0_results[a] = tmp_w0_result
         switches['w0_aa_lst'] = aa
 
@@ -149,45 +149,48 @@ def main():
 
         do_fit = False
         if switches['save_fits'] or switches['debug_save_fit']:
-            pickled_fit = 'pickled_fits/'+model+'_lo_x_'+str(ip.lo_x)+'_lo_a_'+str(ip.lo_a)
-            pickled_fit += '_nlo_x_'+str(ip.nlo_x)+'_nlo_a_'+str(ip.nlo_a)
-            pickled_fit += '_n2lo_x_'+str(ip.nnlo_x)+'_n2lo_a_'+str(ip.nnlo_a)+'.p'
+            pickled_fit = 'pickled_fits/'+model+'_nlo_x_'+str(ip.nlo_x)+'_nlo_a_'+str(ip.nlo_a)
+            pickled_fit += '_n2lo_x_'+str(ip.n2lo_x)+'_n2lo_a_'+str(ip.n2lo_a)
+            pickled_fit += '_n3lo_x_'+str(ip.n3lo_x)+'_n3lo_a_'+str(ip.n3lo_a)+'.p'
             if os.path.exists(pickled_fit):
                 print('reading %s' %pickled_fit)
                 fit_result = gv.load(pickled_fit)
-                check_pickled_fit(fit_result,switches,priors)
+                analysis.check_pickled_fit(fit_result, switches, priors)
+                report_phys_point(fit_result,phys_point, model_list, FF, report=switches['report_phys'])
             else:
                 do_fit = True
         else:
             do_fit = True
         if do_fit or switches['debug_save_fit']:
             tmp_result = fitEnv.fit_data(priors)
-            tmp_result.phys_point = dict()
-            tmp_result.phys_point.update({k:v for k,v in phys_point['p'].items() if ('Lchi' in k) or k in ['mpi','mk','mkp']})
+            tmp_result.ensembles_fit = switches['ensembles_fit']
+            report_phys_point(tmp_result, phys_point, model_list, FF, report=switches['report_phys'], store_phys=True)
             if switches['debug_save_fit']:
+                print('---------------------------------------------------------')
                 print('live fit')
-                report_phys_point(tmp_result, phys_point, model_list, FF, report=True)
-                analysis.uncertainty_breakdown(tmp_result,'FKFpi',print_error=True)
+                print('---------------------------------------------------------')
+                report_phys_point(tmp_result, phys_point, model_list, FF, report=True, store_phys=False)
+                analysis.uncertainty_breakdown(tmp_result,'w0_mO',print_error=True)
+                print('---------------------------------------------------------')
                 print('pickled fit')
+                print('---------------------------------------------------------')
                 if not os.path.exists(pickled_fit):
                     gv.dump(tmp_result, pickled_fit, add_dependencies=True)
                     fit_result = gv.load(pickled_fit)
-                report_phys_point(fit_result, phys_point, model_list, FF, report=True)
-                analysis.uncertainty_breakdown(fit_result,'FKFpi',print_error=True)
+                #print(fit_result.phys_point)
+                report_phys_point(fit_result, phys_point, model_list, FF, report=True, store_phys=False)
+                analysis.uncertainty_breakdown(fit_result,'w0_mO',print_error=True)
             if do_fit:
                 fit_result = tmp_result
 
         if switches['print_fit']:
             print(fit_result.format(maxline=True))
-        fit_result.phys_point.update({k:v for k,v in phys_point['p'].items() if ('Lchi' in k) or k in ['mpi','mk','mkp']})
-        fit_result.ensembles_fit = switches['ensembles_fit']
-        report_phys_point(fit_result, phys_point, model_list, FF, report=switches['report_phys'])
         fit_results[model] = fit_result
         if switches['save_fits']:
             gv.dump(fit_result, pickled_fit, add_dependencies=True)
 
         if switches['debug_phys_point'] and not do_fit:
-            report_phys_point(fit_result, phys_point, model_list, FF)
+            report_phys_point(fit_result, phys_point, model_list, FF, report=True, store_phys=False)
         if switches['make_extrap'] or switches['make_fv']:
             plots = plotting.ExtrapolationPlots(model, model_list, fitEnv, fit_result, switches)
         if switches['make_extrap']:
@@ -205,16 +208,14 @@ def main():
         to_fm = phys_point['p']['hbar_c'] / phys_point['p']['m_omega']
         w0_mO_model_avg, model_sig = model_avg.bayes_model_avg(to_fm)
 
-        #print("%25s &")
-
         if switches['w0_interpolate']:
             model                  = switches['w0_a_model']
             switches['w0_aa_lst']  = aa
             model_list, FF, fv, aa = analysis.gather_w0_elements(model)
             fit_model  = chipt.FitModel(model_list, _fv=fv, _FF=FF)
             fitEnv     = FitEnv(gv_data, fit_model, switches)
-            if switches['make_interp']:
-                plotting.plot_w0(model, model_list, fitEnv, w0_results['all'], switches, w0_results['all'].phys_data)
+            if switches['plot_interp']:
+                plotting.plot_w0(model, model_list, fitEnv, w0_results['all'], switches, w0_results['all'].phys_point)
 
             if switches['print_w0_interp']:
                 print(w0_results['all'].format(maxline=True))
@@ -351,65 +352,25 @@ class FitEnv:
         return lsqfit.nonlinear_fit(data=(x,y), prior=p, fcn=self.w0_function, fitter=fitter, debug=True)
 
 
-def report_phys_point(fit_result, phys_point_params, model_list, FF, report=False):
-    phys_data = copy.deepcopy(phys_point_params)
+def report_phys_point(fit_result, phys_point_params, model_list, FF, report=False, store_phys=False):
     fit_model = chipt.FitModel(model_list, _fv=False, _FF=FF)
-    for k in fit_result.p:
-        if isinstance(k,str):
-            phys_data['p'][k] = fit_result.p[k]
-    fit_result.phys                = dict()
-    fit_result.phys['w0_mO']       = FitEnv._fit_function(fit_model, phys_data['x'], phys_data['p'])
-    fit_result.phys['w0']          = fit_result.phys['w0_mO']
-    fit_result.phys['w0']         *= phys_point_params['p']['hbar_c'] / phys_point_params['p']['m_omega']
+    if store_phys:
+        phys_point = copy.deepcopy(phys_point_params)
+        for k in fit_result.p:
+            if isinstance(k,str):
+                phys_point['p'][k] = fit_result.p[k]
+        fit_result.phys_point = phys_point
+    else:
+        phys_point = fit_result.phys_point
+    fit_result.phys          = dict()
+    fit_result.phys['w0_mO'] = FitEnv._fit_function(fit_model, phys_point['x'], phys_point['p'])
+    fit_result.phys['w0']    = fit_result.phys['w0_mO']
+    fit_result.phys['w0']   *= phys_point['p']['hbar_c'] / phys_point['p']['m_omega']
     if report:
         print('  chi2/dof [dof] = %.2f [%d]   Q=%.3f   logGBF = %.3f' \
             %(fit_result.chi2/fit_result.dof, fit_result.dof, fit_result.Q, fit_result.logGBF))
         print('  w0 * m_O              = %s' %fit_result.phys['w0_mO'])
         print('  w0                    = %s' %(fit_result.phys['w0']))
-
-
-def debug_fit_function(check_fit, model_list, FF, fv):
-    x = check_fit['x']
-    p = check_fit['p']
-    fit_model = chipt.FitModel(model_list, _fv=False, _FF=FF)
-    cP        = chipt.ConvenienceDict(fit_model, x, p)
-    result    = 0.
-    result_FV = 0.
-    if fv:
-        fit_model_fv = chipt.FitModel(model_list, _fv=True, _FF=FF)
-        cP_FV        = chipt.ConvenienceDict(fit_model_fv, x, p)
-        for term in model_list:
-            if term in ['nnlo_log','nnnlo_log','nnlo_ct_fv']:
-                t_FV = getattr(chipt.FitModel, term)(fit_model_fv, x, p, cP_FV)
-                t    = getattr(chipt.FitModel, term)(fit_model, x, p, cP)
-                result    += t
-                result_FV += t_FV
-                print('%16s   ' %(term), t)
-                print('%16s   ' %(term+'_FV'), t_FV)
-            else:
-                t = getattr(chipt.FitModel, term)(fit_model, x, p, cP)
-                result_FV += t
-                result    += t
-                print('%16s   ' %(term), t)
-    else:
-        for term in model_list:
-            t = getattr(chipt.FitModel, term)(fit_model, x, p, cP)
-            result += t
-            print('%16s   ' %(term), t)
-    print('---------------------------------------')
-    if fv:
-        print('%16s   %f' %('total_FV', result_FV))
-    print('%16s   %f' %('total', result))
-
-def check_pickled_fit(fit,switches,priors):
-    ''' make sure the pickled data is consistent with choices in switches '''
-    if not set(fit.ensembles_fit) == set(switches['ensembles_fit']):
-        sys.exit('ensembles_fit from the pickled fit does not match ensembles_fit from input_params')
-    for p in priors:
-        if p in fit.prior:
-            if priors[p].mean != fit.prior[p].mean or priors[p].sdev != fit.prior[p].sdev:
-                sys.exit('prior %s from fit, %s, does not match from input_params %s' \
-                    %(p,fit.prior[p],priors[p]))
 
 
 if __name__ == "__main__":

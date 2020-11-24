@@ -76,8 +76,16 @@ class FitModel:
         `cP` in the physics functions above needs to have a corresponding
         function defined here with the name and an underscore prepended '''
     # xpt masses
-    def _p2(self, x, p, cP): return (p['mpi'] / p['Lam_'+self.FF])**2
-    def _s2(self, x, p, cP): return (2*p['mk']**2 - p['mpi']**2) / (p['Lam_'+self.FF])**2
+    def _p2(self, x, p, cP):
+        if self.FF == 'Of':
+            return (p['mpi'] / x['Lam_'+self.FF])**2
+        else:
+            return (p['mpi'] / p['Lam_'+self.FF])**2
+    def _s2(self, x, p, cP):
+        if self.FF == 'Of':
+            return (2*p['mk']**2 - p['mpi']**2) / (x['Lam_'+self.FF])**2
+        else:
+            return (2*p['mk']**2 - p['mpi']**2) / (p['Lam_'+self.FF])**2
     # logs
     def _lp(self, x, p, cP): return np.log(cP['p2'])
     # eps_a**2
@@ -120,21 +128,21 @@ class FitModel:
     def nlo_alphaS(self,x,p,cP):
         return p['d_a_aS'] * x['alphaS'] * cP['a2']
 
-    def nnlo_ct(self,x,p,cP):
+    def n2lo_ct(self,x,p,cP):
         a_result  =   p['c_ll'] * cP['p2']**2\
                     + p['c_ls'] * cP['p2'] * cP['s2']\
                     + p['c_ss'] * cP['s2']**2
         a_result += cP['a2'] *( p['d_aa'] * cP['a2'] + p['d_al'] * cP['p2'] + p['d_as'] * cP['s2'])
         return a_result
 
-    def nnlo_log(self,x,p,cP):
+    def n2lo_log(self,x,p,cP):
         # note - Ip = p2 * log(p2)
         return p['c_lln'] * cP['p2'] * cP['Ip']
 
-    def nnlo_ct_fv(self,x,p,cP):
+    def n2lo_ct_fv(self,x,p,cP):
         return cP['p2']**2 * cP['ITp'] #NOTE, ITp contains t_fv
 
-    def nnnlo_ct(self,x,p,cP):
+    def n3lo_ct(self,x,p,cP):
         a_result  =   p['c_lll'] * cP['p2']**3\
                     + p['c_lls'] * cP['p2']**2 * cP['s2']\
                     + p['c_lss'] * cP['p2']    * cP['s2']**2\
@@ -147,7 +155,7 @@ class FitModel:
                     + p['d_ass'] * cP['a2']    * cP['s2']**2
         return a_result
 
-    def nnnlo_log(self,x,p,cP):
+    def n3lo_log(self,x,p,cP):
         # note - Ip = p2 * log(p2)
         #        p2 * Ip**2 = p2**3 * log(p2)**2
         a_result  =   p['c_llln']  * cP['p2']**2 * cP['Ip'] \
@@ -169,7 +177,7 @@ class FitModel:
     def w0_nlo_a(self, x, p, cP):
         return p['w0_0'] * cP['a2']
 
-    def w0_nnlo(self, x, p, cP):
+    def w0_n2lo(self, x, p, cP):
         a_result  = p['w0_0'] * p['k_ll']  * cP['p2']**2
         a_result += p['w0_0'] * p['k_ls']  * cP['p2']*cP['s2']
         a_result += p['w0_0'] * p['k_ss']  * cP['s2']**2
@@ -177,14 +185,14 @@ class FitModel:
 
         return a_result
 
-    def w0_nnlo_a0(self, x, p, cP):
+    def w0_n2lo_a0(self, x, p, cP):
         a_result  = p['w0_0'] * p['k_aa'] / (2*p['w0_0'])**4
         a_result += p['w0_0'] * p['k_la'] * cP['p2'] / (2*p['w0_0'])**2
         a_result += p['w0_0'] * p['k_sa'] * cP['s2'] / (2*p['w0_0'])**2
 
         return a_result
 
-    def w0_nnlo_a(self, x, p, cP):
+    def w0_n2lo_a(self, x, p, cP):
         a_result  = p['w0_0'] * p['k_aa'] * cP['a2']**2
         a_result += p['w0_0'] * p['k_la'] * cP['p2'] * cP['a2']
         a_result += p['w0_0'] * p['k_sa'] * cP['s2'] * cP['a2']

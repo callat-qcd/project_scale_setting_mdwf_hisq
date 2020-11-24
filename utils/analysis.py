@@ -7,6 +7,7 @@ import yaml
 
 import gvar as gv
 
+import chipt
 
 class BayesModelAvg:
     ''' Under Bayes Theorem, models which are used to fit the same dataset
@@ -80,6 +81,7 @@ class BayesModelAvg:
         pdf_split = dict()
         pdf_split['F'] = 0.
         pdf_split['O'] = 0.
+        pdf_split['Of'] = 0.
         pdf_split['F_xpt'] = 0.
         pdf_split['F_taylor'] = 0.
         pdf_split['O_xpt'] = 0.
@@ -105,8 +107,10 @@ class BayesModelAvg:
             pdf_split[FF] += w_i * p
             if FF == 'F':
                 pdf_split['F'] += w_i * p
-            else:
+            elif FF == 'O':
                 pdf_split['O'] += w_i * p
+            else:
+                pdf_split['Of'] += w_i * p
         self.avg = avg
         self.pdf = pdf
         self.cdf = cdf
@@ -187,7 +191,6 @@ class BayesModelAvg:
         if save_fig:
             plt.savefig('figures/hist_'+hist_type+'.pdf', transparent=True)
 
-
 def uncertainty_breakdown(result,key,print_error=False):
     stat = dict()
     xpt  = dict()
@@ -199,11 +202,12 @@ def uncertainty_breakdown(result,key,print_error=False):
             disc[k] = result.prior[k]
         else:
             xpt[k]  = result.prior[k]
+    phys_point = {k:v for k,v in result.phys_point['p'].items() if ('Lam' in k) or k in ['mpi','mk']}
     uncertainties = dict()
     uncertainties['stat_xy']    = result.phys[key].partialsdev(result.y,stat)
     uncertainties['xpt']        = result.phys[key].partialsdev(xpt)
     uncertainties['cont']       = result.phys[key].partialsdev(disc)
-    uncertainties['phys_point'] = result.phys[key].partialsdev(result.phys_point)
+    uncertainties['phys_point'] = result.phys[key].partialsdev(phys_point)
     if print_error:
         for k in uncertainties:
             print('%10s   %f' %(k,uncertainties[k]))
@@ -219,17 +223,17 @@ def check_for_duplicates(list_of_elems):
 
 
 def sys_models(switches):
-    def check_model(sys_val,models,nnlo=False,nnnlo=False):
+    def check_model(sys_val,models,n2lo=False,n3lo=False):
         for model in models:
             #if 'taylor' not in model:
             new_model = model+sys_val
-            if nnlo:
+            if n2lo:
                 if (sys_val not in model) and (new_model not in models):
-                    if nnnlo:
-                        if 'nnlo' in model and 'nnnlo' not in model:
+                    if n3lo:
+                        if 'n2lo' in model and 'n3lo' not in model:
                             models.append(new_model)
                     else:
-                        if 'nnlo' in model:
+                        if 'n2lo' in model:
                             models.append(new_model)
             else:
                 if (sys_val not in model) and (new_model not in models):
@@ -261,22 +265,22 @@ def gather_model_elements(model):
     fv     = 'FV'     in model
     alphaS = 'alphaS' in model
 
-    if FF not in ['F','O']:
+    if FF not in ['F','O','Of']:
         sys.exit('unrecognized Lam choice [F, O]: '+FF)
 
     model_elements = [eft+'_nlo']
     if alphaS:
         model_elements += ['nlo_alphaS']
-    if order in ['nnlo', 'nnnlo']:
-        model_elements += ['nnlo_ct']
+    if order in ['n2lo', 'n3lo']:
+        model_elements += ['n2lo_ct']
         if eft == 'xpt':
-            model_elements += ['nnlo_log']
+            model_elements += ['n2lo_log']
         elif eft == 'taylor' and fv:
-            model_elements += ['nnlo_ct_fv']
-    if order in ['nnnlo']:
-        model_elements += ['nnnlo_ct']
+            model_elements += ['n2lo_ct_fv']
+    if order in ['n3lo']:
+        model_elements += ['n3lo_ct']
         if eft == 'xpt':
-            model_elements += ['nnnlo_log']
+            model_elements += ['n3lo_log']
 
     return model_elements, FF, fv
 
@@ -300,13 +304,13 @@ def gather_w0_elements(model):
         else:
             model_elements += ['w0_nlo_a']
 
-    if order in ['nnlo', 'nnnlo']:
-        model_elements += ['w0_nnlo']
+    if order in ['n2lo', 'n3lo']:
+        model_elements += ['w0_n2lo']
         if aa == 'all':
             if a0:
-                model_elements += ['w0_nnlo_a0']
+                model_elements += ['w0_n2lo_a0']
             else:
-                model_elements += ['w0_nnlo_a']
+                model_elements += ['w0_n2lo_a']
 
     return model_elements, FF, fv, aa_lst
 
@@ -384,16 +388,46 @@ def prior_width_scan(model, fitEnv, fit_model, priors, switches):
     yaml.dump(prior_grid, prior_file)
     prior_file.close()
 
-def avg_iso(a,b):
-    ''' We know this correction is negative - so this routing assumes that.
-        - Take the larger in magnitude term
-        - Take the largest uncertainty
-        - add 25% for SU(3) breaking
-    '''
-    max_err = max([a.sdev, b.sdev])
-    avg_err = 0.5*(a+b).sdev
-    sig     = np.sqrt( (max_err**2 - avg_err**2) / ((a+b).mean/2)**2)
-    if a < b:
-        return 0.5*(a+b) * gv.gvar(1, sig) * gv.gvar(1,.25) + (a-b).mean/2
+
+def debug_fit_function(check_fit, model_list, FF, fv):
+    x = check_fit['x']
+    p = check_fit['p']
+    fit_model = chipt.FitModel(model_list, _fv=False, _FF=FF)
+    cP        = chipt.ConvenienceDict(fit_model, x, p)
+    result    = 0.
+    result_FV = 0.
+    if fv:
+        fit_model_fv = chipt.FitModel(model_list, _fv=True, _FF=FF)
+        cP_FV        = chipt.ConvenienceDict(fit_model_fv, x, p)
+        for term in model_list:
+            if term in ['n2lo_log','n3lo_log','n2lo_ct_fv']:
+                t_FV = getattr(chipt.FitModel, term)(fit_model_fv, x, p, cP_FV)
+                t    = getattr(chipt.FitModel, term)(fit_model, x, p, cP)
+                result    += t
+                result_FV += t_FV
+                print('%16s   ' %(term), t)
+                print('%16s   ' %(term+'_FV'), t_FV)
+            else:
+                t = getattr(chipt.FitModel, term)(fit_model, x, p, cP)
+                result_FV += t
+                result    += t
+                print('%16s   ' %(term), t)
     else:
-        return 0.5*(a+b) * gv.gvar(1, sig) * gv.gvar(1,.25) + (b-a).mean/2
+        for term in model_list:
+            t = getattr(chipt.FitModel, term)(fit_model, x, p, cP)
+            result += t
+            print('%16s   ' %(term), t)
+    print('---------------------------------------')
+    if fv:
+        print('%16s   %f' %('total_FV', result_FV))
+    print('%16s   %f' %('total', result))
+
+def check_pickled_fit(fit,switches,priors):
+    ''' make sure the pickled data is consistent with choices in switches '''
+    if not set(fit.ensembles_fit) == set(switches['ensembles_fit']):
+        sys.exit('ensembles_fit from the pickled fit does not match ensembles_fit from input_params')
+    for p in priors:
+        if p in fit.prior:
+            if priors[p].mean != fit.prior[p].mean or priors[p].sdev != fit.prior[p].sdev:
+                sys.exit('prior %s from fit, %s, does not match from input_params %s' \
+                    %(p,fit.prior[p],priors[p]))
