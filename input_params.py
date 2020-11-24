@@ -23,27 +23,24 @@ switches['ensembles_fit'] = [
 # FIT MODELS
 switches['ansatz'] = dict()
 switches['ansatz']['models'] = [
-        'xpt_nnnlo_alphaS_FV'
-        #'xpt_nlo','xpt_nnlo', 'xpt_nnnlo',
-        #'taylor_nlo', 'taylor_nnlo', 'taylor_nnnlo'
-        #'xpt_nlo_FV','xpt_nnlo_FV', 'xpt_nnnlo_FV',
-        #'taylor_nlo_FV', 'taylor_nnlo_FV', 'taylor_nnnlo_FV'
+        'xpt_n2lo', 'xpt_n3lo',
+        'taylor_n2lo', 'taylor_n3lo'
     ]
+switches['ansatz']['models'] = ['xpt_n3lo_FV']
 '''
     The full list of models can be rather long.  The sys switches help loop
     over them.  Example other base models are
-        taylor_nnnlo_FV
-        ma_nnnlo_FV
+        taylor_n3lo_FV
+        ma_n3lo_FV
 '''
 
 switches['w0'] = 'callat' # or milc
 
 # SYSTEMATIC SWITCHES
 switches['sys'] = dict()     # these cause the fitter to loop over various options
-switches['sys']['Lam_chi']   = False # FF = F, O
+switches['sys']['Lam_chi']   = False # FF = F, O, [Of = O with fixed m_Omega value as x-par]
+switches['scales']           = ['F','O'] # Of can also be added
 switches['sys']['alphaS']    = False # include alphaS at NLO?
-switches['scales']           = ['F','O']
-# OLDER SYSTEMATICS - still work, but not used
 switches['sys']['FV']        = True # turn on/off FV corrections
                                # scale is used when the loop over scales is not triggered
 switches['scale']            = 'F' # F: Lam = 4pi Fpi; O: Lam = m_O
@@ -53,18 +50,19 @@ switches['print_lattice']    = False # print data for paper - no fitting will oc
 # Fitting options
 switches['model_avg']         = True # perform Bayes Model Avg
 switches['print_fit']         = False # print lsqfit results?
-switches['report_phys']       = False  # report physical point for each fit?
+switches['report_phys']       = True  # report physical point for each fit?
 switches['bs_bias']           = True  # shift bs avg to b0?
-switches['save_fits']         = False  # save fits in pickle file?
+switches['save_fits']         = True  # save fits in pickle file?
 switches['prior_search']      = False # perform a crude grid search to optimize
 switches['prior_verbose']     = False # NNLO and NNNLO prior widths
 switches['scipy']             = True # use scipy minimizer instead of gsl?
+switches['freeze_mO']         = False
+
 # w0 interpolation fit options
-switches['w0_interpolate']    = True
-switches['w0_a_model']        = 'w0_nnlo_a0_FV_all' # w0_nnlo_a0_FV_all, w0_nnlo_FV_all
+switches['w0_interpolate']    = False
+switches['w0_a_model']        = 'w0_n2lo_a0_FV_all' # w0_n2lo_a0_FV_all, w0_n2lo_FV_all
 switches['print_w0_interp']   = False
 
-switches['check_fit']         = True # print pieces of fit function - no fitting will occur
 # check reweighting and stochastic uncertainty improvement
 switches['reweight']          = False
 switches['deflate_a06']       = False
@@ -72,58 +70,60 @@ switches['deflate_a09']       = False
 switches['deflate_a12m220ms'] = False
 
 # Plotting options
-switches['save_figs']        = True  # save figures
-switches['make_extrap']      = True # make plots
-switches['make_interp']      = False
-switches['make_hist']        = False # make plots
-switches['make_fv']          = False
-switches['plot_ls']          = False # make parameter space plots
+switches['save_figs']         = True  # save figures
+switches['make_extrap']       = False # make plots
+switches['plot_interp']       = True
+switches['make_hist']         = False # make plots
+switches['make_fv']           = False
+switches['plot_ls']           = False # make parameter space plots
 
 # DEBUGGING
-switches['debug_models']     = False # print list of models being generated
-switches['debug_save_fit']   = False # check pickling of fit works
-switches['debug_phys_point'] = False # run report_phys_point even if fit is just loaded
-switches['debug_shift']      = False # check the shifting of raw data to extrapolated points
-switches['debug_bs']         = False # debug shape of bs lists
+switches['check_fit']         = False # print pieces of fit function - no fitting will occur
+switches['debug_models']      = False # print list of models being generated
+switches['debug_save_fit']    = False # check pickling of fit works
+switches['debug_phys_point']  = False # run report_phys_point even if fit is just loaded
+switches['debug_shift']       = False # check the shifting of raw data to extrapolated points
+switches['debug_bs']          = False # debug shape of bs lists
 
 # Taylor priors - beyond NLO - use "XPT" NiLO priors
 priors = dict()
-priors['c0']   = gv.gvar(1.5,1)
+priors['c0']   = gv.gvar(1,1)
+
+nlo_x = 1
+nlo_a = 1
+n2lo_x = 1
+n2lo_a = 1
+n3lo_x = 1
+n3lo_a = 1
 
 def make_priors(priors, s):
-    nlo_x = 1
-    nlo_a = 1
     priors['c_l']    = gv.gvar(1   ,nlo_x * s)
     priors['c_s']    = gv.gvar(1   ,nlo_x * s)
     priors['d_a']    = gv.gvar(-0.5,nlo_a)
-    priors['d_a_aS'] = gv.gvar(0 ,nlo_a)
+    priors['d_a_aS'] = gv.gvar(0 ,  0.7)
 
-    nnlo_x = 1
-    nnlo_a = 1
-    priors['c_ll']  = gv.gvar(0., nnlo_x * s**2)
-    priors['c_ls']  = gv.gvar(0., nnlo_x * s**2)
-    priors['c_ss']  = gv.gvar(0., nnlo_x * s**2)
-    priors['c_lln'] = gv.gvar(0., nnlo_x * s**2)
-    priors['d_aa']  = gv.gvar(0., nnlo_a)
-    priors['d_al']  = gv.gvar(0., nnlo_a * s)
-    priors['d_as']  = gv.gvar(0., nnlo_a * s)
-    priors['t_fv']  = gv.gvar(0,nnlo_a * s)
+    priors['c_ll']  = gv.gvar(0., n2lo_x * s**2)
+    priors['c_ls']  = gv.gvar(0., n2lo_x * s**2)
+    priors['c_ss']  = gv.gvar(0., n2lo_x * s**2)
+    priors['c_lln'] = gv.gvar(0., n2lo_x * s**2)
+    priors['d_aa']  = gv.gvar(0., n2lo_a)
+    priors['d_al']  = gv.gvar(0., n2lo_a * s)
+    priors['d_as']  = gv.gvar(0., n2lo_a * s)
+    priors['t_fv']  = gv.gvar(0., n2lo_a * s)
 
-    nnnlo_x = 1
-    nnnlo_a = 1
-    priors['c_lll']   = gv.gvar(0., nnnlo_x * s**3)
-    priors['c_lls']   = gv.gvar(0., nnnlo_x * s**3)
-    priors['c_lss']   = gv.gvar(0., nnnlo_x * s**3)
-    priors['c_sss']   = gv.gvar(0., nnnlo_x * s**3)
-    priors['c_llln2'] = gv.gvar(0., nnnlo_x * s**3)
-    priors['c_llln']  = gv.gvar(0., nnnlo_x * s**3)
-    priors['c_lsln']  = gv.gvar(0., nnnlo_x * s**3)
-    priors['d_aaa']   = gv.gvar(0., nnnlo_a)
-    priors['d_aal']   = gv.gvar(0., nnnlo_a * s)
-    priors['d_aas']   = gv.gvar(0., nnnlo_a * s)
-    priors['d_all']   = gv.gvar(0., nnnlo_a * s**2)
-    priors['d_als']   = gv.gvar(0., nnnlo_a * s**2)
-    priors['d_ass']   = gv.gvar(0., nnnlo_a * s**2)
+    priors['c_lll']   = gv.gvar(0., n3lo_x * s**3)
+    priors['c_lls']   = gv.gvar(0., n3lo_x * s**3)
+    priors['c_lss']   = gv.gvar(0., n3lo_x * s**3)
+    priors['c_sss']   = gv.gvar(0., n3lo_x * s**3)
+    priors['c_llln2'] = gv.gvar(0., n3lo_x * s**3)
+    priors['c_llln']  = gv.gvar(0., n3lo_x * s**3)
+    priors['c_lsln']  = gv.gvar(0., n3lo_x * s**3)
+    priors['d_aaa']   = gv.gvar(0., n3lo_a)
+    priors['d_aal']   = gv.gvar(0., n3lo_a * s)
+    priors['d_aas']   = gv.gvar(0., n3lo_a * s)
+    priors['d_all']   = gv.gvar(0., n3lo_a * s**2)
+    priors['d_als']   = gv.gvar(0., n3lo_a * s**2)
+    priors['d_ass']   = gv.gvar(0., n3lo_a * s**2)
 
     return priors
 
@@ -171,7 +171,7 @@ phys_point = {
         'a2DI'    : gv.gvar(0,0),
         'w0'      : gv.gvar(0.1714,0),
     },
-    'x' : {'alphaS':0},
+    'x' : {'alphaS':0, 'Lam_Of':m_omega_phys.mean},
     'y' : {},
 }
 
@@ -199,13 +199,13 @@ check_fit = {
         'c_s'    : 1.3,
         'c_ll'   : 0.5,
         't_fv'   : 0.19,
-        'c_lln'  : 0.2,
+        'c_lln'  : 1,#0.2,
         'c_ls'   : 0.6,
         'c_ss'   : 0.7,
         'c_lll'  : 0.2,
-        'c_llln' : 0.4,#4
-        'c_lsln' : 0.7,#7
-        'c_llln2': 0.9,#9
+        'c_llln' : 1,#0.4,#4
+        'c_lsln' : 1,#0.7,#7
+        'c_llln2': 1,#0.9,#9
         'c_lls'  : 0.3,
         'c_lss'  : 0.45,
         'c_sss'  : 0.53,
