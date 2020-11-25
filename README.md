@@ -5,7 +5,7 @@ This repository performs the chiral, continuum and infinite volume extrapolation
 The analysis was performed by Nolan Miller ([millerb](https://github.com/millernb)) with the `master` branch, and Logan Carpenter ([
 loganofcarpenter](https://github.com/orgs/callat-qcd/people/loganofcarpenter)) with cross checks by André Walker-Loud ([walkloud](https://github.com/walkloud)) on the `andre` branch.
 
-The raw correlation functions are contained in the file `data/callat_mdwf_hisq_scale_correlators.h5` and the bootstrap results for the ground state masses and values of `Fpi` are contained in the file `data/omega_pi_k_spec.h5`.
+The raw correlation functions can be found [here](https://a51.lbl.gov/~callat/published_results/) and the bootstrap results for the ground state masses and values of `Fpi` are contained in the file `data/omega_pi_k_spec.h5`.
 
 
 ## How to use
@@ -33,7 +33,7 @@ optional arguments:
   -mc, --milc           use milc's determinations of a/w0
   -nf, --no_fit         do not fit models
   -na, --no_average     do not average models
-  -d, --default         use default priors; defaults to using optimized priors if present, otherwise default priors 
+  -d, --default         use default priors; defaults to using optimized priors if present, otherwise default priors
 ```
 
 To fine-tune the results, either re-run the fits using the options above or by modifying `/results/[name]/settings.yaml`. Similarly, the fits can be constructed with different priors by editing `/results/[name]/priors.yaml` and re-running `python scale-setting.py -c [name]`.
