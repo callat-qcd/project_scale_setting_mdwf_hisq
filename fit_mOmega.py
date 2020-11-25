@@ -177,7 +177,6 @@ def main():
                 if not os.path.exists(pickled_fit):
                     gv.dump(tmp_result, pickled_fit, add_dependencies=True)
                     fit_result = gv.load(pickled_fit)
-                #print(fit_result.phys_point)
                 report_phys_point(fit_result, phys_point, model_list, FF, report=True, store_phys=False)
                 analysis.uncertainty_breakdown(fit_result,'w0_mO',print_error=True)
             if do_fit:
