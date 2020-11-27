@@ -35,6 +35,12 @@ def main():
     priors     = ip.priors
     phys_point = ip.phys_point
     check_fit  = ip.check_fit
+    if switches['gf_scale'] == 'w0':
+        a_sign  = -1
+        a_scale = 1
+    elif switches['gf_scale'] == 't0':
+        a_sign  = 1
+        a_scale = 2
 
     # if check_fit: - add support
     if switches['check_fit']:
@@ -81,9 +87,9 @@ def main():
             fit_model  = chipt.FitModel(model_list, _fv=fv, _FF=FF)
             fitEnv     = FitEnv(gv_data, fit_model, switches)
             if FF == 'F':
-                priors = ip.make_priors(priors,1)
+                priors = ip.make_priors(priors,1, a_sign, a_scale)
             elif FF == 'O':
-                priors = ip.make_priors(priors,2)
+                priors = ip.make_priors(priors,2, a_sign, a_scale)
             analysis.prior_width_scan(model, fitEnv, fit_model, priors, switches)
         sys.exit()
     # do analysis
@@ -141,9 +147,9 @@ def main():
         print(model)
         model_list, FF, fv = analysis.gather_model_elements(model)
         if FF == 'F':
-            priors = ip.make_priors(priors,1)
+            priors = ip.make_priors(priors,1, a_sign, a_scale)
         elif FF == 'O':
-            priors = ip.make_priors(priors,2)
+            priors = ip.make_priors(priors,2, a_sign, a_scale)
         fit_model  = chipt.FitModel(model_list, _fv=fv, _FF=FF)
         fitEnv     = FitEnv(gv_data, fit_model, switches)
 
@@ -274,9 +280,12 @@ class FitEnv:
         self.x          = xyp_dict['x']
         self.pruned_x   = {ens : { k : v for k, v in xyp_dict['x'][ens].items()}
                                 for ens in self.ensembles}
-        self.y          = xyp_dict['y']
+        if switches['gf_scale'] == 'w0':
+            self.y      = xyp_dict['y_w0']
+        elif switches['gf_scale'] == 't0':
+            self.y      = xyp_dict['y_t0']
         self.y_w0       = {ens: xyp_dict['p'][(ens,'w0a')] for ens in self.ensembles}
-        self.pruned_y   = {ens : xyp_dict['y'][ens] for ens in self.ensembles}
+        self.pruned_y   = {ens : self.y[ens] for ens in self.ensembles}
         self.p          = xyp_dict['p']
         required_params = model.get_required_parameters()
         self.pruned_p   = {(ens, k) : v for (ens, k), v in xyp_dict['p'].items()

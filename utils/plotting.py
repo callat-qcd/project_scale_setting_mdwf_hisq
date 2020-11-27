@@ -189,6 +189,17 @@ class ExtrapolationPlots:
         self.shift_fit  = chipt.FitModel(self.shift_list, _fv=False, _FF=self.FF)
         # which ensemble to get aw0 from
         self.aw0_keys = {'a15':'a15m135XL','a12':'a12m130','a09':'a09m135'}
+        # ylim
+        if self.switches['gf_scale'] == 'w0':
+            self.ea_ylim = (1.351, 1.474)
+            self.ea_ylim_zoom = (1.351, 1.559)
+            self.lf_ylim = (1.351, 1.559)
+            self.plot_name = 'w0'
+        elif self.switches['gf_scale'] == 't0':
+            self.ea_ylim = (1.181, 1.399)
+            self.ea_ylim_zoom = (1.201, 1.349)
+            self.plot_name = 'sqrtt0'
+            self.lf_ylim = (1.181, 1.449)
 
     def plot_vs_eps_asq(self,shift_points):
         self.shift_xp = copy.deepcopy(shift_points)
@@ -238,19 +249,21 @@ class ExtrapolationPlots:
         self.ax_cont.legend(handles, labels, ncol=2, columnspacing=0, handletextpad=0.1, fontsize=fs_leg)
 
         self.ax_cont.set_xlabel(r'$\epsilon_a^2 = a^2 / (2 w_0)^2$',fontsize=fs_text)
-        self.ax_cont.set_ylabel(r'$w_0 m_\Omega$',fontsize=fs_text)
+        if self.switches['gf_scale'] == 'w0':
+            self.ax_cont.set_ylabel(r'$w_0 m_\Omega$',fontsize=fs_text)
+        elif self.switches['gf_scale'] == 't0':
+            self.ax_cont.set_ylabel(r'$\sqrt{t_0} m_\Omega$',fontsize=fs_text)
         self.ax_cont.text(0.0175, 1.375, r'%s' %(self.model.replace('_','\_')),\
             horizontalalignment='left', verticalalignment='center', \
             fontsize=fs_text, bbox={'facecolor':'None','boxstyle':'round'})
         self.ax_cont.set_xlim(0,.21)
-        self.ax_cont.set_ylim(1.351, 1.474)
-
+        self.ax_cont.set_ylim(self.ea_ylim)
 
         if self.switches['save_figs']:
-            plt.savefig('figures/'+'w0_mO_vs_ea_'+self.model+'_zoom.pdf',transparent=True)
-            self.ax_cont.set_ylim(1.351, 1.559)
-            plt.savefig('figures/'+'w0_mO_vs_ea_'+self.model+'.pdf',transparent=True)
-            self.ax_cont.set_ylim(1.351, 1.474)
+            plt.savefig('figures/'+self.plot_name+'_mO_vs_ea_'+self.model+'_zoom.pdf',transparent=True)
+            self.ax_cont.set_ylim(self.ea_ylim_zoom)
+            plt.savefig('figures/'+self.plot_name+'_mO_vs_ea_'+self.model+'.pdf',transparent=True)
+            self.ax_cont.set_ylim(self.ea_ylim)
 
 
     def plot_vs_eps_pi(self,shift_points,eps='l'):
@@ -321,7 +334,7 @@ class ExtrapolationPlots:
             y[aa]  = np.array([k.mean for k in y_plot[aa]])
             dy[aa] = np.array([k.sdev for k in y_plot[aa]])
 
-        fig_name = 'w0_mO_vs_'+eps+'_'+self.model
+        fig_name = self.plot_name+'_mO_vs_'+eps+'_'+self.model
         fig_x      = plt.figure(fig_name, figsize=fig_size)
         ax_x  = plt.axes(plt_axes)
         ax_x.fill_between(x, y['a00']-dy['a00'], y['a00']+dy['a00'],
@@ -368,8 +381,11 @@ class ExtrapolationPlots:
             xlim_FF = {'F':(0.33,0.369), 'O':(0.16,0.234)}
         ax_x.set_xlabel(eps_FF[self.FF],fontsize=fs_text)
         ax_x.set_xlim(xlim_FF[self.FF])
-        ax_x.set_ylabel(r'$w_0 m_\Omega$',fontsize=fs_text)
-        ax_x.set_ylim(1.351, 1.559)
+        if self.switches['gf_scale'] == 'w0':
+            ax_x.set_ylabel(r'$w_0 m_\Omega$',fontsize=fs_text)
+        elif self.switches['gf_scale'] == 't0':
+            ax_x.set_ylabel(r'$\sqrt{t_0} m_\Omega$',fontsize=fs_text)
+        ax_x.set_ylim(self.lf_ylim)
 
         if self.switches['save_figs']:
             plt.savefig('figures/'+fig_name+'.pdf',transparent=True)

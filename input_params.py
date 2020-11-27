@@ -21,6 +21,7 @@ switches['ensembles_fit'] = [
     'a15m135XL','a12m130' ,'a09m135',]
 
 # FIT MODELS
+switches['gf_scale'] = 't0'# w0 or t0
 switches['ansatz'] = dict()
 switches['ansatz']['models'] = [
         'xpt_n2lo', 'xpt_n3lo',
@@ -59,7 +60,7 @@ switches['scipy']             = True # use scipy minimizer instead of gsl?
 switches['freeze_mO']         = False
 
 # w0 interpolation fit options
-switches['w0_interpolate']    = True
+switches['w0_interpolate']    = False
 switches['w0_a_model']        = 'w0_n2lo_a0_FV_all' # w0_n2lo_a0_FV_all, w0_n2lo_FV_all
 switches['print_w0_interp']   = True
 
@@ -96,19 +97,19 @@ n2lo_a = 1
 n3lo_x = 1
 n3lo_a = 1
 
-def make_priors(priors, s):
+def make_priors(priors, s, a_sign, a_scale):
     priors['c_l']    = gv.gvar(1   ,nlo_x * s)
     priors['c_s']    = gv.gvar(1   ,nlo_x * s)
-    priors['d_a']    = gv.gvar(-0.5,nlo_a)
+    priors['d_a']    = gv.gvar(a_sign*0.5, nlo_a*a_scale)
     priors['d_a_aS'] = gv.gvar(0 ,  0.7)
 
     priors['c_ll']  = gv.gvar(0., n2lo_x * s**2)
     priors['c_ls']  = gv.gvar(0., n2lo_x * s**2)
     priors['c_ss']  = gv.gvar(0., n2lo_x * s**2)
     priors['c_lln'] = gv.gvar(0., n2lo_x * s**2)
-    priors['d_aa']  = gv.gvar(0., n2lo_a)
-    priors['d_al']  = gv.gvar(0., n2lo_a * s)
-    priors['d_as']  = gv.gvar(0., n2lo_a * s)
+    priors['d_aa']  = gv.gvar(0., n2lo_a * a_scale)
+    priors['d_al']  = gv.gvar(0., n2lo_a * s * a_scale)
+    priors['d_as']  = gv.gvar(0., n2lo_a * s * a_scale)
     priors['t_fv']  = gv.gvar(0., n2lo_a * s)
 
     priors['c_lll']   = gv.gvar(0., n3lo_x * s**3)
@@ -118,12 +119,12 @@ def make_priors(priors, s):
     priors['c_llln2'] = gv.gvar(0., n3lo_x * s**3)
     priors['c_llln']  = gv.gvar(0., n3lo_x * s**3)
     priors['c_lsln']  = gv.gvar(0., n3lo_x * s**3)
-    priors['d_aaa']   = gv.gvar(0., n3lo_a)
-    priors['d_aal']   = gv.gvar(0., n3lo_a * s)
-    priors['d_aas']   = gv.gvar(0., n3lo_a * s)
-    priors['d_all']   = gv.gvar(0., n3lo_a * s**2)
-    priors['d_als']   = gv.gvar(0., n3lo_a * s**2)
-    priors['d_ass']   = gv.gvar(0., n3lo_a * s**2)
+    priors['d_aaa']   = gv.gvar(0., n3lo_a )
+    priors['d_aal']   = gv.gvar(0., n3lo_a * s )
+    priors['d_aas']   = gv.gvar(0., n3lo_a * s )
+    priors['d_all']   = gv.gvar(0., n3lo_a * s**2 )
+    priors['d_als']   = gv.gvar(0., n3lo_a * s**2 )
+    priors['d_ass']   = gv.gvar(0., n3lo_a * s**2 )
 
     return priors
 
