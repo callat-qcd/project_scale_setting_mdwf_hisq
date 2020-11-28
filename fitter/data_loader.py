@@ -113,66 +113,74 @@ class data_loader(object):
                 collection[key] = defaults[key]
 
         self.collection = collection
+        self._bs_data = None
 
 
     @property
     def bs_data(self):
+        if self._bs_data is None:
 
-        with h5py.File(self.project_path +'/data/omega_pi_k_spec.h5', 'r') as f:
-            ensembles = sorted(list(f.keys()))
+            with h5py.File(self.project_path +'/data/omega_pi_k_spec.h5', 'r') as f:
+                ensembles = sorted(list(f.keys()))
 
-        if self.collection['excluded_ensembles'] is not None:
-            for ens in self.collection['excluded_ensembles']:
-                ensembles.remove(ens)
-        #ensembles.remove('a12m220ms')
-        #ensembles.remove('a06m310L')
+            if self.collection['excluded_ensembles'] is not None:
+                for ens in self.collection['excluded_ensembles']:
+                    ensembles.remove(ens)
+            #ensembles.remove('a12m220ms')
+            #ensembles.remove('a06m310L')
 
-        #print('load data')
-        data = {}
-        with h5py.File(self.project_path +'/data/omega_pi_k_spec.h5', 'r') as f:
-            for ens in ensembles:
-                data[ens] = {}
-
-                # Old charm reweighting data
-                #if self.use_charm_reweighting:
-                #    data[ens]['mO'] = f[ens]['m_omega_reweight'][:]
-                #else:
-                #    data[ens]['mO'] = f[ens]['m_omega'][:]
-                data[ens]['mO'] = f[ens]['m_omega'][:]
-
-                to_gvar = lambda arr : gv.gvar(arr[0], arr[1])
-                if self.collection['use_milc_aw0']:
-                    data[ens]['a/w'] = to_gvar(f[ens]['aw0_milc'][:])
-                else:
-                    data[ens]['a/w'] = 1.0 / to_gvar(f[ens]['w0a_callat'][:])
-
-                # arrays
-                for param in ['Fpi', 'mk', 'mpi']:
-                    data[ens][param] = f[ens][param][:]
-
-                # scalars
-                for param in ['L', 'alpha_s']:
-                    data[ens][param] = f[ens][param][()]
-                    
-            if self.collection['use_charm_reweighting']:
-                data['a06m310L']['mO'] = f['a06m310L']['m_omega_reweight'][:]
-                data['a06m310L']['mk'] = f['a06m310L']['mk_reweight'][:]
-                data['a06m310L']['mpi'] = f['a06m310L']['mpi_reweight'][:]
-
-
-        if self.collection['data_file'] == 'omega_pi_k_spec':
-            return data
-        else:
-            h5_filepath = self.project_path +'/data/' +self.collection['data_file'] +'.h5'
-            with h5py.File(h5_filepath, 'r') as f:        
+            #print('load data')
+            data = {}
+            with h5py.File(self.project_path +'/data/omega_pi_k_spec.h5', 'r') as f:
                 for ens in ensembles:
-                    # Fix mismatched naming schemes
-                    if ens == 'a12m220ms':
-                        data['a12m220ms']['mO'] = f['a12m220_ms']['mO'][:]
-                    elif ens in list(f.keys()):
-                        data[ens]['mO'] = f[ens]['mO'][:]
+                    data[ens] = {}
 
-            return data
+                    # Old charm reweighting data
+                    #if self.use_charm_reweighting:
+                    #    data[ens]['mO'] = f[ens]['m_omega_reweight'][:]
+                    #else:
+                    #    data[ens]['mO'] = f[ens]['m_omega'][:]
+                    data[ens]['mO'] = f[ens]['m_omega'][:]
+
+                    to_gvar = lambda arr : gv.gvar(arr[0], arr[1])
+                    if self.collection['use_milc_aw0']:
+                        data[ens]['a/w'] = to_gvar(f[ens]['aw0_milc'][:])
+                    else:
+                        data[ens]['a/w'] = 1.0 / to_gvar(f[ens]['w0a_callat'][:])
+
+
+                    data[ens]['t/a^2'] = to_gvar(f[ens]['aw0_milc'][:])
+
+                    # arrays
+                    for param in ['Fpi', 'mk', 'mpi']:
+                        data[ens][param] = f[ens][param][:]
+
+                    # scalars
+                    for param in ['L', 'alpha_s']:
+                        data[ens][param] = f[ens][param][()]
+                        
+                if self.collection['use_charm_reweighting']:
+                    data['a06m310L']['mO'] = f['a06m310L']['m_omega_reweight'][:]
+                    data['a06m310L']['mk'] = f['a06m310L']['mk_reweight'][:]
+                    data['a06m310L']['mpi'] = f['a06m310L']['mpi_reweight'][:]
+
+
+            if self.collection['data_file'] == 'omega_pi_k_spec':
+                self._bs_data = data
+            else:
+                h5_filepath = self.project_path +'/data/' +self.collection['data_file'] +'.h5'
+                with h5py.File(h5_filepath, 'r') as f:        
+                    for ens in ensembles:
+                        # Fix mismatched naming schemes
+                        if ens == 'a12m220ms':
+                            data['a12m220ms']['mO'] = f['a12m220_ms']['mO'][:]
+                        elif ens in list(f.keys()):
+                            data[ens]['mO'] = f[ens]['mO'][:]
+
+                self._bs_data = data
+
+        return self._bs_data
+
 
     @property
     def gv_data(self):
@@ -189,8 +197,9 @@ class data_loader(object):
                 gv_data[ens][param] = gv_data[ens][param] - gv.mean(gv_data[ens][param]) + self.bs_data[ens][param][0]
             
             gv_data[ens]['a/w'] = self.bs_data[ens]['a/w']
-            gv_data[ens]['L'] = self.bs_data[ens]['L']
-            gv_data[ens]['alpha_s'] = self.bs_data[ens]['alpha_s']
+            gv_data[ens]['t/a^2'] = self.bs_data[ens]['t/a^2']
+            gv_data[ens]['L'] = gv.gvar(self.bs_data[ens]['L'], self.bs_data[ens]['L'] / 10**6)
+            gv_data[ens]['alpha_s'] = gv.gvar(self.bs_data[ens]['alpha_s'], self.bs_data[ens]['alpha_s'] / 10**6)
 
         return gv_data
 

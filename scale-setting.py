@@ -91,14 +91,14 @@ if args['empirical_priors'] is not None:
         print('\n', model)
 
         # Load data
-        bs_data = data_loader.bs_data
+        gv_data = data_loader.gv_data
         phys_point_data = data_loader.phys_point_data
         prior = data_loader.get_prior(model=model, default=True)
         prior_interpolation = data_loader.get_prior(interpolation=True)
         model_info = data_loader.get_model_info_from_name(model)
 
         fit_manager = fm.fit_manager(
-            bs_data=bs_data, 
+            fit_data=gv_data,
             phys_point_data=phys_point_data, 
             prior=prior, 
             prior_interpolation=prior_interpolation,
@@ -121,7 +121,7 @@ if args['perform_fits']:
         print('\n', model)
 
         # Load data
-        bs_data = data_loader.bs_data
+        gv_data = data_loader.gv_data
         phys_point_data = data_loader.phys_point_data
         model_info = data_loader.get_model_info_from_name(model)
         prior_interpolation = data_loader.get_prior(interpolation=True)
@@ -131,7 +131,7 @@ if args['perform_fits']:
             prior = data_loader.get_prior(model=model)
 
         fit_manager = fm.fit_manager(
-            bs_data=bs_data, 
+            fit_data=gv_data,
             phys_point_data=phys_point_data, 
             prior=prior, 
             prior_interpolation = prior_interpolation,
@@ -185,7 +185,7 @@ if args['average_models']:
         print('Making fits for model:', model)
 
         # Load data
-        bs_data = data_loader.bs_data
+        fit_data = data_loader.gv_data
         phys_point_data = data_loader.phys_point_data
         model_info = data_loader.get_model_info_from_name(model)
         prior_interpolation = data_loader.get_prior(interpolation=True)
@@ -196,7 +196,7 @@ if args['average_models']:
         
 
         fit_manager = fm.fit_manager(
-            bs_data=bs_data, 
+            fit_data=gv_data,
             phys_point_data=phys_point_data, 
             prior=prior, 
             prior_interpolation = prior_interpolation,

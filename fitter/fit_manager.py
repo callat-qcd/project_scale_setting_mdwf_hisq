@@ -25,50 +25,15 @@ import fitter.fitter as fit
 
 class fit_manager(object):
 
-    def __init__(self, phys_point_data, fit_data=None, bs_data=None, prior=None, prior_interpolation=None, model_info=None, **kwargs):
-        if model_info['chiral_cutoff'] == 'mO':
-            params_list = ['mpi', 'mk', 'mO']
-        elif model_info['chiral_cutoff'] == 'Fpi': 
-            params_list = ['mpi', 'mk', 'mO', 'Fpi']
-        
-        if fit_data is not None:
-            pass
-        elif bs_data is not None:
-            fit_data = {}
-            for ens in sorted(list(bs_data)):
-                #if ens not in ['a06m135L', 'a15m135XL', 'a12m130', 'a09m135']:
-                fit_data[ens] = gv.BufferDict()
-                for param in params_list:
-                    fit_data[ens][param] = bs_data[ens][param]
+    def __init__(self, phys_point_data, fit_data=None, prior=None, prior_interpolation=None, model_info=None):
 
-                # Deflate uncertainty on a06m310L
-                # (for testing purposes only)
-                #if False: #ens in ['a06m310L', 'a12m220_ms']:
-                #    mean = np.mean(bs_data[ens]['mO'])
-                #    fluctuations = (bs_data[ens]['mO'] - mean)/np.sqrt(2)
-                #
-                #    fit_data[ens]['mO'] = mean + fluctuations
-
-
-                fit_data[ens] = gv.dataset.avg_data(fit_data[ens], bstrap=True)
-                for param in ['mO', 'mpi', 'mk', 'Fpi']: 
-                    if param in fit_data[ens]:
-                        fit_data[ens][param] = fit_data[ens][param] - gv.mean(fit_data[ens][param]) + bs_data[ens][param][0]
-
-
-                if model_info['chiral_cutoff'] == 'mO':
-                    fit_data[ens]['lam_chi'] = fit_data[ens]['mO']
-                    phys_point_data['lam_chi'] = phys_point_data['mO']
-                elif model_info['chiral_cutoff'] == 'Fpi':
-                    fit_data[ens]['lam_chi'] = 4 *np.pi *fit_data[ens]['Fpi']
-                    phys_point_data['lam_chi'] = 4 *np.pi *phys_point_data['Fpi']
-
-                #if ens == 'a15m135XL':
-                #    fit_data[ens]['mO'] = gv.gvar(gv.mean(fit_data[ens]['mO']), gv.mean(fit_data[ens]['mO'])/np.sqrt(2))
-                fit_data[ens]['a/w'] = bs_data[ens]['a/w']
-                fit_data[ens]['L'] = gv.gvar(bs_data[ens]['L'], bs_data[ens]['L']/10**6)
-                fit_data[ens]['alpha_s'] = gv.gvar(bs_data[ens]['alpha_s'], bs_data[ens]['alpha_s']/10**6)
-                #print(ens, fit_data[ens]['mO'])
+        for ens in sorted(list(fit_data)):
+            if model_info['chiral_cutoff'] == 'mO':
+                fit_data[ens]['lam_chi'] = fit_data[ens]['mO']
+                phys_point_data['lam_chi'] = phys_point_data['mO']
+            elif model_info['chiral_cutoff'] == 'Fpi':
+                fit_data[ens]['lam_chi'] = 4 *np.pi *fit_data[ens]['Fpi']
+                phys_point_data['lam_chi'] = 4 *np.pi *phys_point_data['Fpi']
 
 
         self.ensembles = list(sorted(fit_data))
@@ -748,23 +713,7 @@ class fit_manager(object):
 
 
 class fitter_dict(dict):
-    def __init__(self, prior, prior_interpolation=None, fit_data=None, bs_data=None):
-        if fit_data is not None:
-            pass
-        elif bs_data is not None:
-            fit_data = {}
-            for ens in sorted(list(bs_data)):
-                fit_data[ens] = gv.BufferDict()
-                for param in ['mpi', 'mk', 'mO', 'Fpi']:
-                    if param in bs_data[ens]:
-                        fit_data[ens][param] = bs_data[ens][param][:1]
-                fit_data[ens] = gv.dataset.avg_data(fit_data[ens], bstrap=True)
-                for param in ['mO', 'mpi', 'mk', 'Fpi']: 
-                    fit_data[ens][param] = fit_data[ens][param] - gv.mean(fit_data[ens][param]) + bs_data[ens][param][0]
-
-                fit_data[ens]['a/w'] = bs_data[ens]['a/w']
-                fit_data[ens]['L'] = gv.gvar(bs_data[ens]['L'], bs_data[ens]['L']/10**6)
-                fit_data[ens]['alpha_s'] = gv.gvar(bs_data[ens]['alpha_s'], bs_data[ens]['alpha_s']/10**6)
+    def __init__(self, prior, prior_interpolation=None, fit_data=None):
 
         self.fit_data = fit_data
         self.prior = prior
