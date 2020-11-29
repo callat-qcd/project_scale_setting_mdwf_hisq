@@ -27,7 +27,7 @@ switches['ansatz']['models'] = [
         'xpt_n2lo', 'xpt_n3lo',
         'taylor_n2lo', 'taylor_n3lo'
     ]
-#switches['ansatz']['models'] = ['xpt_n3lo_FV']
+switches['ansatz']['models'] = ['xpt_n3lo_FV']
 '''
     The full list of models can be rather long.  The sys switches help loop
     over them.  Example other base models are
@@ -39,10 +39,10 @@ switches['w0'] = 'callat' # or milc
 
 # SYSTEMATIC SWITCHES
 switches['sys'] = dict()     # these cause the fitter to loop over various options
-switches['sys']['Lam_chi']   = True # FF = F, O, [Of = O with fixed m_Omega value as x-par]
+switches['sys']['Lam_chi']   = False # FF = F, O, [Of = O with fixed m_Omega value as x-par]
 switches['scales']           = ['F','O'] # Of can also be added
-switches['sys']['alphaS']    = True # include alphaS at NLO?
-switches['sys']['FV']        = True # turn on/off FV corrections
+switches['sys']['alphaS']    = False # include alphaS at NLO?
+switches['sys']['FV']        = False # turn on/off FV corrections
                                # scale is used when the loop over scales is not triggered
 switches['scale']            = 'F' # F: Lam = 4pi Fpi; O: Lam = m_O
 
@@ -60,7 +60,7 @@ switches['scipy']             = True # use scipy minimizer instead of gsl?
 switches['freeze_mO']         = False
 
 # w0 interpolation fit options
-switches['w0_interpolate']    = False
+switches['w0_interpolate']    = True
 switches['w0_a_model']        = 'w0_n2lo_a0_FV_all' # w0_n2lo_a0_FV_all, w0_n2lo_FV_all
 switches['print_w0_interp']   = True
 

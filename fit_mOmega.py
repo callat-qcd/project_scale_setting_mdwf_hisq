@@ -170,6 +170,7 @@ def main():
         if do_fit or switches['debug_save_fit']:
             tmp_result = fitEnv.fit_data(priors)
             tmp_result.ensembles_fit = switches['ensembles_fit']
+            tmp_result.gf_scale = switches['gf_scale']
             report_phys_point(tmp_result, phys_point, model_list, FF, report=switches['report_phys'], store_phys=True)
             if switches['debug_save_fit']:
                 print('---------------------------------------------------------')
@@ -226,7 +227,10 @@ def main():
                 print(w0_results['all'].format(maxline=True))
             print('----------------------------------------------------------------')
             print('             GLOBAL                |        INDIVIDUAL          ')
-            print('a      w_0 / a     a / fm          |   w_0 / a     a / fm       ')
+            if switches['gf_scale'] == 'w0':
+                print('a      w_0 / a     a / fm          |   w_0 / a     a / fm       ')
+            elif switches['gf_scale'] == 't0':
+                print('a      t_0 / a^2   a / fm          |   t_0 / a^2   a / fm       ')
             print('----------------------------------------------------------------')
             for a in aa:
                 if a == 'a06':
@@ -235,9 +239,15 @@ def main():
                     var_a_i = ''
                 else:
                     w0_a_i = w0_results[a].phys['w0_'+a]
-                    a_fm_i = w0_mO_model_avg*to_fm / w0_results[a].phys['w0_'+a]
+                    if switches['gf_scale'] == 'w0':
+                        a_fm_i = w0_mO_model_avg * to_fm / w0_results[a].phys['w0_'+a]
+                    elif switches['gf_scale'] == 't0':
+                        a_fm_i = w0_mO_model_avg * to_fm / np.sqrt(w0_results[a].phys['w0_'+a])
                     var_a_i = "(%02d)" %(int(("%.1e" %a_fm_i.sdev)[0:3:2])*model_sig/w0_mO_model_avg.sdev)
-                a_fm_g  = w0_mO_model_avg*to_fm / w0_results['all'].phys['w0_a_'+a]
+                if switches['gf_scale'] == 'w0':
+                    a_fm_g  = w0_mO_model_avg*to_fm / w0_results['all'].phys['w0_a_'+a]
+                elif switches['gf_scale'] == 't0':
+                    a_fm_g  = w0_mO_model_avg*to_fm / np.sqrt(w0_results['all'].phys['w0_a_'+a])
                 var_a_g = "(%02d)" %(int(("%.1e" %a_fm_g.sdev)[0:3:2])*model_sig/w0_mO_model_avg.sdev)
                 print("%s:  %10s  %11s%4s  |  %10s  %11s%4s " \
                     %(a,
@@ -251,10 +261,10 @@ def main():
             print('----------------------------------------------------------------')
 
         if switches['make_hist']:
-            model_avg.plot_bma_hist('FF',save_fig=switches['save_figs'])
+            model_avg.plot_bma_hist('FF',    save_fig=switches['save_figs'])
             model_avg.plot_bma_hist('FF_xpt',save_fig=switches['save_figs'])
-            model_avg.plot_bma_hist('ratio',save_fig=switches['save_figs'])
-            model_avg.plot_bma_hist('ct',save_fig=switches['save_figs'])
+            model_avg.plot_bma_hist('ratio', save_fig=switches['save_figs'])
+            model_avg.plot_bma_hist('ct',    save_fig=switches['save_figs'])
 
     plt.ioff()
     if run_from_ipython():
@@ -282,9 +292,10 @@ class FitEnv:
                                 for ens in self.ensembles}
         if switches['gf_scale'] == 'w0':
             self.y      = xyp_dict['y_w0']
+            self.y_w0   = {ens: xyp_dict['p'][(ens,'w0a')] for ens in self.ensembles}
         elif switches['gf_scale'] == 't0':
             self.y      = xyp_dict['y_t0']
-        self.y_w0       = {ens: xyp_dict['p'][(ens,'w0a')] for ens in self.ensembles}
+            self.y_w0   = {ens: xyp_dict['p'][(ens,'t0a2')] for ens in self.ensembles}
         self.pruned_y   = {ens : self.y[ens] for ens in self.ensembles}
         self.p          = xyp_dict['p']
         required_params = model.get_required_parameters()
@@ -377,8 +388,13 @@ def report_phys_point(fit_result, phys_point_params, model_list, FF, report=Fals
     if report:
         print('  chi2/dof [dof] = %.2f [%d]   Q=%.3f   logGBF = %.3f' \
             %(fit_result.chi2/fit_result.dof, fit_result.dof, fit_result.Q, fit_result.logGBF))
-        print('  w0 * m_O              = %s' %fit_result.phys['w0_mO'])
-        print('  w0                    = %s' %(fit_result.phys['w0']))
+        if fit_result.gf_scale == 'w0':
+            print('  w0 * m_O              = %s' %fit_result.phys['w0_mO'])
+            print('  w0                    = %s' %(fit_result.phys['w0']))
+        elif fit_result.gf_scale == 't0':
+            print('  t0^1/2 * m_O          = %s' %fit_result.phys['w0_mO'])
+            print('  t0^1/2                = %s' %(fit_result.phys['w0']))
+
 
 
 if __name__ == "__main__":

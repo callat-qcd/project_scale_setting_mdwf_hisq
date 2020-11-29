@@ -123,8 +123,8 @@ def format_h5_data(data_path, switches):
             p[(ens,'Lam_F')] = 4 * np.pi * gvdata['Fpi']
 
         if switches['print_lattice']:
-            lattice_fits.append('%9s& %s& %s& %s& %s& %s& %s& %s& %s& %s& %.2f& %s& %s\\\\' \
-                %(ens, gvdata['m_omega'], p[(ens,'w0a')], y_w0[ens],\
+            lattice_fits.append('%9s& %s& %s& %s& %s& %s& %s& %s& %s& %.2f& %s& %s\\\\' \
+                %(ens, p[(ens,'w0a')], y_w0[ens],\
                     p[(ens,'t0a2')], y_t0[ens],\
                     (gvdata['mpi']/4/np.pi/gvdata['Fpi'])**2,\
                     (2*gvdata['mk']**2 - gvdata['mpi']**2)/(4*np.pi*gvdata['Fpi'])**2,\
@@ -133,7 +133,7 @@ def format_h5_data(data_path, switches):
                     x[ens]['mpiL'], (p[(ens,'aw0')] / 2)**2, x[ens]['alphaS']))
 
     if switches['print_lattice']:
-        print(r'ensemble& $am_\Omega$& $w_0/a$& $w_0 m_\Omega$& $t_0/a^2$& $\sqrt{t_0}m_\Omega$& $l_F^2$& $s_F^2$& $l_\Omega^2$& $s_\Omega^2$& $m_\pi L$& $\e_a^2$& $\a_S$\\')
+        print(r'ensemble& $w_0/a$& $w_0 m_\Omega$& $t_0/a^2$& $\sqrt{t_0}m_\Omega$& $l_F^2$& $s_F^2$& $l_\Omega^2$& $s_\Omega^2$& $m_\pi L$& $\e_a^2$& $\a_S$\\')
         print(r'\hline')
         for l in lattice_fits:
             print(l)

@@ -33,6 +33,8 @@ class BayesModelAvg:
             value is an lsqfit object
         '''
         self.results = results
+        # gf scale
+        self.gf_scale = results[next(iter(results))].gf_scale
         # create a list of the keys so we gaurantee the same order
         self.r_list  = [a_res for a_res in self.results]
         self.weights = self.get_weights()
@@ -60,7 +62,10 @@ class BayesModelAvg:
 
     def print_weighted_models(self):
         i_weights = np.argsort(self.weights)[::-1]
-        print(r"%28s & chi2/dof &   $Q$ &  logGBF& weight& $w_0 m_O$& w_0\\" %'model')
+        if self.gf_scale == 'w0':
+            print(r"%28s & chi2/dof &   $Q$ &  logGBF& weight& $w_0 m_\O$& w_0\\" %'model')
+        elif self.gf_scale == 't0':
+            print(r"%28s & chi2/dof &   $Q$ &  logGBF& weight& $\sqrt(t_0) m_\O$& \sqrt(t_0)\\" %'model')
         print(r'\hline')
         for a_i, a_model in enumerate(np.array(self.r_list)[i_weights]):
             chi2    = self.results[a_model].chi2
@@ -118,14 +123,21 @@ class BayesModelAvg:
         self.model_var  = np.sum(self.weights * np.array([r.mean**2 for r in results]))
         self.model_var += -self.avg['w0_mO'].mean**2
         print('-----------------------------------------------------------------------------------')
-        print('%25s &         %s +- %.4f' %('Bayes Model Avg: w0_mO', self.avg['w0_mO'], np.sqrt(self.model_var)))
+
+        if self.gf_scale == 'w0':
+            print('%28s &         %s +- %.4f' %('Bayes Model Avg: w0_mO', self.avg['w0_mO'], np.sqrt(self.model_var)))
+        elif self.gf_scale == 't0':
+            print('%28s &         %s +- %.4f' %('Bayes Model Avg: t0^1/2 mO', self.avg['w0_mO'], np.sqrt(self.model_var)))
         for k in var_avg:
             e = '%.4f' %np.sqrt(var_avg[k])
-            print('%25s           %9s     %s' %('',e[-2:],k))
-        print('%25s &         %s +- %.4f' %('w0/fm', self.avg['w0_mO']*to_fm, np.sqrt(self.model_var)*to_fm.mean))
+            print('%28s           %9s     %s' %('',e[-2:],k))
+        if self.gf_scale == 'w0':
+            print('%28s &         %s +- %.4f' %('w0 / fm', self.avg['w0_mO']*to_fm, np.sqrt(self.model_var)*to_fm.mean))
+        elif self.gf_scale == 't0':
+            print('%28s &         %s +- %.4f' %('t0^1/2 / fm', self.avg['w0_mO']*to_fm, np.sqrt(self.model_var)*to_fm.mean))
         for k in var_avg:
             e = '%.4f' %(np.sqrt(var_avg[k])*to_fm.mean)
-            print('%25s           %9s     %s' %('',e[-2:],k))
+            print('%28s           %9s     %s' %('',e[-2:],k))
 
         return self.avg['w0_mO'], np.sqrt(self.model_var)
 
