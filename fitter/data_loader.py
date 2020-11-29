@@ -221,77 +221,92 @@ class data_loader(object):
         }
         return phys_point_data
 
+
     def _pickle_fit_info(self, fit_info):
-        model = fit_info['name']
-        if not os.path.exists(self.project_path +'/results/'+ self.collection['name'] +'/pickles/'):
-            os.makedirs(self.project_path +'/results/'+ self.collection['name'] +'/pickles/')
-        filename = self.project_path +'/results/'+ self.collection['name'] +'/pickles/'+ model +'.p'
+        for obs in list(fit_info):
+            model = fit_info[obs]['name']
+            if not os.path.exists(self.project_path +'/results/'+ self.collection['name'] +'/pickles/'):
+                os.makedirs(self.project_path +'/results/'+ self.collection['name'] +'/pickles/')
+            filename = self.project_path +'/results/'+ self.collection['name'] +'/pickles/'+ obs +'_'+ model +'.p'
 
-        output = {
-            'w0' : fit_info['w0'],
-            'logGBF' : gv.gvar(fit_info['logGBF']),
-            'chi2/df' : gv.gvar(fit_info['chi2/df']),
-            'Q' : gv.gvar(fit_info['Q']),
-        }
+            output = {}
+            if obs == 'w0':
+                output['w0'] = fit_info[obs]['w0']
+            elif obs == 't0':
+                output['t0'] = fit_info[obs]['t0']
 
-        for key in fit_info['prior'].keys():
-            output['prior:'+key] = fit_info['prior'][key]
-            #output[key] = [fit_info['prior'][key], fit_info['posterior'][key]]
 
-        for key in fit_info['posterior'].keys():
-            output['posterior:'+key] = fit_info['posterior'][key]
+            output['logGBF'] = gv.gvar(fit_info[obs]['logGBF'])
+            output['chi2/df'] = gv.gvar(fit_info[obs]['chi2/df'])
+            output['Q'] = gv.gvar(fit_info[obs]['Q'])
 
-        for key in fit_info['phys_point'].keys():
-            # gvar can't handle integers -- entries not in correlation matrix
-            output['phys_point:'+key] = fit_info['phys_point'][key]
+            for key in fit_info[obs]['prior'].keys():
+                output['prior:'+key] = fit_info[obs]['prior'][key]
 
-        for key in fit_info['error_budget']:
-            output['error_budget:'+key] = gv.gvar(fit_info['error_budget'][key])
+            for key in fit_info[obs]['posterior'].keys():
+                output['posterior:'+key] = fit_info[obs]['posterior'][key]
 
-        gv.dump(output, filename)
+            for key in fit_info[obs]['phys_point'].keys():
+                # gvar can't handle integers -- entries not in correlation matrix
+                output['phys_point:'+key] = fit_info[obs]['phys_point'][key]
+
+            for key in fit_info[obs]['error_budget']:
+                output['error_budget:'+key] = gv.gvar(fit_info[obs]['error_budget'][key])
+
+            gv.dump(output, filename)
         return None
 
-    def _unpickle_fit_info(self, model):
-        filepath = self.project_path +'/results/'+ self.collection['name'] +'/pickles/'+ model +'.p'
+
+    def _unpickle_fit_info(self, mdl_key):
+        filepath = self.project_path +'/results/'+ self.collection['name'] +'/pickles/'+ mdl_key +'.p'
         if os.path.isfile(filepath):
             return gv.load(filepath)
         else:
             return None
 
-    def get_fit(self, model):
-        return None
 
     def get_fit_collection(self):
         if os.path.exists(self.project_path +'/results/'+ self.collection['name'] +'/pickles/'):
             output = {}
 
-            models = []
+            pickled_models = []
             for file in os.listdir(self.project_path +'/results/'+ self.collection['name'] +'/pickles/'):
                 if(file.endswith('.p')):
-                    models.append(file.split('.')[0])
+                    pickled_models.append(file.split('.')[0])
 
-            for model in models:
-                fit_info_model = self._unpickle_fit_info(model=model)
-                output[model] = {}
-                output[model]['name'] = model
-                output[model]['w0'] = fit_info_model['w0']
-                output[model]['logGBF'] = fit_info_model['logGBF'].mean
-                output[model]['chi2/df'] = fit_info_model['chi2/df'].mean
-                output[model]['Q'] = fit_info_model['Q'].mean
-                output[model]['prior'] = {}
-                output[model]['posterior'] = {}
-                output[model]['phys_point'] = {}
-                output[model]['error_budget'] = {}
+            for mdl_key in pickled_models:
+                fit_info_mdl_key = self._unpickle_fit_info(mdl_key=mdl_key)
+                model = mdl_key.split('_', 1)[1]
 
-                for key in fit_info_model.keys():
+                obs = mdl_key.split('_')[0]
+                if obs not in output:
+                    output[obs] = {}
+
+
+
+                output[obs][model] = {}
+                output[obs][model]['name'] = model
+                if obs == 'w0':
+                    output[obs][model]['w0'] = fit_info_mdl_key['w0']
+                elif obs == 't0':
+                    output[obs][model]['t0'] = fit_info_mdl_key['t0']
+                output[obs][model]['logGBF'] = fit_info_mdl_key['logGBF'].mean
+                output[obs][model]['chi2/df'] = fit_info_mdl_key['chi2/df'].mean
+                output[obs][model]['Q'] = fit_info_mdl_key['Q'].mean
+                output[obs][model]['prior'] = {}
+                output[obs][model]['posterior'] = {}
+                output[obs][model]['phys_point'] = {}
+                output[obs][model]['error_budget'] = {}
+
+                for key in fit_info_mdl_key.keys():
                     if key.startswith('prior'):
-                        output[model]['prior'][key.split(':')[-1]] = fit_info_model[key]
+                        output[obs][model]['prior'][key.split(':')[-1]] = fit_info_mdl_key[key]
                     elif key.startswith('posterior'):
-                        output[model]['posterior'][key.split(':')[-1]] = fit_info_model[key]
+                        output[obs][model]['posterior'][key.split(':')[-1]] = fit_info_mdl_key[key]
                     elif key.startswith('phys_point'):
-                        output[model]['phys_point'][key.split(':')[-1]] = fit_info_model[key]
+                        output[obs][model]['phys_point'][key.split(':')[-1]] = fit_info_mdl_key[key]
                     elif key.startswith('error_budget'):
-                        output[model]['error_budget'][key.split(':')[-1]] = fit_info_model[key].mean
+                        output[obs][model]['error_budget'][key.split(':')[-1]] = fit_info_mdl_key[key].mean
 
             return output
 
@@ -341,6 +356,7 @@ class data_loader(object):
 
         return model_info
 
+
     def get_model_name_from_info(self, model_info):
         if model_info['chiral_cutoff'] == 'mO':
             name = 'Om'
@@ -379,61 +395,94 @@ class data_loader(object):
 
         return name
 
-    def get_prior(self, model=None, model_info=None, default=False, interpolation=False):
 
-        def get_default_prior(model):
+    def get_prior(self, model=None, model_info=None, default=False):
+
+        def get_default_prior(model, fit_type):
             with open(self.project_path+'/data/default_priors.yaml') as file:
-                output = yaml.safe_load(file)
-                if interpolation:
-                    prior = gv.gvar(output['interpolation'])
-                    self.save_prior('interpolation', prior)
-                    return prior
+                prior_file = yaml.safe_load(file)
 
                 model_info = self.get_model_info_from_name(model)
-                if model_info['chiral_cutoff'] == 'mO':
-                    prior = gv.gvar(output['default_mO'])
-                    self.save_prior('default_mO', prior)
-                elif model_info['chiral_cutoff'] ==  'Fpi':
-                    prior = gv.gvar(output['default_Fpi'])
-                    self.save_prior('default_Fpi', prior)
+                chiral_cutoff = model_info['chiral_cutoff']
+
+                if (fit_type == 'w0') and (chiral_cutoff == 'Fpi'):
+                    key = 'w0_default_Fpi'
+                elif (fit_type == 'w0') and (chiral_cutoff == 'mO'):
+                    key = 'w0_default_mO'
+
+                elif (fit_type == 't0') and (chiral_cutoff == 'Fpi'):
+                    key = 't0_default_Fpi'
+                elif (fit_type == 't0') and (chiral_cutoff == 'mO'):
+                    key = 't0_default_mO'
+
+                elif fit_type == 'w0_interpolation':
+                    key = 'w0_interpolation'
+                elif fit_type == 't0_interpolation':
+                    key = 't0_interpolation'
+
+                else:
+                    print('Error: requested prior does not exist!')
+                    return None
+
+                output = gv.gvar(prior_file[key])
+                self.save_prior(model=key, prior=output)
+
+                return output
+
+
+        if (model is None) and (model_info is not None):
+            model = self.get_model_name_from_info(model_info)
+
+        filepath = self.project_path+'/results/'+self.collection['name']+'/priors.yaml'
+
+        if os.path.isfile(filepath) and not default:
+            with open(filepath) as file:
+                prior_file = yaml.safe_load(file)
+                chiral_cutoff = self.get_model_info_from_name(model)['chiral_cutoff']
+
+                prior = {}
+
+                # Load prior for w0 extrapolation
+                if 'w0_'+model in prior_file:
+                    prior['w0'] = gv.gvar(prior_file['w0_'+model])
+                elif ('w0_default_Fpi' in prior_file) and (chiral_cutoff == 'Fpi'):
+                    prior['w0'] = gv.gvar(prior_file['w0_default_Fpi'])
+                elif ('w0_default_mO' in prior_file) and (chiral_cutoff == 'mO'):
+                    prior['w0'] = gv.gvar(prior_file['w0_default_mO'])
+                else:
+                    prior['w0'] = get_default_prior(model=model, fit_type='w0')
+
+                # Load prior for t0 extrapolation
+                if 't0_'+model in prior_file:
+                    prior['t0'] = gv.gvar(prior_file['t0_'+model])
+                elif ('t0_default_Fpi' in prior_file) and (chiral_cutoff == 'Fpi'):
+                    prior['t0'] = gv.gvar(prior_file['t0_default_Fpi'])
+                elif ('t0_default_mO' in prior_file) and (chiral_cutoff == 'mO'):
+                    prior['t0'] = gv.gvar(prior_file['t0_default_mO'])
+                else:
+                    prior['t0'] = get_default_prior(model=model, fit_type='t0')
+
+
+                if 'w0_interpolation' in prior_file:
+                    prior['w0_interpolation'] = gv.gvar(prior_file['w0_interpolation'])
+                else:
+                    prior['w0_interpolation'] = get_default_prior(model=model, fit_type='w0_interpolation')
+
+                if 't0_interpolation' in prior_file:
+                    prior['t0_interpolation'] = gv.gvar(prior_file['t0_interpolation'])
+                else:
+                    prior['t0_interpolation'] = get_default_prior(model=model, fit_type='t0_interpolation')
+
                 return prior
+                
+        else:
+            prior = {}
+            prior['w0'] = get_default_prior(model=model, fit_type='w0')
+            prior['t0'] = get_default_prior(model=model, fit_type='w0')
+            prior['w0_interpolation'] = get_default_prior(model=model, fit_type='w0_interpolation')
+            prior['t0_interpolation'] = get_default_prior(model=model, fit_type='t0_interpolation')
 
-        if not interpolation:
-            if model is None:
-                model = self.get_model_name_from_info(model_info)
-            elif model not in ['default_Fpi', 'default_mO']:
-                # Standardize name formatting (eg, '*_fv_alphas' -> '_alphas_fv')
-                model = self.get_model_info_from_name(model)['name']
-
-        if default:
-            return get_default_prior(model)
-
-
-        try:
-            with open(self.project_path+'/results/'+self.collection['name']+'/priors.yaml') as file:
-                output = yaml.safe_load(file)
-                try:
-                    return gv.gvar(output[model])
-                except KeyError:
-                    try:
-                        if interpolation:
-                            return gv.gvar(output['interpolation'])
-
-                        if model_info is None:
-                            model_info = self.get_model_info_from_name(model)
-                            
-                        if model_info['chiral_cutoff'] == 'mO':
-                            prior = gv.gvar(output['default_mO'])
-                        elif model_info['chiral_cutoff'] ==  'Fpi':
-                            prior = gv.gvar(output['default_Fpi'])
-                        print('Using default prior for', model)
-                        return prior
-
-                    except KeyError:
-                        return get_default_prior(model)
-        except FileNotFoundError:
-            return get_default_prior(model)
-            
+            return prior
 
 
     def plot_qq(self, ens, param):
@@ -446,9 +495,11 @@ class data_loader(object):
 
         return fig
 
+
     def save_fit_info(self, fit_info):
         self._pickle_fit_info(fit_info)
         return None
+
 
     def save_results_summary(self, output_string):
 
@@ -487,29 +538,36 @@ class data_loader(object):
 
         filename = self.project_path +'/results/'+ self.collection['name'] + '/README.md'
 
-        # Make table for priors
-        models = self.collection['models'].copy()
-        if any([True if self.get_model_info_from_name(mdl)['chiral_cutoff'] == 'Fpi' else False 
-                    for mdl in self.collection['models']]):
-            models.insert(0, 'default_Fpi')
-        if any([True if self.get_model_info_from_name(mdl)['chiral_cutoff'] == 'mO' else False
-                    for mdl in self.collection['models']]):
-            models.insert(0, 'default_mO')
-        priors_models = {mdl : self.get_prior(mdl) for mdl in models}
+        models = self.collection['models']
+        filepath = self.project_path +'/results/'+ self.collection['name'] +'/pickles/'
+        observables = np.unique([file.split('.')[0].split('_')[0] for file in os.listdir(filepath)])
 
-        # Sort keys by lo, nlo, n2lo, etc
-        length = lambda x : len(x.split('_')[1]) if len(x.split('_')) > 1 else 0
-        prior_table = dict_dict_to_table(priors_models, column0='model', sort_key=length)
+        prior_table = ''
+        for obs in observables:
+            prior_table += 'observable: %s \n' %(obs)
+            priors_models = {mdl : self.get_prior(model=mdl)[obs] for mdl in models}
+
+            length = lambda x : len(x.split('_')[1]) if len(x.split('_')) > 1 else 0
+            prior_table += dict_dict_to_table(priors_models, column0='model', sort_key=length)
+            prior_table += '\n\n'
+
+        for obs in observables:
+            priors_models = {obs+'_interpolation' : self.get_prior(model=models[0])[obs+'_interpolation']}
+            prior_table += dict_dict_to_table(priors_models, column0='model', sort_key=length)
+            prior_table += '\n\n'
 
         # Generate table for models    
-        models = self.collection['models']
-        models_descriptions = {mdl : self.get_model_info_from_name(mdl) for mdl in models}
-        models_table = dict_dict_to_table(models_descriptions, exclude=['name'], column0='model')
+        #models = self.collection['models']
+        #models_descriptions = {mdl : self.get_model_info_from_name(mdl) for mdl in models}
+        #models_table = dict_dict_to_table(models_descriptions, exclude=['name'], column0='model')
 
         # Generate table for input params
         inputs_table = dict_dict_to_table(self.gv_data, column0='ens')
 
-        output_string  = '### Priors\n' +prior_table+ '\n### Model List\n' +models_table+ '\n### Inputs\n' +inputs_table+ '\n' +output_string
+        #output_string  = '### Priors\n' +prior_table+ '\n### Model List\n' +models_table+ '\n### Inputs\n' +inputs_table+ '\n' +output_string
+        output_string  = '### Priors\n' +prior_table+ '\n### Inputs\n' +inputs_table+ '\n' +output_string
+
+        #return output_string
 
         if os.path.exists(filename):
             with open(filename, 'r') as file:
@@ -532,6 +590,7 @@ class data_loader(object):
 
         return None
 
+
     def save_fig(self, fig=None, output_filename=None):
 
         if fig is None:
@@ -551,6 +610,7 @@ class data_loader(object):
         fig.savefig(output_file, bbox_inches='tight')
         return None
 
+
     def save_settings(self):
         filepath = self.project_path+'/results/'+self.collection['name']+'/settings.yaml'
         Path(self.project_path+'/results/'+self.collection['name']).mkdir(parents=True, exist_ok=True)
@@ -561,6 +621,7 @@ class data_loader(object):
             yaml.dump(output, file)
 
         return None
+
 
     def save_prior(self, model, prior):
         filepath = self.project_path+'/results/'+self.collection['name']+'/priors.yaml'

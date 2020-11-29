@@ -1,0 +1,163 @@
+w0_default_Fpi:
+  wm0: 1(1)
+
+  A_a: -0.5(1.0)
+  A_l: 1(1)
+  A_s: 1(1)
+
+  A_aa: 0(1)
+  A_al: 0(1)
+  A_as: 0(1)
+  A_ll: 0(1)
+  A_ls: 0(1)
+  A_ss: 0(1)
+  A_ll_g: 0(1)
+
+  A_aaa: 0(1)
+  A_aal: 0(1)
+  A_aas: 0(1)
+  A_all: 0(1)
+  A_als: 0(1)
+  A_ass: 0(1)
+  A_lll: 0(1)
+  A_lls: 0(1)
+  A_lss: 0(1)
+  A_sss: 0(1)
+  A_lll_g: 0(1)
+  A_lls_g: 0(1)
+  A_lll_gg: 0(1)
+
+  A_alpha: 0.0(0.7)
+
+
+w0_default_mO:
+  wm0: 1(1)
+
+  A_a: -0.5(1.0)
+  A_l: 2(2)
+  A_s: 2(2)
+
+  A_aa: 0(1)
+  A_al: 0(2)
+  A_as: 0(4)
+  A_ll: 0(4)
+  A_ls: 0(4)
+  A_ss: 0(4)
+  A_ll_g: 0(4)
+
+  A_aaa: 0(1)
+  A_aal: 0(2)
+  A_aas: 0(2)
+  A_all: 0(4)
+  A_als: 0(4)
+  A_ass: 0(4)
+  A_lll: 0(8)
+  A_lls: 0(8)
+  A_lss: 0(8)
+  A_sss: 0(8)
+  A_lll_g: 0(8)
+  A_lls_g: 0(8)
+  A_lll_gg: 0(8)
+
+  A_alpha: 0.0(0.7)
+
+
+w0_interpolation:
+  w0a06: 3(1)
+  w0a09: 2(1)
+  w0a12: 1.5(1.0)
+  w0a15: 1(1)
+
+  k_a: 2(2)
+  k_l: 0(2)
+  k_s: 0(2)
+
+  k_aa: 0(2)
+  k_al: 0(2)
+  k_as: 0(2)
+  k_ll: 0(2)
+  k_ls: 0(2)
+  k_ss: 0(2)
+  k_ll_g: 0(2)
+
+t0_default_Fpi:
+  wm0: 1(1)
+
+  A_a: -0.5(1.0)
+  A_l: 1(1)
+  A_s: 1(1)
+
+  A_aa: 0(1)
+  A_al: 0(1)
+  A_as: 0(1)
+  A_ll: 0(1)
+  A_ls: 0(1)
+  A_ss: 0(1)
+  A_ll_g: 0(1)
+
+  A_aaa: 0(1)
+  A_aal: 0(1)
+  A_aas: 0(1)
+  A_all: 0(1)
+  A_als: 0(1)
+  A_ass: 0(1)
+  A_lll: 0(1)
+  A_lls: 0(1)
+  A_lss: 0(1)
+  A_sss: 0(1)
+  A_lll_g: 0(1)
+  A_lls_g: 0(1)
+  A_lll_gg: 0(1)
+
+  A_alpha: 0.0(0.7)
+
+
+t0_default_mO:
+  wm0: 1(1)
+
+  A_a: -0.5(1.0)
+  A_l: 2(2)
+  A_s: 2(2)
+
+  A_aa: 0(1)
+  A_al: 0(2)
+  A_as: 0(4)
+  A_ll: 0(4)
+  A_ls: 0(4)
+  A_ss: 0(4)
+  A_ll_g: 0(4)
+
+  A_aaa: 0(1)
+  A_aal: 0(2)
+  A_aas: 0(2)
+  A_all: 0(4)
+  A_als: 0(4)
+  A_ass: 0(4)
+  A_lll: 0(8)
+  A_lls: 0(8)
+  A_lss: 0(8)
+  A_sss: 0(8)
+  A_lll_g: 0(8)
+  A_lls_g: 0(8)
+  A_lll_gg: 0(8)
+
+  A_alpha: 0.0(0.7)
+
+
+t0_interpolation:
+  w0a06: 3(1)
+  w0a09: 2(1)
+  w0a12: 1.5(1.0)
+  w0a15: 1(1)
+
+  k_a: 2(2)
+  k_l: 0(2)
+  k_s: 0(2)
+
+  k_aa: 0(2)
+  k_al: 0(2)
+  k_as: 0(2)
+  k_ll: 0(2)
+  k_ls: 0(2)
+  k_ss: 0(2)
+  k_ll_g: 0(2)

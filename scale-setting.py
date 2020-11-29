@@ -94,14 +94,12 @@ if args['empirical_priors'] is not None:
         gv_data = data_loader.gv_data
         phys_point_data = data_loader.phys_point_data
         prior = data_loader.get_prior(model=model, default=True)
-        prior_interpolation = data_loader.get_prior(interpolation=True)
         model_info = data_loader.get_model_info_from_name(model)
 
         fit_manager = fm.fit_manager(
             fit_data=gv_data,
             phys_point_data=phys_point_data, 
             prior=prior, 
-            prior_interpolation=prior_interpolation,
             model_info = model_info
         )
 
@@ -124,7 +122,6 @@ if args['perform_fits']:
         gv_data = data_loader.gv_data
         phys_point_data = data_loader.phys_point_data
         model_info = data_loader.get_model_info_from_name(model)
-        prior_interpolation = data_loader.get_prior(interpolation=True)
         if args['use_default_priors']:
             prior = data_loader.get_prior(model=model, default=True)
         else:
@@ -134,7 +131,6 @@ if args['perform_fits']:
             fit_data=gv_data,
             phys_point_data=phys_point_data, 
             prior=prior, 
-            prior_interpolation = prior_interpolation,
             model_info = model_info
         )
 
@@ -157,11 +153,11 @@ if args['average_models']:
     #    data_loader.save_fig(fig, output_filename='/figs/histogram_fit_'+compare)
 
 
-    fig = model_average.plot_comparison()
+    fig = model_average.plot_comparison(param='w0')
     data_loader.save_fig(fig, output_filename='/figs/comparison_fits')
     str_output += '![image](./figs/comparison_fits.png)\n' 
 
-    fig = model_average.plot_histogram(compare='order')
+    fig = model_average.plot_histogram(param='w0', compare='order')
     data_loader.save_fig(fig, output_filename='/figs/histogram_fit_order')
     str_output += '![image](./figs/histogram_fit_order.png)\n' 
     #fig = model_average.plot_histogram(compare='chiral_cutoff')
@@ -172,7 +168,7 @@ if args['average_models']:
     #fig = model_average.plot_fits('a')
     #data_loader.save_fig(fig, output_filename='/figs/all_fits_vs_latt_spacing')
 
-    fig = model_average.plot_fits('mpi')
+    fig = model_average.plot_fits('mpi', observable='w0')
     data_loader.save_fig(fig, output_filename='/figs/all_fits_vs_mpi')
     str_output += '![image](./figs/all_fits_vs_mpi.png)\n' 
 
@@ -181,14 +177,13 @@ if args['average_models']:
 
     str_output += '\n### Highest Weight Models'
 
-    for j, model in enumerate(model_average.get_model_names(by_weight=True)[:5]):
+    for j, model in enumerate(model_average.get_model_names(observable='w0', by_weight=True)[:5]):
         print('Making fits for model:', model)
 
         # Load data
-        fit_data = data_loader.gv_data
+        gv_data = data_loader.gv_data
         phys_point_data = data_loader.phys_point_data
         model_info = data_loader.get_model_info_from_name(model)
-        prior_interpolation = data_loader.get_prior(interpolation=True)
         if args['use_default_priors']:
             prior = data_loader.get_prior(model=model, default=True)
         else:
@@ -199,7 +194,6 @@ if args['average_models']:
             fit_data=gv_data,
             phys_point_data=phys_point_data, 
             prior=prior, 
-            prior_interpolation = prior_interpolation,
             model_info = model_info
         )
 
@@ -208,7 +202,7 @@ if args['average_models']:
         # add w/a interpolation plots for highest weight fig
         if j == 0:
             for latt_spacing in np.unique([ens[:3] for ens in fit_manager.ensembles]):
-                fig = fit_manager.plot_interpolation(latt_spacing=latt_spacing)
+                fig = fit_manager.plot_interpolation(latt_spacing=latt_spacing, observable='w0')
                 data_loader.save_fig(fig, output_filename='/figs/interpolation_'+latt_spacing)
                 str_output += '![image](./figs/interpolation_'+latt_spacing+'.png)\n' 
 
@@ -218,13 +212,13 @@ if args['average_models']:
         str_output += '![image](./figs/fits/'+str(j+1)+'_vs_s--'+fit_manager.model+'.png)\n'
         str_output += '![image](./figs/fits/'+str(j+1)+'_vs_a--'+fit_manager.model+'.png)\n'
 
-        fig = fit_manager.plot_fit('a')
+        fig = fit_manager.plot_fit('a', observable='w0')
         data_loader.save_fig(fig, output_filename='/figs/fits/'+str(j+1)+'_vs_a--'+fit_manager.model)
 
-        fig = fit_manager.plot_fit('pi')
+        fig = fit_manager.plot_fit('pi', observable='w0')
         data_loader.save_fig(fig, output_filename='/figs/fits/'+str(j+1)+'_vs_l--'+fit_manager.model)
 
-        fig = fit_manager.plot_fit('k')
+        fig = fit_manager.plot_fit('k', observable='w0')
         data_loader.save_fig(fig, output_filename='/figs/fits/'+str(j+1)+'_vs_s--'+fit_manager.model)
 
 

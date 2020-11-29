@@ -43,34 +43,38 @@ class model_average(object):
 
 
     def __str__(self):
-        param ='w0'
-        extrapolated_value = self.average(param, split_unc=True)
+        output = ''
+        for observable in list(self.fit_results):
+            param = observable
+            extrapolated_value = self.average(param, observable=observable, split_unc=True)
 
-        output  = 'w0: %s\n'%(self.average(param))
-        #output += '[FLAG:     %s]\n'%(self._get_phys_point_data()[param])
 
-        sig_fig = lambda x : np.around(x, int(np.floor(-np.log10(x))+3)) if x>0 else x
-        output += '\n---\n'
-        output += 'Uncertainty: \n'
-        output += '   RMS model sdev:  % .5f \n' %(extrapolated_value[1])
-        output += '   Model unc:       % .5f \n' %(extrapolated_value[2])
+            output  += '%s: %s\n'%(observable, self.average(param, observable=observable))
+            #output += '[FLAG:     %s]\n'%(self._get_phys_point_data()[param])
 
-        error_budget = self.error_budget()
-        if error_budget['chiral'] is not None:
+            #sig_fig = lambda x : np.around(x, int(np.floor(-np.log10(x))+3)) if x>0 else x
             output += '\n---\n'
-            output += 'Error budget (rms model sdev): \n'
-            output += '   Statistical: % .5f \n' %(error_budget['stat'])
-            output += '   Chiral:      % .5f \n' %(error_budget['chiral'])
-            output += '   Disc:        % .5f \n' %(error_budget['disc'])
-            output += '   Phys point:  % .5f \n' %(error_budget['pp_input'])
-            
+            output += 'Uncertainty: \n'
+            output += '   RMS model sdev:  % .5f \n' %(extrapolated_value[1])
+            output += '   Model unc:       % .5f \n' %(extrapolated_value[2])
 
-        model_list = self.get_model_names(by_weight=True)
-        weight = lambda model_k : np.exp(self.fit_results[model_k]['logGBF']) / np.sum([np.exp(self.fit_results[model_l]['logGBF']) for model_l in model_list])
-        output += '\n---\n'
-        output += 'Highest Weight: \n'
-        for k in range(np.min([5, len(model_list)])):
-            output += '  % .3f:  %s\n' %(weight(model_list[k]), model_list[k])
+            error_budget = self.error_budget(observable=observable)
+            if error_budget['chiral'] is not None:
+                output += '\n---\n'
+                output += 'Error budget (RMS model sdev): \n'
+                output += '   Statistical: % .5f \n' %(error_budget['stat'])
+                output += '   Chiral:      % .5f \n' %(error_budget['chiral'])
+                output += '   Disc:        % .5f \n' %(error_budget['disc'])
+                output += '   Phys point:  % .5f \n' %(error_budget['pp_input'])
+                
+
+            model_list = self.get_model_names(observable=observable, by_weight=True)
+            weight = lambda model_k : np.exp(self.fit_results[observable][model_k]['logGBF']) / np.sum([np.exp(self.fit_results[observable][model_l]['logGBF']) for model_l in model_list])
+            output += '\n---\n'
+            output += 'Highest Weight: \n'
+            for k in range(np.min([5, len(model_list)])):
+                output += '  % .3f:  %s\n' %(weight(model_list[k]), model_list[k])
+            output += '\n------\n'
 
         return output
 
@@ -79,21 +83,16 @@ class model_average(object):
         return self.data_loader.get_model_info_from_name(name)
 
 
-    def _get_fit_extrapolation(self, model):
-        #return gv.gvar(self.fit_results[model]['FK/Fpi'])
-        return None
-
-
-    def _get_fit_posterior(self, model):
-        if 'posterior' in self.fit_results[model] and bool(self.fit_results[model]['posterior']):
-            return self.fit_results[model]['posterior']
+    def _get_fit_posterior(self, model, observable):
+        if 'posterior' in self.fit_results[observable][model] and bool(self.fit_results[observable][model]['posterior']):
+            return self.fit_results[observable][model]['posterior']
         else:
             return None
 
 
-    def _get_fit_prior(self, model):
-        if 'prior' in self.fit_results[model] and bool(self.fit_results[model]['prior']):
-            return self.fit_results[model]['prior']
+    def _get_fit_prior(self, model, observable):
+        if 'prior' in self.fit_results[observable][model] and bool(self.fit_results[observable][model]['prior']):
+            return self.fit_results[observable][model]['prior']
         else:
             return None
 
@@ -115,25 +114,26 @@ class model_average(object):
             return param
 
 
-    def average(self, param, models=None, split_unc=False, include_unc=True):
+    def average(self, param, observable=None, models=None, split_unc=False, include_unc=True):
+        if observable is None:
+            observable = param
         if models is None:
-            models = self.get_model_names()
+            models = self.get_model_names(observable=observable)
 
         y = {}
         for mdl in models:
 
-            if param == 'extrapolate':
-                y[mdl] = self._get_fit_extrapolation(mdl)
-
-            elif self._get_fit_posterior(mdl) is not None and param in self._get_fit_posterior(mdl):
-                y[mdl] =  self._get_fit_posterior(mdl)[param]
+            # LECs
+            if self._get_fit_posterior(mdl, observable=observable) is not None and param in self._get_fit_posterior(mdl, observable=observable):
+                y[mdl] =  self._get_fit_posterior(mdl, observable=observable)[param]
 
             # Error budget
-            elif param.startswith('eb:') and 'error_budget' in self.fit_results[mdl]:
-                y[mdl] = self.fit_results[mdl]['error_budget'][param.split(':')[-1]]
+            elif param.startswith('eb:') and 'error_budget' in self.fit_results[observable][mdl]:
+                y[mdl] = self.fit_results[observable][mdl]['error_budget'][param.split(':')[-1]]
 
-            elif param in self.fit_results[mdl]:
-                y[mdl] = self.fit_results[mdl][param]
+            # w0, t0, etc
+            elif param in self.fit_results[observable][mdl]:
+                y[mdl] = self.fit_results[observable][mdl][param]
 
             else:
                 y[mdl] = None
@@ -150,7 +150,7 @@ class model_average(object):
 
         # calculate P( M_k | D )
         prob_Mk_given_D = lambda model_k : (
-             np.exp(self.fit_results[model_k]['logGBF']) / np.sum([np.exp(self.fit_results[model_l]['logGBF']) for model_l in nonempty_keys])
+             np.exp(self.fit_results[observable][model_k]['logGBF']) / np.sum([np.exp(self.fit_results[observable][model_l]['logGBF']) for model_l in nonempty_keys])
         )
 
         # Get central value
@@ -187,56 +187,49 @@ class model_average(object):
             return [expct_y, np.sqrt(var_model), np.sqrt(var_selection)]
 
 
-    def error_budget(self):
+    def error_budget(self, observable):
         output = {}
         for key in ['chiral', 'pp_input', 'stat', 'disc']:
-            output[key] = self.average('eb:'+key, include_unc=False)
+            output[key] = self.average('eb:'+key, observable=observable, include_unc=False)
 
         return output
 
 
-    def extrapolate_to_phys_point(self, model):
-        data = self._get_phys_point_data(model)
-        return self.fitfcn(model, data)
-
-
-    def fitfcn(self, model, data, p=None):
+    def fitfcn(self, model, data, observable, p=None):
         model_info = self._get_model_info_from_name(model).copy()
 
         if p is None:
-            p = self._get_fit_posterior(model)
+            p = self._get_fit_posterior(model, observable=observable)
 
         fitfcn = fit.model(datatag='xpt', model_info=model_info).fitfcn
         return fitfcn
 
 
-    def get_model_names(self, by_weight=False):
+    def get_model_names(self, observable, by_weight=False):
         if by_weight:
-            models_list = self.get_model_names()
-            temp = {model : self.fit_results[model]['logGBF'] for model in models_list}
+            temp = {model : self.fit_results[observable][model]['logGBF'] for model in self.fit_results[observable]}
             sorted_list = [model for model, logGBF
                            in sorted(temp.items(), key=lambda item: item[1], reverse=True)]
             return sorted_list
 
         else:
-            return sorted(list(self.fit_results))
+            return sorted(list(self.fit_results[observable]))
 
 
-    def plot_comparison(self, param=None, title=None, xlabel=None,
+    def plot_comparison(self, param, observable=None, title=None, xlabel=None,
                         show_model_avg=True):
 
-        if param is None:
-            param='w0'
+        if observable is None:
+            observable = param
         if title is None:
             title = ""
         if xlabel is None:
             xlabel = self._param_keys_dict(param)
 
-
         colors = ['salmon', 'darkorange', 'mediumaquamarine', 'orchid', 'navy']
 
-        #results_array = [self.fit_results, {name : {name : self.other_results[name]} for name in self.other_results}]
-        #results = self.fit_results
+        #results_array = [self.fit_results[observable], {name : {name : self.other_results[name]} for name in self.other_results}]
+        #results = self.fit_results[observable]
 
         fig = plt.figure(figsize=(8, 8))
 
@@ -281,14 +274,14 @@ class model_average(object):
         y_other = y
 
         plt.axhline(y-0.5, ls='--')
-        for name in sorted(self.fit_results, key=by_order):
+        for name in sorted(self.fit_results[observable], key=by_order):
 
             param_value = None
 
-            if param in self.fit_results[name].keys():
-                param_value = gv.gvar(self.fit_results[name][param])
-            elif 'posterior' in self.fit_results[name] and param in self.fit_results[name]['posterior'].keys():
-                param_value = gv.gvar(self.fit_results[name]['posterior'][param])
+            if param in self.fit_results[observable][name].keys():
+                param_value = gv.gvar(self.fit_results[observable][name][param])
+            elif 'posterior' in self.fit_results[observable][name] and param in self.fit_results[observable][name]['posterior'].keys():
+                param_value = gv.gvar(self.fit_results[observable][name]['posterior'][param])
             else:
                 param_value = None
 
@@ -320,7 +313,7 @@ class model_average(object):
         # Show model average
         if show_model_avg:
             try:
-                avg = self.average(param)
+                avg = self.average(param, observable=observable)
                 pm = lambda g, k : gv.mean(g) + k*gv.sdev(g)
                 plt.axvspan(pm(avg, -1), pm(avg, +1), alpha=0.3, color='cornflowerblue', label='avg')
                 plt.axvline(pm(avg, 0), ls='-.', color='m')
@@ -330,7 +323,7 @@ class model_average(object):
         labels = [l.replace('_', ' ') for l in sorted(labels, key=by_order)]
         plt.yticks(range(len(labels)), labels)
         plt.tick_params('y', labelsize=mpl.rcParams['font.size'])
-        #plt.yticks(list(self.fit_results))
+        #plt.yticks(list(self.fit_results[observable]))
         plt.ylim(-1, y)
         if param == 'w0':
             plt.xlim(0.1685, 0.1775)
@@ -353,12 +346,12 @@ class model_average(object):
         ax_logGBF = plt.axes([0.60,0.10,0.09,0.8])
 
         # Get max logGBF
-        logGBF_max = np.nanmax([gv.mean(gv.gvar(self.fit_results[model]['logGBF']))
-                               for model in self.fit_results.keys()])
+        logGBF_max = np.nanmax([gv.mean(gv.gvar(self.fit_results[observable][model]['logGBF']))
+                               for model in self.fit_results[observable].keys()])
 
         y=y_other
         labels = np.array([])
-        for name in sorted(self.fit_results, key=by_order):
+        for name in sorted(self.fit_results[observable], key=by_order):
             model_info = self._get_model_info_from_name(name)
             if model_info['order'] == 'lo':
                 color = colors[0]
@@ -372,7 +365,7 @@ class model_average(object):
                 color = colors[4]
 
 
-            logGBF = gv.mean(gv.gvar(self.fit_results[name]['logGBF']))
+            logGBF = gv.mean(gv.gvar(self.fit_results[observable][name]['logGBF']))
             x = np.exp(logGBF - logGBF_max)
 
             alpha = 1
@@ -398,7 +391,7 @@ class model_average(object):
 
         y=y_other
         labels = np.array([])
-        for name in sorted(self.fit_results, key=by_order):
+        for name in sorted(self.fit_results[observable], key=by_order):
             model_info = self._get_model_info_from_name(name)
             if model_info['order'] == 'lo':
                 color = colors[0]
@@ -411,7 +404,7 @@ class model_average(object):
             else:
                 color = colors[4]
 
-            x = gv.mean(gv.gvar(self.fit_results[name]['Q']))
+            x = gv.mean(gv.gvar(self.fit_results[observable][name]['Q']))
             #plt.axvline(x, ls='--', alpha=0.4)
             plt.scatter(x=x, y=y, color=color)
             y = y + 1
@@ -432,7 +425,7 @@ class model_average(object):
 
         y=y_other
         labels = np.array([])
-        for name in sorted(self.fit_results, key=by_order):
+        for name in sorted(self.fit_results[observable], key=by_order):
             model_info = self._get_model_info_from_name(name)
             if model_info['order'] == 'lo':
                 color = colors[0]
@@ -445,7 +438,7 @@ class model_average(object):
             else:
                 color = colors[4]
 
-            x = gv.mean(gv.gvar(self.fit_results[name]['chi2/df']))
+            x = gv.mean(gv.gvar(self.fit_results[observable][name]['chi2/df']))
             #plt.axvline(x, ls='--', alpha=0.4)
             plt.scatter(x=x, y=y, color=color)
             y = y + 1
@@ -469,12 +462,12 @@ class model_average(object):
 
     # parameter = 'a', 'mpi', 'volume'
     # !Only works for lam_chi = 4 pi Fpi!
-    def plot_fits(self, parameter):
+    def plot_fits(self, parameter, observable):
 
         # Check that posterior contains covarianace matrix
-        temp_model_name = list(self.get_model_names())[0]
-        temp_po = self._get_fit_posterior(temp_model_name)
-        temp_p = self._get_fit_prior(temp_model_name)
+        temp_model_name = list(self.get_model_names(observable=observable))[0]
+        temp_po = self._get_fit_posterior(temp_model_name, observable=observable)
+        temp_p = self._get_fit_prior(temp_model_name, observable=observable)
         xi = None
 
         if (temp_p is None) or (temp_po is None) or (gv.uncorrelated(temp_po['wm0'], temp_p['wm0'])):
@@ -503,7 +496,7 @@ class model_average(object):
         else:
             return None
 
-        total_GBF = np.sum([np.exp(self.fit_results[model_l]['logGBF']) for model_l in self.fit_results.keys()])
+        total_GBF = np.sum([np.exp(self.fit_results[observable][model_l]['logGBF']) for model_l in self.fit_results[observable].keys()])
 
         pm = lambda g, k : gv.mean(g) + k*gv.sdev(g)
 
@@ -528,7 +521,7 @@ class model_average(object):
 
             return number
 
-        for j, name in enumerate(sorted(self.fit_results, key=by_order)):
+        for j, name in enumerate(sorted(self.fit_results[observable], key=by_order)):
 
             model_info = self._get_model_info_from_name(name)
 
@@ -538,7 +531,7 @@ class model_average(object):
             elif parameter in ['mpi', 'pi', 'p', 'l']:
                 xi['l'] = x #{'l' : (np.linspace(10, 400, 50) / (4 *np.pi *self._get_phys_point_data()['Fpi']))**2}
 
-            p = self.fit_results[name]['posterior'].copy()
+            p = self.fit_results[observable][name]['posterior'].copy()
             if model_info['chiral_cutoff'] == 'Fpi':
                 data['lam_chi'] = 4 *np.pi *self._get_phys_point_data()['Fpi']
                 color = colors[0]
@@ -552,11 +545,11 @@ class model_average(object):
 
             #color = colors[j%len(colors)]
 
-            p = self.fit_results[name]['posterior']
+            p = self.fit_results[observable][name]['posterior']
 
-            y = self.fitfcn(name, model_info)(p=p, fit_data=data, xi=xi) 
+            y = self.fitfcn(name, model_info, observable=observable)(p=p, fit_data=data, xi=xi) 
             #y = y / self._get_phys_point_data()['mO'] *self._get_phys_point_data()['hbarc']
-            weight = np.exp(self.fit_results[name]['logGBF']) / total_GBF
+            weight = np.exp(self.fit_results[observable][name]['logGBF']) / total_GBF
             plt.fill_between(pm(x, 0), pm(y, -1), pm(y, 1), 
                              alpha=np.max([np.min([weight, 1]), 0.1]), color=color,
                              rasterized=False, label=model_info['order']) #
@@ -600,23 +593,25 @@ class model_average(object):
 
 
     # See self._get_model_info_from_name for possible values for 'compare'
-    def plot_histogram(self, param='w0', title=None, xlabel=None, compare='order'):
+    def plot_histogram(self, param, observable=None, title=None, xlabel=None, compare='order'):
+        if observable is None:
+            observable = param
         if xlabel is None:
             xlabel = self._param_keys_dict(param)
         if title is None:
             title = ""
 
-        param_avg = self.average(param=param)
+        param_avg = self.average(param=param, observable=observable)
         pm = lambda g, k : g.mean + k *g.sdev
         x = np.linspace(pm(param_avg, -4), pm(param_avg, +4), 2000)
 
         # Determine ordering
         # Have larger contributions behind smaller contributions
-        choices = np.unique([self._get_model_info_from_name(model)[compare] for model in self.get_model_names()])
+        choices = np.unique([self._get_model_info_from_name(model)[compare] for model in self.get_model_names(observable=observable)])
         temp_dict = {choice : 0 for choice in choices}
-        for model in self.get_model_names():
+        for model in self.get_model_names(observable=observable):
             model_info = self._get_model_info_from_name(model)
-            temp_dict[model_info[compare]] += np.exp(self.fit_results[model]['logGBF'])
+            temp_dict[model_info[compare]] += np.exp(self.fit_results[observable][model]['logGBF'])
             choices = sorted(temp_dict, key=temp_dict.get, reverse=True)
 
         # Set colors
@@ -650,7 +645,7 @@ class model_average(object):
         for j, choice in enumerate(sorted(np.append(['All'], choices), key=by_order, reverse=True)):
 
             # read Bayes Factors
-            logGBF_list = [self.fit_results[model]['logGBF'] for model in self.get_model_names()]
+            logGBF_list = [self.fit_results[observable][model]['logGBF'] for model in self.get_model_names(observable=observable)]
 
             # initiate a bunch of parameters
             y = 0
@@ -669,27 +664,27 @@ class model_average(object):
             cdf = 0
             cdfdict = dict()
 
-            for model in self.get_model_names():
+            for model in self.get_model_names(observable=observable):
                 model_info = self._get_model_info_from_name(model)
 
                 r = np.nan
                 if param == '':
                     r = self._get_fit_extrapolation(model)
 
-                elif (self._get_fit_posterior(model) is not None) and (param in self._get_fit_posterior(model)):
-                    r =  self._get_fit_posterior(model)[param]
+                elif (self._get_fit_posterior(model, observable=observable) is not None) and (param in self._get_fit_posterior(model, observable=observable)):
+                    r =  self._get_fit_posterior(model, observable=observable)[param]
 
-                elif param in self.fit_results[model]:
-                    r = gv.gvar(self.fit_results[model][param])
+                elif param in self.fit_results[observable][model]:
+                    r = gv.gvar(self.fit_results[observable][model][param])
 
                 else:
                     r = np.nan
 
                 if r is not np.nan and r is not None and (str(model_info[compare]) == choice or choice=='All'):
-                    #r = gv.gvar(self.fit_results[model][param])
+                    #r = gv.gvar(self.fit_results[observable][model][param])
                     y_dict[model] = r
 
-                    w = 1/sum(np.exp(np.array(logGBF_list)-self.fit_results[model]['logGBF']))
+                    w = 1/sum(np.exp(np.array(logGBF_list)-self.fit_results[observable][model]['logGBF']))
                     sqrtw = np.sqrt(w) # sqrt scales the std dev correctly
                     wd[model] = w
                     w_lst.append(w)

@@ -8,7 +8,7 @@ import fitter.special_functions as sf
 
 class fitter(object):
 
-    def __init__(self, prior, fit_data, model_info, prior_interpolation=None):
+    def __init__(self, prior, fit_data, model_info, observable, prior_interpolation=None):
         self.prior = prior
         self.prior_interpolation = prior_interpolation
         self.fit_data = fit_data

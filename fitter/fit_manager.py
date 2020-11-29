@@ -25,7 +25,7 @@ import fitter.fitter as fit
 
 class fit_manager(object):
 
-    def __init__(self, phys_point_data, fit_data=None, prior=None, prior_interpolation=None, model_info=None):
+    def __init__(self, phys_point_data, fit_data=None, prior=None, model_info=None):
 
         for ens in sorted(list(fit_data)):
             if model_info['chiral_cutoff'] == 'mO':
@@ -35,16 +35,16 @@ class fit_manager(object):
                 fit_data[ens]['lam_chi'] = 4 *np.pi *fit_data[ens]['Fpi']
                 phys_point_data['lam_chi'] = 4 *np.pi *phys_point_data['Fpi']
 
-
         self.ensembles = list(sorted(fit_data))
         self.model_info = model_info
         self.fit_data = fit_data
-        self.fitter = fitter_dict(prior=prior, fit_data=fit_data, prior_interpolation=prior_interpolation)[model_info]
-        self.prior_interpolation = prior_interpolation
-        
+        self.fitter = {}
+        self.fitter['w0'] = fitter_dict(fit_data=fit_data, input_prior=prior, observable='w0')[model_info]
+        self.fitter['t0'] = fitter_dict(fit_data=fit_data, input_prior=prior, observable='w0')[model_info]
+
         self._input_prior = prior
         self._phys_point_data = phys_point_data
-        self._fit = None
+        self._fit = {}
 
 
     def __str__(self):
@@ -56,22 +56,22 @@ class fit_manager(object):
             output += 'w0/{}: {}'.format(a_xx, w0_a).ljust(22)  + '=> %s/fm: %s\n'%(a_xx, self.w0 / w0_a)
 
         output += '\nParameters:\n'
-        my_str = self.fit.format(pstyle='m')
+        my_str = self.fit['w0'].format(pstyle='m')
         for item in my_str.split('\n'):
-            for key in self.fit_keys:
+            for key in self.fit_keys['w0']:
                 re = key+' '
                 if re in item:
                     output += item + '\n'
 
         output += '\n'
-        output += self.fit.format(pstyle=None)
+        output += self.fit['w0'].format(pstyle=None)
 
         output += '\nError Budget:\n'
-        max_len = np.max([len(key) for key in self.error_budget])
-        for key in {k: v for k, v in sorted(self.error_budget.items(), key=lambda item: item[1], reverse=True)}:
+        max_len = np.max([len(key) for key in self.error_budget['w0']])
+        for key in {k: v for k, v in sorted(self.error_budget['w0'].items(), key=lambda item: item[1], reverse=True)}:
             output += '  '
             output += key.ljust(max_len+1)
-            output += '{: .1%}\n'.format((self.error_budget[key]/self.w0.sdev)**2).rjust(7)
+            output += '{: .1%}\n'.format((self.error_budget['w0'][key]/self.w0.sdev)**2).rjust(7)
         return output
 
     @property
@@ -79,80 +79,120 @@ class fit_manager(object):
         return self._get_error_budget()
 
     def _get_error_budget(self, verbose=False, **kwargs):
-        output = {}
+        output = None
 
-        # Fill these out
-        disc_keys = ['A_a', 'A_alpha', 'A_aa', 'A_al', 'A_as', 'A_aaa', 'A_aal', 'A_aas', 'A_all', 'A_als', 'A_ass']
-        chiral_keys = ['wm0', 'A_l', 'A_s', 'A_ll', 'A_ls', 'A_ss', 'A_ll_g', 'A_lll', 'A_lls', 'A_lss', 'A_sss', 'A_lll_g', 'A_lls_g', 'A_lll_gg']
-        phys_keys = list(self.phys_point_data)
-        stat_key = 'lam_chi' # Since the input data is correlated, only need a single variable as a proxy for all
+        for observable in ['w0', 't0']:
+            # Fill these out
+            disc_keys = ['A_a', 'A_alpha', 'A_aa', 'A_al', 'A_as', 'A_aaa', 'A_aal', 'A_aas', 'A_all', 'A_als', 'A_ass']
+            chiral_keys = ['wm0', 'A_l', 'A_s', 'A_ll', 'A_ls', 'A_ss', 'A_ll_g', 'A_lll', 'A_lls', 'A_lss', 'A_sss', 'A_lll_g', 'A_lls_g', 'A_lll_gg']
+            phys_keys = list(self.phys_point_data)
+            stat_key = 'lam_chi' # Since the input data is correlated, only need a single variable as a proxy for all
 
 
-        if verbose:
-            inputs = {}
+            if verbose:
+                if output is None:
+                    output = ''
 
-            # xpt/chiral contributiosn
-            inputs.update({str(param)+' [xpt]' : self.prior[param] for param in chiral_keys if param in self.prior})
-            inputs.update({str(param)+' [disc]' : self.prior[param] for param in disc_keys if param in self.prior})
+                inputs = {}
 
-            # phys point contributions
-            inputs.update({str(param)+' [pp]' : self.phys_point_data[param] for param in list(phys_keys)})
-            del inputs['lam_chi [pp]']
+                # xpt/chiral contributiosn
+                inputs.update({str(param)+' [xpt]' : self.prior[observable][param] for param in chiral_keys if param in self.prior[observable]})
+                inputs.update({str(param)+' [disc]' : self.prior[observable][param] for param in disc_keys if param in self.prior[observable]})
 
-            # stat contribtions
-            inputs.update({'x [stat]' : self._get_prior(stat_key) , 'y [stat]' : self.fitter.y})
-            
-            if kwargs is None:
-                kwargs = {}
-            kwargs.setdefault('percent', False)
-            kwargs.setdefault('ndecimal', 10)
-            kwargs.setdefault('verify', True)
+                # phys point contributions
+                inputs.update({str(param)+' [pp]' : self.phys_point_data[param] for param in list(phys_keys)})
+                del inputs['lam_chi [pp]']
 
-            return gv.fmt_errorbudget(outputs={'w0' : self.w0}, inputs=inputs, **kwargs)
-        else:
-            output['disc'] = self.w0.partialsdev(
-                [self.prior[key] for key in disc_keys if key in self.prior]
-            )
-            output['chiral'] = self.w0.partialsdev(
-                [self.prior[key] for key in chiral_keys if key in self.prior]
-            )
-            output['pp_input'] = self.w0.partialsdev(
-                [self.phys_point_data[key] for key in phys_keys]
-            )
-            output['stat'] = self.w0.partialsdev(
-                [self._get_prior(stat_key), self.fitter.y]
-                #self.fitter.y
-            )
+                # stat contribtions
+                inputs.update({'x [stat]' : self._get_prior(stat_key)[observable] , 'y [stat]' : self.fitter[observable].y})
+                
+                if kwargs is None:
+                    kwargs = {}
+                kwargs.setdefault('percent', False)
+                kwargs.setdefault('ndecimal', 10)
+                kwargs.setdefault('verify', True)
 
-            return output
+                
+
+                if observable == 'w0':
+                    output += 'observable: ' + observable + '\n' + gv.fmt_errorbudget(outputs={'w0' : self.w0}, inputs=inputs, **kwargs) + '\n---\n'
+                elif observable == 't0':
+                    output += 'observable: ' + observable + '\n' + gv.fmt_errorbudget(outputs={'t0' : self.t0}, inputs=inputs, **kwargs) + '\n---\n'
+
+            else: 
+                if output is None:
+                    output = {}
+
+                output[observable] = {}
+                if observable == 'w0':
+                    output[observable]['disc'] = self.w0.partialsdev(
+                        [self.prior[observable][key] for key in disc_keys if key in self.prior[observable]]
+                    )
+                    output[observable]['chiral'] = self.w0.partialsdev(
+                        [self.prior[observable][key] for key in chiral_keys if key in self.prior[observable]]
+                    )
+                    output[observable]['pp_input'] = self.w0.partialsdev(
+                        [self.phys_point_data[key] for key in phys_keys]
+                    )
+                    output[observable]['stat'] = self.w0.partialsdev(
+                        [self._get_prior(stat_key)[observable], self.fitter[observable].y]
+                        #self.fitter['w0'].y
+                    )
+                elif observable == 't0':
+                    output[observable]['disc'] = self.t0.partialsdev(
+                        [self.prior[observable][key] for key in disc_keys if key in self.prior[observable]]
+                    )
+                    output[observable]['chiral'] = self.t0.partialsdev(
+                        [self.prior[observable][key] for key in chiral_keys if key in self.prior[observable]]
+                    )
+                    output[observable]['pp_input'] = self.t0.partialsdev(
+                        [self.phys_point_data[key] for key in phys_keys]
+                    )
+                    output[observable]['stat'] = self.t0.partialsdev(
+                        [self._get_prior(stat_key)[observable], self.fitter[observable].y]
+                        #self.fitter['w0'].y
+                    )
+
+
+        return output
 
 
     @property
     def fit(self):
-        if self._fit is None:
-            print("Making fit...")
+        if 'w0' not in self._fit:
+            temp_fit = self.fitter['w0'].fit
+            self._fit['w0'] = temp_fit
 
-            start_time = time.time()
-            temp_fit = self.fitter.fit
-            end_time = time.time()
-
-            self._fit = temp_fit
-            print("Time (s): ",  end_time - start_time, '\n----\n')
+        if 't0' not in self._fit: 
+            temp_fit = self.fitter['t0'].fit
+            self._fit['t0'] = temp_fit
 
         return self._fit
 
     @property
     def fit_info(self):
-        fit_info = {
+        fit_info = {}
+        fit_info['w0'] = {
             'name' : self.model,
             'w0' : self.w0,
-            'logGBF' : self.fit.logGBF,
-            'chi2/df' : self.fit.chi2 / self.fit.dof,
-            'Q' : self.fit.Q,
+            'logGBF' : self.fit['w0'].logGBF,
+            'chi2/df' : self.fit['w0'].chi2 / self.fit['w0'].dof,
+            'Q' : self.fit['w0'].Q,
             'phys_point' : self.phys_point_data,
-            'error_budget' : self.error_budget,
-            'prior' : self.prior,
-            'posterior' : self.posterior,
+            'error_budget' : self.error_budget['w0'],
+            'prior' : self.prior['w0'],
+            'posterior' : self.posterior['w0'],
+        }
+        fit_info['t0'] = {
+            'name' : self.model,
+            't0' : self.t0,
+            'logGBF' : self.fit['t0'].logGBF,
+            'chi2/df' : self.fit['t0'].chi2 / self.fit['t0'].dof,
+            'Q' : self.fit['t0'].Q,
+            'phys_point' : self.phys_point_data,
+            'error_budget' : self.error_budget['t0'],
+            'prior' : self.prior['t0'],
+            'posterior' : self.posterior['t0'],
         }
 
         return fit_info
@@ -160,10 +200,12 @@ class fit_manager(object):
     # Returns names of LECs in prior/posterior
     @property
     def fit_keys(self):
-        keys1 = list(self._input_prior.keys())
-        keys2 = list(self.fit.p.keys())
-        parameters = np.intersect1d(keys1, keys2)
-        return parameters
+        output = {}
+        for observable in ['w0', 't0']:
+            keys1 = list(self._input_prior[observable].keys())
+            keys2 = list(self.fit[observable].p.keys())
+            output[observable] = np.intersect1d(keys1, keys2)
+        return output
 
     @property
     def model(self):
@@ -186,33 +228,42 @@ class fit_manager(object):
 
     # Returns dictionary with keys fit parameters, entries gvar results
     def _get_posterior(self, param=None):
-        if param is None:
-            return {param : self.fit.p[param] for param in self.fit_keys}
-        elif param == 'all':
-            return self.fit.p
-        else:
-            return self.fit.p[param]
+        output = {}
+        for observable in ['w0', 't0']:
+            if param is None:
+                output[observable] = {param : self.fit[observable].p[param] for param in self.fit_keys[observable]}
+            elif param == 'all':
+                output[observable] = self.fit[observable].p
+            else:
+                output[observable] = self.fit[observable].p[param]
+
+        return output
 
     @property
     def prior(self):
         return self._get_prior()
 
     def _get_prior(self, param=None):
-        if param is None:
-            #if self._prior is None:
-            #    self._prior = {param : self.fit.prior[param] for param in self.fit_keys}
-            #return self._prior
-            return {param : self.fit.prior[param] for param in self.fit_keys}
-        elif param == 'all':
-            return self.fit.prior
-        else:
-            return self.fit.prior[param]
+        output = {}
+        for observable in ['w0', 't0']: 
+            if param is None:
+                output[observable] = {param : self.fit[observable].prior[param] for param in self.fit_keys[observable]}
+            elif param == 'all':
+                output[observable] = self.fit[observable].prior
+            else:
+                output[observable] = self.fit[observable].prior[param]
+
+        return output
+
+    @property
+    def t0(self):
+        return self.w0
 
     @property
     def w0(self):
-        return self.fitfcn(fit_data=self.phys_point_data.copy()) / self.phys_point_data['mO'] *self.phys_point_data['hbarc']
+        return self.fitfcn(fit_data=self.phys_point_data.copy(), observable='w0') / self.phys_point_data['mO'] *self.phys_point_data['hbarc']
 
-    def _extrapolate_to_ens(self, ens=None, phys_params=None):
+    def _extrapolate_to_ens(self, ens=None, phys_params=None, observable=None):
         if phys_params is None:
             phys_params = []
 
@@ -221,15 +272,15 @@ class fit_manager(object):
             posterior = {}
             xi = {}
             if ens is None or (ens is not None and ens_j == ens):
-                for param in self.fit.p:
-                    shape = self.fit.p[param].shape
+                for param in self.fit[observable].p:
+                    shape = self.fit[observable].p[param].shape
                     if param in phys_params:
                         a_fm = self.w0 / self.interpolate_w0a(ens_j[:3])
                         posterior[param] = self.phys_point_data[param] / self.phys_point_data['hbarc'] *a_fm
                     elif shape == ():
-                        posterior[param] = self.fit.p[param]
+                        posterior[param] = self.fit[observable].p[param]
                     else:
-                        posterior[param] = self.fit.p[param][j]
+                        posterior[param] = self.fit[observable].p[param][j]
 
                 if 'alpha_s' in phys_params:
                     posterior['alpha_s'] = self.phys_point_data['alpha_s']
@@ -242,9 +293,9 @@ class fit_manager(object):
                     xi['a'] = 0
 
                 if ens is not None:
-                    return self.fitfcn(posterior=posterior, fit_data={}, xi=xi)
+                    return self.fitfcn(posterior=posterior, fit_data={}, xi=xi, observable=observable)
                 else:
-                    extrapolated_values[ens_j] = self.fitfcn(posterior=posterior, fit_data={}, xi=xi)
+                    extrapolated_values[ens_j] = self.fitfcn(posterior=posterior, fit_data={}, xi=xi, observable=observable)
         return extrapolated_values
 
 
@@ -265,27 +316,29 @@ class fit_manager(object):
             return key
 
 
-    def fitfcn(self, fit_data=None, posterior=None, xi=None, debug=False):
+    def fitfcn(self, fit_data=None, posterior=None, xi=None, debug=False, observable=None):
         if fit_data is None:
             fit_data = self.phys_point_data.copy()
+
         if posterior is None:
-            posterior = self.posterior.copy()
+            posterior = self.posterior[observable].copy()
 
         model_info = self.model_info.copy()
 
-        model = self.fitter._make_models()[0]
+        model = self.fitter[observable]._make_models()[0]
         return model.fitfcn(p=posterior, fit_data=fit_data, xi=xi, debug=debug)
 
 
-    def fitfcn_interpolation(self, latt_spacing, fit_data=None, posterior=None, xi=None, simultaneous=False):
+    # observable = 'w0' or 't0'
+    def fitfcn_interpolation(self, latt_spacing, fit_data=None, posterior=None, xi=None, simultaneous=False, observable=None):
         if fit_data is None:
             fit_data = self.phys_point_data.copy()
 
-        param_keys = set(list(self.prior_interpolation)).intersection(set(list(self.fitter.fit_interpolation(simultaneous).p)))
-        posterior = {param : self.fitter.fit_interpolation(simultaneous).p[param] 
-            for param in self.prior_interpolation if param in param_keys}
+        param_keys = set(list(self._input_prior[observable+'_interpolation'])).intersection(set(list(self.fitter['w0'].fit_interpolation(simultaneous).p)))
+        posterior = {param : self.fitter[observable].fit_interpolation(simultaneous).p[param] 
+            for param in self._input_prior[observable+'_interpolation'] if param in param_keys}
 
-        model = self.fitter._make_models(interpolation=True, w_a_data=None)[0]
+        model = self.fitter[observable]._make_models(interpolation=True, w_a_data=None)[0]
         return model.fitfcn(p=posterior, fit_data=fit_data, xi=xi, latt_spacing=latt_spacing)
 
 
@@ -294,22 +347,22 @@ class fit_manager(object):
 
 
     def interpolate_w0a(self, latt_spacing, simultaneous=False):
-        return self.fitfcn_interpolation(latt_spacing=latt_spacing, simultaneous=simultaneous)
+        return self.fitfcn_interpolation(latt_spacing=latt_spacing, simultaneous=simultaneous, observable='w0')
 
 
-    def optimize_prior(self, empbayes_grouping='order'):
-        temp_prior = self.fitter._make_empbayes_fit(empbayes_grouping).prior
+    def optimize_prior(self, empbayes_grouping='order', observable=None):
+        temp_prior = self.fitter[observable]._make_empbayes_fit(empbayes_grouping).prior
         prior = gv.BufferDict()
-        for key in self.fit_keys:
+        for key in self.fit_keys[observable]:
             prior[key] = temp_prior[key]
 
         return prior
 
 
-    # Takes keys from posterior (eg, 'L_5' and 'L_4')
-    def plot_error_ellipsis(self, x_key, y_key):
-        x = self._get_posterior(x_key)
-        y = self._get_posterior(y_key)
+    # Takes keys from posterior (eg, 'A_l' and 'A_s')
+    def plot_error_ellipsis(self, x_key, y_key, observable):
+        x = self._get_posterior(x_key)[observable]
+        y = self._get_posterior(y_key)[observable]
 
 
         fig, ax = plt.subplots()
@@ -317,8 +370,7 @@ class fit_manager(object):
         corr = '{0:.3g}'.format(gv.evalcorr([x, y])[0,1])
         std_x = '{0:.3g}'.format(gv.sdev(x))
         std_y = '{0:.3g}'.format(gv.sdev(y))
-        text = ('$R_{x, y}=$ %s\n $\sigma_x =$ %s\n $\sigma_y =$ %s'
-                % (corr,std_x,std_y))
+        text = ('$R_{x, y}=$ %s\n $\sigma_x =$ %s\n $\sigma_y =$ %s' %(corr,std_x,std_y))
 
         # these are matplotlib.patch.Patch properties
         props = dict(boxstyle='round', facecolor='wheat', alpha=0.5)
@@ -339,15 +391,15 @@ class fit_manager(object):
 
         plt.grid()
         plt.gca().set_aspect('equal', adjustable='datalim')
-        plt.xlabel(self._fmt_key_as_latex(x_key), fontsize = 24)
-        plt.ylabel(self._fmt_key_as_latex(y_key), fontsize = 24)
+        plt.xlabel(x_key.replace('_', '\_'), fontsize = 24)
+        plt.ylabel(y_key.replace('_', '\_'), fontsize = 24)
 
         fig = plt.gcf()
         plt.close()
         return fig
 
 
-    def plot_fit(self, param, show_legend=True, ylim=None):
+    def plot_fit(self, param, observable, show_legend=True, ylim=None, ):
 
         x = {}
         y = {}
@@ -394,7 +446,7 @@ class fit_manager(object):
                 x_fit = xi['a']
 
                 
-            y_fit = self.fitfcn(posterior=self.posterior, fit_data=phys_data, xi=xi)
+            y_fit = self.fitfcn(posterior=self.posterior[observable], fit_data=phys_data, xi=xi, observable=observable)
 
             # For LO fits
             if not hasattr(y_fit, "__len__"):
@@ -413,21 +465,21 @@ class fit_manager(object):
 
             if param in ['pi', 'l', 'p']:
                 x[ens] = (self.fit_data[ens]['mpi'] / self.fit_data[ens]['lam_chi'])**2
-                y[ens] = (self.shift_latt_to_phys(ens=ens, phys_params=['xi_s', 'alpha_s']))
+                y[ens] = (self.shift_latt_to_phys(ens=ens, phys_params=['xi_s', 'alpha_s'], observable=observable))
                 label = r'$\xi_l$'
                 if self.model_info['chiral_cutoff'] == 'Fpi':
                     label = r'$l^2_F = m_\pi^2 / (4 \pi F_\pi)^2$'
 
             elif param in ['k', 's']:
                 x[ens] = (2 *self.fit_data[ens]['mk']**2 - self.fit_data[ens]['mpi']**2) / self.fit_data[ens]['lam_chi']**2
-                y[ens] = (self.shift_latt_to_phys(ens=ens, phys_params=['xi_l', 'alpha_s']))
+                y[ens] = (self.shift_latt_to_phys(ens=ens, phys_params=['xi_l', 'alpha_s'], observable=observable))
                 label = r'$\xi_s$'
                 if self.model_info['chiral_cutoff'] == 'Fpi':
                     label = r'$s^2_F$'
 
             elif param == 'a':
                 x[ens] = self.fit_data[ens]['a/w']**2 / 4
-                y[ens] = (self.shift_latt_to_phys(ens=ens, phys_params=['xi_l', 'xi_s', 'alpha_s']))
+                y[ens] = (self.shift_latt_to_phys(ens=ens, phys_params=['xi_l', 'xi_s', 'alpha_s'], observable=observable))
                 label = '$\epsilon^2_a = (a / 2 w_0)^2$'
 
         for ens in reversed(self.ensembles):
@@ -472,7 +524,11 @@ class fit_manager(object):
 
         #plt.grid()
         plt.xlabel(label)
-        plt.ylabel('$w_0 m_\Omega$')
+
+        if observable == 'w0':
+            plt.ylabel('$w_0 m_\Omega$')
+        elif observable == 't0':
+            plt.ylabel('$m_\Omega \sqrt{t_0 / a^2}$')
 
         if ylim is not None:
             plt.ylim(ylim)
@@ -482,7 +538,7 @@ class fit_manager(object):
         return fig
 
 
-    def plot_interpolation(self, latt_spacing, param='p'):
+    def plot_interpolation(self, latt_spacing, param='p', observable=None):
         x = {}
         y = {}
         c = {}
@@ -525,7 +581,7 @@ class fit_manager(object):
             if self.model_info['chiral_cutoff'] == 'Fpi':
                 xlabel = r'$s^2_F$'
         
-        y_fit = self.fitfcn_interpolation(fit_data=phys_data, xi=xi, latt_spacing=latt_spacing)
+        y_fit = self.fitfcn_interpolation(fit_data=phys_data, xi=xi, latt_spacing=latt_spacing, observable=observable)
 
         # For LO fits
         if not hasattr(y_fit, "__len__"):
@@ -540,7 +596,7 @@ class fit_manager(object):
             xi['s'] = (2 *self.fit_data[ens]['mk']**2 - self.fit_data[ens]['mpi']**2) / self.fit_data[ens]['lam_chi']**2
 
             value_latt = 1 / self.fit_data[ens]['a/w']
-            value_fit = self.fitfcn_interpolation(latt_spacing=latt_spacing, xi=xi)
+            value_fit = self.fitfcn_interpolation(latt_spacing=latt_spacing, xi=xi, observable=observable)
 
             if param in ['pi', 'l', 'p']:
                 x[ens] = (self.fit_data[ens]['mpi'] / self.fit_data[ens]['lam_chi'])**2
@@ -552,7 +608,7 @@ class fit_manager(object):
                 x[ens] = (2 *self.fit_data[ens]['mk']**2 - self.fit_data[ens]['mpi']**2) / self.fit_data[ens]['lam_chi']**2
                 label = r'$a_{%s}(l_F^{\rm phys},s_F)$'%(ens[1:3])
 
-            value_fit_phys = self.fitfcn_interpolation(latt_spacing=latt_spacing, xi=xi)
+            value_fit_phys = self.fitfcn_interpolation(latt_spacing=latt_spacing, xi=xi, observable=observable)
 
             y[ens] = value_latt + value_fit_phys - value_fit
 
@@ -566,7 +622,10 @@ class fit_manager(object):
 
 
         plt.xlabel(xlabel)
-        plt.ylabel('$w_0/a$')
+        if observable == 'w0':
+            plt.ylabel('$w_0 m_\Omega$')
+        elif observable == 't0':
+            plt.ylabel('$m_\Omega \sqrt{t_0 / a^2}$')
 
         fig = plt.gcf()
         plt.close()
@@ -622,8 +681,9 @@ class fit_manager(object):
             for e, v in zip(eVe, eVa.T):
                 plt.plot([gv.mean(x[ens])-1*np.sqrt(e)*v[0], 1*np.sqrt(e)*v[0] + gv.mean(x[ens])],
                         [gv.mean(y[ens])-1*np.sqrt(e)*v[1], 1*np.sqrt(e)*v[1] + gv.mean(y[ens])],
-                        color=colors[ens[1:3]], lw=3, label=ens[0:3])
-                plt.scatter(x[ens].mean, y[ens].mean, color=colors[ens[1:3]], edgecolors='k', zorder=5)
+                        color=colors[ens[1:3]], alpha=1.0, lw=2)
+                plt.plot(gv.mean(x[ens]), gv.mean(y[ens]), 
+                         color=colors[ens[1:3]], marker='o', mec='w', zorder=3)
 
 
         handles, labels = plt.gca().get_legend_handles_labels()
@@ -639,24 +699,24 @@ class fit_manager(object):
         return fig
 
 
-    def plot_qq(self):
+    def plot_qq(self, observable):
         fig = plt.figure()
         ax = fig.add_subplot(111)
 
-        self.fit.qqplot_residuals()
+        self.fit[observable].qqplot_residuals()
 
         fig = plt.gcf()
         plt.close()
         return fig
 
 
-    def plot_residuals(self):
+    def plot_residuals(self, observable):
 
         y = 1
         labels = np.array([])
         for ens in self.ensembles:
             # fit result
-            fit_value = self._extrapolate_to_ens(ens)
+            fit_value = self._extrapolate_to_ens(ens, observable=observable)
             x = gv.mean(fit_value)
             xerr = gv.sdev(fit_value)
             plt.errorbar(x=x, y=y, xerr=xerr, yerr=0.0,
@@ -697,13 +757,13 @@ class fit_manager(object):
         return fig
 
 
-    def shift_latt_to_phys(self, ens=None, phys_params=None):
+    def shift_latt_to_phys(self, ens=None, phys_params=None, observable=None):
         value_shifted = {}
         for j, ens_j in enumerate(self.ensembles):
             if ens is None or ens_j == ens:
-                value_latt = self.fit.y.values()[0][j]
-                value_fit = self._extrapolate_to_ens(ens_j)
-                value_fit_phys = self._extrapolate_to_ens(ens_j, phys_params)
+                value_latt = self.fit[observable].y.values()[0][j]
+                value_fit = self._extrapolate_to_ens(ens_j, observable=observable)
+                value_fit_phys = self._extrapolate_to_ens(ens_j, phys_params, observable=observable)
 
                 value_shifted[ens_j] = value_latt + value_fit_phys - value_fit
                 if ens is not None:
@@ -713,11 +773,18 @@ class fit_manager(object):
 
 
 class fitter_dict(dict):
-    def __init__(self, prior, prior_interpolation=None, fit_data=None):
+    def __init__(self, fit_data, input_prior, observable):
+
+        if observable == 'w0':
+            self.prior = input_prior['w0']
+            self.prior_interpolation = input_prior['w0_interpolation']
+        elif observable == 't0':
+            self.prior = input_prior['t0']
+            self.prior_interpolation = input_prior['t0_interpolation']
+
 
         self.fit_data = fit_data
-        self.prior = prior
-        self.prior_interpolation = prior_interpolation
+        self.observable = observable
         self.ensembles = sorted(list(fit_data))
 
 
@@ -759,7 +826,7 @@ class fitter_dict(dict):
     def _make_fitter(self, model_info):
         prepped_data = self._make_fit_data(model_info)
         #print(model_info)
-        fitter = fit.fitter(fit_data=prepped_data, prior=self.prior, prior_interpolation=self.prior_interpolation, model_info=model_info)
+        fitter = fit.fitter(fit_data=prepped_data, prior=self.prior, prior_interpolation=self.prior_interpolation, model_info=model_info, observable=self.observable)
         return fitter
 
 
