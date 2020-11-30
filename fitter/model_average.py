@@ -51,7 +51,7 @@ class model_average(object):
                 param = 'sqrt_t0'
             
             extrapolated_value = self.average(param, observable=observable, split_unc=True)
-            output  += '%s: %s\n'%(observable, self.average(param, observable=observable))
+            output  += '%s: %s\n'%(param, self.average(param, observable=observable))
             #output += '[FLAG:     %s]\n'%(self._get_phys_point_data()[param])
 
             #sig_fig = lambda x : np.around(x, int(np.floor(-np.log10(x))+3)) if x>0 else x
