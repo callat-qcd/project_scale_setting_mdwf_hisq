@@ -470,7 +470,7 @@ class model_average(object):
         temp_p = self._get_fit_prior(temp_model_name, observable=observable)
         xi = None
 
-        if (temp_p is None) or (temp_po is None) or (gv.uncorrelated(temp_po['wm0'], temp_p['wm0'])):
+        if (temp_p is None) or (temp_po is None) or (gv.uncorrelated(temp_po['c0'], temp_p['c0'])):
             print('Correlations between gvar variables lost! Fit plots will be inaccurate.')
             return None
 

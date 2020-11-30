@@ -14,20 +14,18 @@ class fitter(object):
         self.fit_data = fit_data
         self.model_info = model_info.copy()
 
-        if model_info['chiral_cutoff'] == 'Fpi':
-            self.y = fit_data['mO'] / fit_data['a/w']
-        else: # In Omega-type fits, shifting lam_chi will also shift y, leading to nonsensical fits 
-            make_gvar = lambda g : gv.gvar(gv.mean(g), gv.sdev(g))
-            self.y = make_gvar(fit_data['mO'] / fit_data['a/w'])
+
 
         
         # attributes of fitter object to fill later
         self.empbayes_grouping = None
+        self.observable = observable
         self._counter = {'iters' : 0, 'evals' : 0} # To force empbayes_fit to converge?
         self._empbayes_fit = None
         self._fit = None
         self._fit_interpolation = None
         self._simultaneous = False
+        self._y = None
 
 
     def __str__(self):
@@ -48,6 +46,7 @@ class fitter(object):
 
         return self._fit
 
+
     #@property
     def fit_interpolation(self, simultaneous=None):
         if simultaneous is None:
@@ -59,20 +58,47 @@ class fitter(object):
             #y_data = make_gvar(1 / self.fit_data['a/w'])
 
             make_gvar = lambda g : gv.gvar(gv.mean(g), gv.sdev(g))
-            w_a_data = make_gvar(1 / self.fit_data['a/w'])
-            y_data = {self.model_info['name']+'_interpolation' : w_a_data }
+            if self.observable == 'w0':
+                y_data = make_gvar(self.fit_data['a/w'])
+                data = {self.model_info['name']+'_interpolation' : 1 / y_data }
+            elif self.observable == 't0':
+                y_data = make_gvar(self.fit_data['t/a^2'])
+                data = {self.model_info['name']+'_interpolation' : y_data }
+
             if simultaneous:
-                y_data[self.model_info['name']] = self.y
+                data[self.model_info['name']] = self.y
 
 
-            models = self._make_models(interpolation=True, w_a_data=w_a_data, simultaneous=simultaneous)
+            models = self._make_models(interpolation=True, y_data=y_data, simultaneous=simultaneous)
             prior = self._make_prior(interpolation=True, simultaneous=simultaneous)
 
             fitter = lsqfit.MultiFitter(models=models)
-            fit = fitter.lsqfit(data=y_data, prior=prior, fast=False, mopt=False)
+            fit = fitter.lsqfit(data=data, prior=prior, fast=False, mopt=False)
             self._fit_interpolation = fit
 
         return self._fit_interpolation
+
+
+    @property
+    def y(self):
+        make_gvar = lambda g : gv.gvar(gv.mean(g), gv.sdev(g))
+
+        if self._y is not None:
+            return self._y
+
+        if self.observable == 'w0':
+            if self.model_info['chiral_cutoff'] == 'Fpi':
+                output = self.fit_data['mO'] / self.fit_data['a/w']
+            else: # In Omega-type fits, shifting lam_chi will also shift y, leading to nonsensical fits 
+                output = make_gvar(self.fit_data['mO'] / self.fit_data['a/w'])
+        elif self.observable == 't0':
+            if self.model_info['chiral_cutoff'] == 'Fpi':
+                output = np.sqrt(self.fit_data['t/a^2']) *self.fit_data['mO'] 
+            else: # In Omega-type fits, shifting lam_chi will also shift y, leading to nonsensical fits 
+                output = make_gvar(np.sqrt(self.fit_data['t/a^2']) *self.fit_data['mO'])
+
+        self._y = output
+        return output
 
 
     def _empbayes_groupings(self):
@@ -80,7 +106,7 @@ class fitter(object):
 
         if self.empbayes_grouping == 'all':
             for param in self.prior:
-                if param != 'wm0': # Have a good prior for this already
+                if param != 'c0': # Have a good prior for this already
                     zkeys[param] = [param]
 
         elif self.empbayes_grouping == 'order':
@@ -199,7 +225,7 @@ class fitter(object):
         return (dict(data=y_data, fcn=fitfcn, prior=prior), plaus)
 
 
-    def _make_models(self, model_info=None, interpolation=False, w_a_data=None, simultaneous=False):
+    def _make_models(self, model_info=None, interpolation=False, y_data=None, simultaneous=False):
         if model_info is None:
             model_info = self.model_info.copy()
 
@@ -219,7 +245,7 @@ class fitter(object):
             }
 
             datatag = model_info_interpolation['name']
-            models = np.append(models, model_interpolation(datatag=datatag, model_info=model_info_interpolation, w_a_data=w_a_data))
+            models = np.append(models, model_interpolation(datatag=datatag, model_info=model_info_interpolation, y_data=y_data))
             if not simultaneous:
                 return models
 
@@ -237,17 +263,33 @@ class fitter(object):
 
         if interpolation or simultaneous:
             prior = self.prior_interpolation
+
+            if self.observable == 'w0': 
+                param = 'a/w'
+                groupings = {
+                    'a06' : 0.3453,
+                    'a09' : 0.5257,
+                    'a12' : 0.7151,
+                    'a15' : 0.8894
+                }
+
+            elif self.observable == 't0':
+                param = 't/a^2'
+                groupings = {
+                    'a06' : 6.4079,
+                    'a09' : 2.9773,
+                    'a12' : 1.7399,
+                    'a15' : 1.2136
+                }
+
+            # priors for LO LECs, which depend on lattice spacing (eg, w0_ch/a06)
             relative_error = lambda c, v: np.abs((c - v)/(c))
-            if np.any([relative_error(0.3453, val) < 0.1 for val in gv.mean(fit_data['a/w'])]):
-                newprior['w0a06'] = prior['w0a06']
-            if np.any([relative_error(0.5257, val) < 0.1 for val in gv.mean(fit_data['a/w'])]):
-                newprior['w0a09'] = prior['w0a09']
-            if np.any([relative_error(0.7151, val) < 0.1 for val in gv.mean(fit_data['a/w'])]):
-                newprior['w0a12'] = prior['w0a12']
-            if np.any([relative_error(0.8894, val) < 0.1 for val in gv.mean(fit_data['a/w'])]):
-                newprior['w0a15'] = prior['w0a15']
-            
-            for key in set(list(prior)).difference(['w0a06', 'w0a09', 'w0a12', 'w0a15']):
+            for aXX in groupings:
+                if np.any([relative_error(groupings[aXX], val) < 0.1 for val in gv.mean(fit_data[param])]):
+                    newprior['c0'+aXX] = prior['c0'+aXX]
+
+            # add priors for other LECs
+            for key in set(list(prior)).difference(['c0a06', 'c0a09', 'c0a12', 'c0a15']):
                 newprior[key] = prior[key]
 
             for key in ['mpi', 'mk', 'lam_chi']:
@@ -261,7 +303,7 @@ class fitter(object):
 
         # xpt terms
         # lo
-        newprior['wm0'] = prior['wm0']
+        newprior['c0'] = prior['c0']
 
         # nlo
         if self.model_info['order'] in ['nlo', 'n2lo', 'n3lo']:
@@ -361,7 +403,7 @@ class model(lsqfit.MultiFitterModel):
 
 
         # lo
-        output = p['wm0']
+        output = p['c0']
 
         if self.debug:
             self.debug_table['lo_ct'] = output
@@ -553,12 +595,12 @@ class model(lsqfit.MultiFitterModel):
 
 class model_interpolation(lsqfit.MultiFitterModel):
 
-    def __init__(self, datatag, model_info, w_a_data, **kwargs):
+    def __init__(self, datatag, model_info, y_data, **kwargs):
         super(model_interpolation, self).__init__(datatag)
 
         # Model info
         self.model_info = model_info
-        self.w_a_data = w_a_data
+        self.y_data = y_data
 
 
     def fitfcn(self, p, fit_data=None, xi=None, latt_spacing=None):
@@ -578,10 +620,10 @@ class model_interpolation(lsqfit.MultiFitterModel):
         if 's' not in xi:
             xi['s'] = (2 *p['mk']**2 - p['mpi']**2) / p['lam_chi']**2
 
-        w0ch_a = self.fitfcn_lo_ct(p, xi, latt_spacing)
+        y_ch = self.fitfcn_lo_ct(p, xi, latt_spacing)
 
         if 'a' not in xi:
-            xi['a'] =  1 / (2 *w0ch_a)**2
+            xi['a'] =  1 / (2 *y_ch)**2
 
         # lo
         #output = w0ch_a
@@ -601,7 +643,7 @@ class model_interpolation(lsqfit.MultiFitterModel):
         #    print(gv.evalcorr([w0ch_a[0], self.fitfcn_lo_ct(p, latt_spacing)[0]]))
 
         #output = 1 / (2 *np.sqrt(xi['a'])) *(
-        output = w0ch_a *(
+        output = y_ch *(
             + 1
             + self.fitfcn_nlo_ct(p, xi)
             + self.fitfcn_n2lo_ct(p, xi)
@@ -615,26 +657,26 @@ class model_interpolation(lsqfit.MultiFitterModel):
     def fitfcn_lo_ct(self, p, xi, latt_spacing=None):
 
         if latt_spacing == 'a06':
-            output = p['w0a06']
+            output = p['c0a06']
         elif latt_spacing == 'a09':
-            output= p['w0a09']
+            output= p['c0a09']
         elif latt_spacing == 'a12':
-            output = p['w0a12']
+            output = p['c0a12']
         elif latt_spacing == 'a15':
-            output= p['w0a15']
+            output = p['c0a15']
 
         else:
             relative_error = lambda c, v: np.abs((c - v.mean)/(c))
             output = xi['l'] *xi['s'] *0 # returns correct shape
-            for j, a_w0 in enumerate(1 / self.w_a_data):
-                if (relative_error(0.3453, a_w0) < 0.1):
-                    output[j] = p['w0a06']
-                elif (relative_error(0.5257, a_w0) < 0.1):
-                    output[j] = p['w0a09']
-                elif (relative_error(0.7151, a_w0) < 0.1):
-                    output[j] = p['w0a12']
-                elif (relative_error(0.8894, a_w0) < 0.1):
-                    output[j] = p['w0a15']
+            for j, y in enumerate(self.y_data):
+                if (relative_error(0.3453, y) < 0.1) or (relative_error(6.4079, y) < 0.1):
+                    output[j] = p['c0a06']
+                elif (relative_error(0.5257, y) < 0.1) or (relative_error(2.9773, y) < 0.1):
+                    output[j] = p['c0a09']
+                elif (relative_error(0.7151, y) < 0.1) or (relative_error(1.7399, y) < 0.1):
+                    output[j] = p['c0a12']
+                elif (relative_error(0.8894, y) < 0.1) or (relative_error(1.2136, y) < 0.1):
+                    output[j] = p['c0a15']
                 else:
                     output[j] = 0
 

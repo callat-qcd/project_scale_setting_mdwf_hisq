@@ -149,7 +149,7 @@ class data_loader(object):
                         data[ens]['a/w'] = 1.0 / to_gvar(f[ens]['w0a_callat'][:])
 
 
-                    data[ens]['t/a^2'] = to_gvar(f[ens]['aw0_milc'][:])
+                    data[ens]['t/a^2'] = to_gvar(f[ens]['t0aSq'][:])
 
                     # arrays
                     for param in ['Fpi', 'mk', 'mpi']:
@@ -233,7 +233,7 @@ class data_loader(object):
             if obs == 'w0':
                 output['w0'] = fit_info[obs]['w0']
             elif obs == 't0':
-                output['t0'] = fit_info[obs]['t0']
+                output['sqrt_t0'] = fit_info[obs]['sqrt_t0']
 
 
             output['logGBF'] = gv.gvar(fit_info[obs]['logGBF'])
@@ -289,7 +289,7 @@ class data_loader(object):
                 if obs == 'w0':
                     output[obs][model]['w0'] = fit_info_mdl_key['w0']
                 elif obs == 't0':
-                    output[obs][model]['t0'] = fit_info_mdl_key['t0']
+                    output[obs][model]['sqrt_t0'] = fit_info_mdl_key['sqrt_t0']
                 output[obs][model]['logGBF'] = fit_info_mdl_key['logGBF'].mean
                 output[obs][model]['chi2/df'] = fit_info_mdl_key['chi2/df'].mean
                 output[obs][model]['Q'] = fit_info_mdl_key['Q'].mean
