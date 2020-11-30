@@ -60,7 +60,6 @@ class fit_manager(object):
 
             elif obs == 't0':
                 output += "\nsqrt(t0): %s\n\n" %(self.sqrt_t0)
-                output += "\nw0: %s\n\n" %(self.w0)
                 for a_xx in ['a06', 'a09', 'a12', 'a15']:
                     t0_a2 = self.interpolate_t0a2(latt_spacing=a_xx)
                     output += 't0/{}^2: {}'.format(a_xx, t0_a2).ljust(22)  + '=> %s/fm: %s\n'%(a_xx, self.sqrt_t0 / np.sqrt(t0_a2))
@@ -605,7 +604,10 @@ class fit_manager(object):
             xi['l'] = (self.fit_data[ens]['mpi'] / self.fit_data[ens]['lam_chi'])**2
             xi['s'] = (2 *self.fit_data[ens]['mk']**2 - self.fit_data[ens]['mpi']**2) / self.fit_data[ens]['lam_chi']**2
 
-            value_latt = 1 / self.fit_data[ens]['a/w']
+            if observable == 'w0':
+                value_latt = 1 / self.fit_data[ens]['a/w']
+            elif observable == 't0':
+                value_latt = self.fit_data[ens]['t/a^2']
             value_fit = self.fitfcn_interpolation(latt_spacing=latt_spacing, xi=xi, observable=observable)
 
             if param in ['pi', 'l', 'p']:
@@ -721,53 +723,6 @@ class fit_manager(object):
 
         fig = plt.gcf()
         plt.close()
-        return fig
-
-
-    def plot_residuals(self, observable):
-
-        y = 1
-        labels = np.array([])
-        for ens in self.ensembles:
-            # fit result
-            fit_value = self._extrapolate_to_ens(ens, observable=observable)
-            x = gv.mean(fit_value)
-            xerr = gv.sdev(fit_value)
-            plt.errorbar(x=x, y=y, xerr=xerr, yerr=0.0,
-                         color='deeppink', marker='o', capsize=0.0, mec='white', ms=10.0, alpha=0.6,
-                         ecolor='deepskyblue', elinewidth=8.0, label='fit')
-            y = y + 1
-
-            # data
-            data = self.fit_data[ens]['mO'] / self.fit_data[ens]['a/w']
-            x = gv.mean(data)
-            xerr = gv.sdev(data)
-
-            plt.errorbar(x=x, y=y, xerr=xerr, yerr=0.0,
-                         color='springgreen', marker='o', capsize=0.0, mec='white', ms=10.0, alpha=0.6,
-                         ecolor='teal', elinewidth=8.0, label='data')
-
-            labels = np.append(labels, str(""))
-            y = y + 1
-
-            labels = np.append(labels, str(ens))
-            plt.axhline(y, ls='--')
-
-            y = y + 1
-            labels = np.append(labels, str(""))
-
-        plt.yticks(1*list(range(len(labels))), labels, fontsize=15, rotation=45)
-        plt.ylim(-1, y)
-        plt.xlabel('$w_o m_\Omega$', fontsize = 24)
-
-        handles, labels = plt.gca().get_legend_handles_labels()
-        by_label = dict(zip(reversed(labels), reversed(handles)))
-        plt.legend(by_label.values(), by_label.keys(),
-            ncol=len(by_label), bbox_to_anchor=(0,1), loc='lower left')
-
-        fig = plt.gcf()
-        plt.close()
-
         return fig
 
 
