@@ -45,10 +45,12 @@ class model_average(object):
     def __str__(self):
         output = ''
         for observable in list(self.fit_results):
-            param = observable
+            if observable == 'w0':
+                param = 'w0'
+            elif observable == 't0':
+                param = 'sqrt_t0'
+            
             extrapolated_value = self.average(param, observable=observable, split_unc=True)
-
-
             output  += '%s: %s\n'%(observable, self.average(param, observable=observable))
             #output += '[FLAG:     %s]\n'%(self._get_phys_point_data()[param])
 
@@ -104,11 +106,13 @@ class model_average(object):
 
     def _param_keys_dict(self, param):
         if param == 'w0':
-            return '$w_0$'
+            return r'$w_0$ (fm)'
         elif param == 'Fpi':
-            return '$F_\pi$'
+            return r'$F_\pi$'
         elif param == 'mO':
-            return '$m_\Omega$'
+            return r'$m_\Omega$'
+        elif param == 'sqrt_t0':
+            return r'$t_0^{1/2}$ (fm)'
 
         else:
             return param
@@ -216,11 +220,9 @@ class model_average(object):
             return sorted(list(self.fit_results[observable]))
 
 
-    def plot_comparison(self, param, observable=None, title=None, xlabel=None,
+    def plot_comparison(self, param, observable, title=None, xlabel=None,
                         show_model_avg=True):
 
-        if observable is None:
-            observable = param
         if title is None:
             title = ""
         if xlabel is None:
@@ -231,7 +233,7 @@ class model_average(object):
         #results_array = [self.fit_results[observable], {name : {name : self.other_results[name]} for name in self.other_results}]
         #results = self.fit_results[observable]
 
-        fig = plt.figure(figsize=(8, 8))
+        fig = plt.figure(figsize=(8, 11))
 
         # These axes compare fits
         ax_fits = plt.axes([0.10,0.10,0.49,0.8])
@@ -483,7 +485,7 @@ class model_average(object):
 
             x = np.linspace(0, (0.16/(2 *0.1710))**2, 50)
         elif parameter in ['mpi', 'pi', 'p', 'l']:
-            xlabel = r'$l^2_F$'# = m_\pi^2 / (4 \pi F_\pi)^2$'
+            xlabel = r'$l^2$'# = m_\pi^2 / (4 \pi F_\pi)^2$'
             x = (np.linspace(10, 400, 50) / (4 *np.pi *self._get_phys_point_data()['Fpi']))**2
             plt.axvline(gv.mean(self._get_phys_point_data()['mpi'] / (4 *np.pi *self._get_phys_point_data()['Fpi']))**2, color=colors[0])
             plt.axvline(gv.mean(self._get_phys_point_data()['mpi'] / (self._get_phys_point_data()['mO']))**2, color=colors[1])
@@ -579,7 +581,10 @@ class model_average(object):
 
         plt.xlim(np.min(gv.mean(x)), np.max(gv.mean(x)))
         plt.xlabel(xlabel)
-        plt.ylabel('$w_0 m_\Omega$')
+        if observable == 'w0':
+            plt.ylabel('$w_0 m_\Omega$')
+        elif observable == 't0':
+            plt.ylabel('$m_\Omega \sqrt{t/a^2}$')
 
 
         #w0_avg = self.average('w0')
@@ -593,9 +598,7 @@ class model_average(object):
 
 
     # See self._get_model_info_from_name for possible values for 'compare'
-    def plot_histogram(self, param, observable=None, title=None, xlabel=None, compare='order'):
-        if observable is None:
-            observable = param
+    def plot_histogram(self, param, observable, title=None, xlabel=None, compare='order'):
         if xlabel is None:
             xlabel = self._param_keys_dict(param)
         if title is None:
@@ -752,7 +755,7 @@ class model_average(object):
             leg = ax.legend(edgecolor='k',fancybox=False)
             ax.set_ylim(bottom=0)
             #ax.set_xlim([1.225,1.335])
-            ax.set_xlabel('$w_0$ (fm)')
+            ax.set_xlabel(xlabel)
             frame = plt.gca()
             frame.axes.get_yaxis().set_visible(False)
             #ax.xaxis.set_tick_params(labelsize=ts,width=lw)
