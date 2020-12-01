@@ -632,12 +632,11 @@ class fit_manager(object):
         ]
         plt.legend(handles=handles, labels=[label])#, bbox_to_anchor=(0,1), loc='lower left')
 
-
         plt.xlabel(xlabel)
         if observable == 'w0':
-            plt.ylabel('$w_0 m_\Omega$')
+            plt.ylabel('$w_0 / a$')
         elif observable == 't0':
-            plt.ylabel('$m_\Omega \sqrt{t_0 / a^2}$')
+            plt.ylabel('$t_0 / a^2$')
 
         fig = plt.gcf()
         plt.close()
