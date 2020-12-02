@@ -19,18 +19,20 @@ def sort_ens(ensembles):
     return sorted
 
 def format_h5_data(data_path, switches):
-    data = h5.open_file(data_path,'r')
-    x    = dict()
-    y_w0 = dict()
-    y_t0 = dict()
-    p    = dict()
+    data     = h5.open_file(data_path,'r')
+    x        = dict()
+    y_w0     = dict()
+    y_w0_imp = dict()
+    y_t0     = dict()
+    y_t0_imp = dict()
+    p        = dict()
     if switches['bs_bias']:
         print('Shifting BS data to boot0')
     else:
         print('Treating mean as one of the bootstrap samples')
     if switches['print_lattice']:
-        lattice_fits = []
-        mixed_fits   = []
+        fits_y = []
+        fits_x = []
 
     print('%9s w_0 m_Omega' %'ensemble')
     print('-----------------------------------------------------------------')
@@ -101,18 +103,32 @@ def format_h5_data(data_path, switches):
             w0_a = data.get_node('/'+ens+'/w0a_callat').read()
             p[(ens,'w0a')] = gv.gvar(w0_a[0],w0_a[1])
             p[(ens,'aw0')] = 1 / p[(ens,'w0a')]
+
+            w0_a_imp = data.get_node('/'+ens+'/w0a_callat_imp').read()
+            p[(ens,'w0a_imp')] = gv.gvar(w0_a_imp[0],w0_a_imp[1])
+            p[(ens,'aw0_imp')] = 1 / p[(ens,'w0a_imp')]
+
             t0_a2 = data.get_node('/'+ens+'/t0aSq').read()
             p[(ens,'t0a2')] = gv.gvar(t0_a2[0],t0_a2[1])
+
+            t0_imp = data.get_node('/'+ens+'/t0aSq_imp').read()
+            p[(ens,'t0a2_imp')] = gv.gvar(t0_imp[0],t0_imp[1])
         elif switches['w0'] == 'milc':
             a_w0 = data.get_node('/'+ens+'/aw0_milc').read()
             p[(ens,'aw0')] = gv.gvar(a_w0[0], a_w0[1])
             p[(ens,'w0a')] = 1 / p[(ens,'aw0')]
-        y_w0[ens] = gvdata['m_omega'] * gv.gvar(p[(ens,'w0a')].mean,p[(ens,'w0a')].sdev)
-        y_t0[ens] = gvdata['m_omega'] * np.sqrt(p[(ens,'t0a2')])
+        y_w0[ens]     = gvdata['m_omega'] * p[(ens,'w0a')]
+        y_w0_imp[ens] = gvdata['m_omega'] * p[(ens,'w0a_imp')]
+        y_t0[ens]     = gvdata['m_omega'] * np.sqrt(p[(ens,'t0a2')])
+        y_t0_imp[ens] = gvdata['m_omega'] * np.sqrt(p[(ens,'t0a2_imp')])
         if switches['gf_scale'] == 'w0':
             print("%9s %s" %(ens,y_w0[ens]))
+        elif switches['gf_scale'] == 'w0_imp':
+            print("%9s %s" %(ens,y_w0_imp[ens]))
         elif switches['gf_scale'] == 't0':
             print("%9s %s" %(ens,y_t0[ens]))
+        elif switches['gf_scale'] == 't0_imp':
+            print("%9s %s" %(ens,y_t0_imp[ens]))
 
         # MASSES
         p[(ens,'mpi')]     = gvdata['mpi']
@@ -123,19 +139,31 @@ def format_h5_data(data_path, switches):
             p[(ens,'Lam_F')] = 4 * np.pi * gvdata['Fpi']
 
         if switches['print_lattice']:
-            lattice_fits.append('%9s& %s& %s& %s& %s& %s& %s& %s& %s& %.2f& %s& %s\\\\' \
-                %(ens, p[(ens,'w0a')], y_w0[ens],\
-                    p[(ens,'t0a2')], y_t0[ens],\
-                    (gvdata['mpi']/4/np.pi/gvdata['Fpi'])**2,\
-                    (2*gvdata['mk']**2 - gvdata['mpi']**2)/(4*np.pi*gvdata['Fpi'])**2,\
-                    (gvdata['mpi']/gvdata['m_omega'])**2, \
-                    (2*gvdata['mk']**2 - gvdata['mpi']**2)/gvdata['m_omega']**2,\
-                    x[ens]['mpiL'], (p[(ens,'aw0')] / 2)**2, x[ens]['alphaS']))
+            # ens mO w0_o w0_i w0_omO w0_imO t0_o t0_i t0_omO t0_imO
+            fits_y.append('%9s& %s& %s& %s& %s& %s& %s& %s& %s& %s\\\\' \
+                %(ens, gvdata['m_omega'],\
+                p[(ens,'w0a')],  p[(ens,'w0a_imp')],  y_w0[ens], y_w0_imp[ens],\
+                p[(ens,'t0a2')], p[(ens,'t0a2_imp')], y_t0[ens], y_t0_imp[ens]))
+            # ens lFsq sFsq lOsq sOsq mpiL eps_a alphaS
+            fits_x.append('%9s& %s& %s& %s& %s& %.2f& %s& %s\\\\' \
+                %(ens,\
+                (gvdata['mpi']/4/np.pi/gvdata['Fpi'])**2,\
+                (2*gvdata['mk']**2 - gvdata['mpi']**2)/(4*np.pi*gvdata['Fpi'])**2,\
+                (gvdata['mpi']/gvdata['m_omega'])**2, \
+                (2*gvdata['mk']**2 - gvdata['mpi']**2)/gvdata['m_omega']**2,\
+                x[ens]['mpiL'], (p[(ens,'aw0')] / 2)**2, x[ens]['alphaS']))
 
     if switches['print_lattice']:
-        print(r'ensemble& $w_0/a$& $w_0 m_\Omega$& $t_0/a^2$& $\sqrt{t_0}m_\Omega$& $l_F^2$& $s_F^2$& $l_\Omega^2$& $s_\Omega^2$& $m_\pi L$& $\e_a^2$& $\a_S$\\')
+        print(r'ensemble& $am_\O$& $w_{0,\rm orig}/a$& $w_{0,\rm imp}/a$& $w_{0,\rm orig} m_\O$& $w_{0,\rm imp} m_\O$& $t_{0,\rm orig}/a^2$& $t_{0,\rm imp}/a^2$& $\sqrt{t_{0,\rm orig}}m_\O$& $\sqrt{t_{0,\rm imp}}m_\O$\\')
         print(r'\hline')
-        for l in lattice_fits:
+        for l in fits_y:
+            print(l)
+            if any(ens in l for ens in ['a15m135XL','a12m130','a09m135']):
+                print("\\hline")
+        print('')
+        print(r'ensemble& $l_F^2$& $s_F^2$& $l_\Omega^2$& $s_\Omega^2$& $m_\pi L$& $\e_a^2$& $\a_S$\\')
+        print(r'\hline')
+        for l in fits_x:
             print(l)
             if any(ens in l for ens in ['a15m135XL','a12m130','a09m135']):
                 print("\\hline")
@@ -144,4 +172,4 @@ def format_h5_data(data_path, switches):
         sys.exit()
 
     data.close()
-    return {'x':x, 'y_w0':y_w0, 'y_t0':y_t0, 'p':p}
+    return {'x':x, 'y_w0':y_w0, 'y_w0_imp':y_w0_imp, 'y_t0':y_t0, 'y_t0_imp':y_t0_imp, 'p':p}

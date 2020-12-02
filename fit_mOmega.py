@@ -7,7 +7,7 @@ import numpy as np
 import gvar as gv
 import lsqfit
 
-# FK / Fpi libraries
+# scale setting libraries
 sys.path.append('utils')
 import io_utils
 import chipt
@@ -35,10 +35,10 @@ def main():
     priors     = ip.priors
     phys_point = ip.phys_point
     check_fit  = ip.check_fit
-    if switches['gf_scale'] == 'w0':
+    if switches['gf_scale'] in ['w0','w0_imp']:
         a_sign  = -1
         a_scale = 1
-    elif switches['gf_scale'] == 't0':
+    elif switches['gf_scale'] in ['t0','t0_imp']:
         a_sign  = 1
         a_scale = 2
 
@@ -155,7 +155,7 @@ def main():
 
         do_fit = False
         if switches['save_fits'] or switches['debug_save_fit']:
-            pickled_fit = 'pickled_fits/'+model+'_nlo_x_'+str(ip.nlo_x)+'_nlo_a_'+str(ip.nlo_a)
+            pickled_fit = 'pickled_fits/'+model+'_'+switches['gf_scale']+'_nlo_x_'+str(ip.nlo_x)+'_nlo_a_'+str(ip.nlo_a)
             pickled_fit += '_n2lo_x_'+str(ip.n2lo_x)+'_n2lo_a_'+str(ip.n2lo_a)
             pickled_fit += '_n3lo_x_'+str(ip.n3lo_x)+'_n3lo_a_'+str(ip.n3lo_a)+'.p'
             if os.path.exists(pickled_fit):
@@ -239,14 +239,14 @@ def main():
                     var_a_i = ''
                 else:
                     w0_a_i = w0_results[a].phys['w0_'+a]
-                    if switches['gf_scale'] == 'w0':
+                    if switches['gf_scale'] in ['w0','w0_imp']:
                         a_fm_i = w0_mO_model_avg * to_fm / w0_results[a].phys['w0_'+a]
-                    elif switches['gf_scale'] == 't0':
+                    elif switches['gf_scale'] in ['t0','t0_imp']:
                         a_fm_i = w0_mO_model_avg * to_fm / np.sqrt(w0_results[a].phys['w0_'+a])
                     var_a_i = "(%02d)" %(int(("%.1e" %a_fm_i.sdev)[0:3:2])*model_sig/w0_mO_model_avg.sdev)
-                if switches['gf_scale'] == 'w0':
+                if switches['gf_scale'] in ['w0','w0_imp']:
                     a_fm_g  = w0_mO_model_avg*to_fm / w0_results['all'].phys['w0_a_'+a]
-                elif switches['gf_scale'] == 't0':
+                elif switches['gf_scale'] in ['t0','t0_imp']:
                     a_fm_g  = w0_mO_model_avg*to_fm / np.sqrt(w0_results['all'].phys['w0_a_'+a])
                 var_a_g = "(%02d)" %(int(("%.1e" %a_fm_g.sdev)[0:3:2])*model_sig/w0_mO_model_avg.sdev)
                 print("%s:  %10s  %11s%4s  |  %10s  %11s%4s " \
@@ -293,9 +293,15 @@ class FitEnv:
         if switches['gf_scale'] == 'w0':
             self.y      = xyp_dict['y_w0']
             self.y_w0   = {ens: xyp_dict['p'][(ens,'w0a')] for ens in self.ensembles}
+        elif switches['gf_scale'] == 'w0_imp':
+            self.y      = xyp_dict['y_w0_imp']
+            self.y_w0   = {ens: xyp_dict['p'][(ens,'w0a_imp')] for ens in self.ensembles}
         elif switches['gf_scale'] == 't0':
             self.y      = xyp_dict['y_t0']
             self.y_w0   = {ens: xyp_dict['p'][(ens,'t0a2')] for ens in self.ensembles}
+        elif switches['gf_scale'] == 't0_imp':
+            self.y      = xyp_dict['y_t0_imp']
+            self.y_w0   = {ens: xyp_dict['p'][(ens,'t0a2_imp')] for ens in self.ensembles}
         self.pruned_y   = {ens : self.y[ens] for ens in self.ensembles}
         self.p          = xyp_dict['p']
         required_params = model.get_required_parameters()
@@ -388,10 +394,10 @@ def report_phys_point(fit_result, phys_point_params, model_list, FF, report=Fals
     if report:
         print('  chi2/dof [dof] = %.2f [%d]   Q=%.3f   logGBF = %.3f' \
             %(fit_result.chi2/fit_result.dof, fit_result.dof, fit_result.Q, fit_result.logGBF))
-        if fit_result.gf_scale == 'w0':
+        if fit_result.gf_scale in ['w0','w0_imp']:
             print('  w0 * m_O              = %s' %fit_result.phys['w0_mO'])
             print('  w0                    = %s' %(fit_result.phys['w0']))
-        elif fit_result.gf_scale == 't0':
+        elif fit_result.gf_scale in ['t0','t0_imp']:
             print('  t0^1/2 * m_O          = %s' %fit_result.phys['w0_mO'])
             print('  t0^1/2                = %s' %(fit_result.phys['w0']))
 

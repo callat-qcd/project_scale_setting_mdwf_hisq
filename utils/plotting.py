@@ -190,18 +190,20 @@ class ExtrapolationPlots:
         # which ensemble to get aw0 from
         self.aw0_keys = {'a15':'a15m135XL','a12':'a12m130','a09':'a09m135'}
         # ylim
-        if self.switches['gf_scale'] == 'w0':
+        if self.switches['gf_scale'] in ['w0', 'w0_imp']:
             self.ea_ylim = (1.351, 1.474)
             self.ea_ylim_zoom = (1.351, 1.559)
             self.lf_ylim = (1.351, 1.559)
-            self.plot_name = 'w0'
-        elif self.switches['gf_scale'] == 't0':
+            self.plot_name = self.switches['gf_scale']
+        elif self.switches['gf_scale'] in ['t0','t0_imp']:
             self.ea_ylim = (1.181, 1.399)
             self.ea_ylim_zoom = (1.201, 1.349)
             self.plot_name = 'sqrtt0'
+            if '_imp' in self.switches['gf_scale']:
+                self.plot_name += '_imp'
             self.lf_ylim = (1.181, 1.449)
 
-    def plot_vs_eps_asq(self,shift_points):
+    def plot_vs_eps_asq(self,shift_points,ax=None):
         self.shift_xp = copy.deepcopy(shift_points)
         for k in self.fit_result.p:
             if isinstance(k,str):
@@ -222,12 +224,15 @@ class ExtrapolationPlots:
         i09 = np.where(x > ((self.fitEnv.p[('a09m310',  'aw0')] / 2)**2).mean)[0][0]
         i12 = np.where(x > ((self.fitEnv.p[('a12m310',  'aw0')] / 2)**2).mean)[0][0]
         i15 = np.where(x > ((self.fitEnv.p[('a15m400',  'aw0')] / 2)**2).mean)[0][0]
-        y  = np.array([k.mean for k in y_plot])
-        dy = np.array([k.sdev for k in y_plot])
+        y   = np.array([k.mean for k in y_plot])
+        dy  = np.array([k.sdev for k in y_plot])
 
         figsize = fig_size
-        self.fig_cont = plt.figure('w0_mO_vs_ea_'+self.model,figsize=figsize)
-        self.ax_cont  = plt.axes(plt_axes)
+        self.fig_cont = plt.figure(self.switches['gf_scale'].split('_')[0]+'_mO_vs_ea_'+self.model,figsize=figsize)
+        if ax:
+            self.ax_cont = ax
+        else:
+            self.ax_cont  = plt.axes(plt_axes)
         #self.ax_cont.fill_between(x, y-dy, y+dy, facecolor='None',edgecolor='k', hatch='\\')
 
         for i in range(i06):
@@ -250,9 +255,13 @@ class ExtrapolationPlots:
 
         self.ax_cont.set_xlabel(r'$\epsilon_a^2 = a^2 / (2 w_0)^2$',fontsize=fs_text)
         if self.switches['gf_scale'] == 'w0':
-            self.ax_cont.set_ylabel(r'$w_0 m_\Omega$',fontsize=fs_text)
+            self.ax_cont.set_ylabel(r'$w_{0,\rm orig}\, m_\Omega$',fontsize=fs_text)
+        elif self.switches['gf_scale'] == 'w0_imp':
+            self.ax_cont.set_ylabel(r'$w_{0,\rm imp}\, m_\Omega$',fontsize=fs_text)
         elif self.switches['gf_scale'] == 't0':
-            self.ax_cont.set_ylabel(r'$\sqrt{t_0} m_\Omega$',fontsize=fs_text)
+            self.ax_cont.set_ylabel(r'$\sqrt{t_{0,\rm orig}}\, m_\Omega$',fontsize=fs_text)
+        elif self.switches['gf_scale'] == 't0_imp':
+            self.ax_cont.set_ylabel(r'$\sqrt{t_{0,\rm imp}}\, m_\Omega$',fontsize=fs_text)
         self.ax_cont.text(0.0175, 1.375, r'%s' %(self.model.replace('_','\_')),\
             horizontalalignment='left', verticalalignment='center', \
             fontsize=fs_text, bbox={'facecolor':'None','boxstyle':'round'})
@@ -264,7 +273,11 @@ class ExtrapolationPlots:
             self.ax_cont.set_ylim(self.ea_ylim_zoom)
             plt.savefig('figures/'+self.plot_name+'_mO_vs_ea_'+self.model+'.pdf',transparent=True)
             self.ax_cont.set_ylim(self.ea_ylim)
-
+        try:
+            if self.switches['return_ax']:
+                return self.ax_cont
+        except:
+            pass
 
     def plot_vs_eps_pi(self,shift_points,eps='l'):
         self.shift    = shift_points
@@ -446,7 +459,10 @@ class ExtrapolationPlots:
                 x += -(self.shift_xp['p']['mpi'] / self.shift_xp['p']['Lam_'+self.FF])**2
                 dx = 0
             if a_ens in self.switches['ensembles_fit']:
-                mfc = 'white'
+                if '_imp' in self.switches['gf_scale']:
+                    mfc = c
+                else:
+                    mfc = 'white'
             else:
                 mfc = 'None'
             if p_type == 'ea' and a_ens in eps_a_labels:

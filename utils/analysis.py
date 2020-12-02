@@ -124,17 +124,17 @@ class BayesModelAvg:
         self.model_var += -self.avg['w0_mO'].mean**2
         print('-----------------------------------------------------------------------------------')
 
-        if self.gf_scale == 'w0':
-            print('%28s &         %s +- %.4f' %('Bayes Model Avg: w0_mO', self.avg['w0_mO'], np.sqrt(self.model_var)))
-        elif self.gf_scale == 't0':
-            print('%28s &         %s +- %.4f' %('Bayes Model Avg: t0^1/2 mO', self.avg['w0_mO'], np.sqrt(self.model_var)))
+        if self.gf_scale in ['w0','w0_imp']:
+            print('%28s &         %s +- %.4f' %('Bayes Model Avg: '+self.gf_scale+'_mO', self.avg['w0_mO'], np.sqrt(self.model_var)))
+        elif self.gf_scale in ['t0','t0_imp']:
+            print('%28s &         %s +- %.4f' %('Bayes Model Avg: '+self.gf_scale+'^1/2 mO', self.avg['w0_mO'], np.sqrt(self.model_var)))
         for k in var_avg:
             e = '%.4f' %np.sqrt(var_avg[k])
             print('%28s           %9s     %s' %('',e[-2:],k))
-        if self.gf_scale == 'w0':
-            print('%28s &         %s +- %.4f' %('w0 / fm', self.avg['w0_mO']*to_fm, np.sqrt(self.model_var)*to_fm.mean))
-        elif self.gf_scale == 't0':
-            print('%28s &         %s +- %.4f' %('t0^1/2 / fm', self.avg['w0_mO']*to_fm, np.sqrt(self.model_var)*to_fm.mean))
+        if self.gf_scale in ['w0','w0_imp']:
+            print('%28s &         %s +- %.4f' %(self.gf_scale+' / fm', self.avg['w0_mO']*to_fm, np.sqrt(self.model_var)*to_fm.mean))
+        elif self.gf_scale in ['t0','t0_imp']:
+            print('%28s &         %s +- %.4f' %(self.gf_scale+'^1/2 / fm', self.avg['w0_mO']*to_fm, np.sqrt(self.model_var)*to_fm.mean))
         for k in var_avg:
             e = '%.4f' %(np.sqrt(var_avg[k])*to_fm.mean)
             print('%28s           %9s     %s' %('',e[-2:],k))
