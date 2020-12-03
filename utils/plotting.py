@@ -16,7 +16,7 @@ gr        = 1.618034333 # golden ratio
 fig_size  = (fig_width, fig_width / gr)
 fig_size2 = (fig_width, 2 * fig_width / gr)
 plt_axes  = [0.145,0.145,0.85,0.85]
-plt_axes2 = [0.145,0.07,0.85,0.92]
+plt_axes2 = [0.150,0.07,0.845,0.92]
 fs_text   = 20 # font size of text
 fs_leg    = 16 # legend font size
 mrk_size  = '5' # marker size
@@ -624,6 +624,15 @@ class w0Plots:
         self.aw0_keys = {'a15':'a15m135XL','a12':'a12m130','a09':'a09m135'}
 
 def plot_w0(model, model_list, fitEnv, fit_result, switches, shift_point):
+    if switches['gf_scale'] == 'w0':
+        gf_lbl = r'w_{0,\rm orig} / a'
+    elif switches['gf_scale'] == 'w0_imp':
+        gf_lbl = r'w_{0,\rm imp} / a'
+    elif switches['gf_scale'] == 't0':
+        gf_lbl = r't_{0,\rm orig} / a^2'
+    elif switches['gf_scale'] == 't0_imp':
+        gf_lbl = r't_{0,\rm imp} / a^2'
+
     eps_pisq_phys = (gv.gvar(shift_point['p']['mpi'] / shift_point['p']['Lam_F']))**2
     og_fit    = chipt.FitModel(model_list, _fv=('FV' in model), _FF='F')
     shift_fit = chipt.FitModel(model_list, _fv=False, _FF='F')
@@ -631,9 +640,14 @@ def plot_w0(model, model_list, fitEnv, fit_result, switches, shift_point):
     mpi_range = np.sqrt(np.arange(100, 411**2, 411**2/100))
 
     fig = plt.figure('w0_a',figsize=fig_size2)
-    ylim = {'a15':(1.081,1.159), 'a12':(1.301,1.434), 'a09':(1.701,1.999), 'a06':(2.51,3.09)}
+    if switches['gf_scale'] in ['w0','w0_imp']:
+        ylim = {'a15':(1.081,1.159), 'a12':(1.301,1.434), 'a09':(1.701,1.999), 'a06':(2.51,3.09)}
+    elif switches['gf_scale'] == 't0':
+        ylim = {'a15':(1.161,1.254), 'a12':(1.61,1.779), 'a09':(2.61,3.12), 'a06':(5.71,6.79)}
+    elif switches['gf_scale'] == 't0_imp':
+        ylim = {'a15':(0.931,1.009), 'a12':(1.326,1.49), 'a09':(2.351,2.79), 'a06':(5.41,6.39)}
     for i_a, aa in enumerate(switches['w0_aa_lst']):
-        ax = plt.axes([0.1,.07+i_a*.232,.895,.232])
+        ax = plt.axes([0.11,.07+i_a*.232,.885,.232])
         # fit band
         shift_xp = copy.deepcopy(shift_point)
         shift_xp['p']['w0_0'] = fit_result.p[(aa,'w0_0')]
@@ -702,18 +716,18 @@ def plot_w0(model, model_list, fitEnv, fit_result, switches, shift_point):
         y  = [k.mean for k in y_og]
         dy = [k.sdev for k in y_og]
         ax.errorbar(x,y,yerr=dy, linestyle='None',
-            marker='o',c='k',mfc='None',alpha=0.5,label=r'$w_0 / a_{%s}(l_F^{\rm ens},s_F^{\rm ens})$' %aa[1:])
+            marker='o',c='k',mfc='None',alpha=0.5,label=r'$%s_{%s}(l_F^{\rm ens},s_F^{\rm ens})$' %(gf_lbl,aa[1:]))
         y  = [k.mean for k in yy]
         dy = [k.sdev for k in yy]
         ax.errorbar(x,y,yerr=dy, linestyle='None',
-            marker='s',c=colors[aa],mfc='None',label=r'$w_0 / a_{%s}(l_F^{\rm ens},s_F^{\rm phys})$' %aa[1:])
+            marker='s',c=colors[aa],mfc='None',label=r'$%s_{%s}(l_F^{\rm ens},s_F^{\rm phys})$' %(gf_lbl,aa[1:]))
         ax.legend(loc=3,fontsize=fs_leg)
         if i_a == 0:
             ax.tick_params(bottom=True, labelbottom=True, top=True, direction='in')
             ax.set_xlabel(r'$l_F^2 = m_\pi^2 / (4\pi F_\pi)^2$',fontsize=fs_text)
         else:
             ax.tick_params(bottom=True, labelbottom=False, top=True, direction='in')
-        ax.set_ylabel(r'$w_0 / a_{%s}$' %aa[1:],fontsize=fs_text)
+        ax.set_ylabel(r'$%s_{%s}$' %(gf_lbl,aa[1:]),fontsize=fs_text)
         ax.set_xlim(0,0.094)
         ax.set_ylim(ylim[aa])
         ax.axvline(eps_pisq_phys.mean,linestyle='--',color='#a6aaa9')
@@ -721,4 +735,4 @@ def plot_w0(model, model_list, fitEnv, fit_result, switches, shift_point):
             alpha=0.4, color='#a6aaa9')
 
     if switches['save_figs']:
-        plt.savefig('figures/w0_a_vs_lFSq.pdf',transparent=True)
+        plt.savefig('figures/'+switches['gf_scale']+'_a_vs_lFSq.pdf',transparent=True)
