@@ -21,13 +21,12 @@ switches['ensembles_fit'] = [
     'a15m135XL','a12m130' ,'a09m135',]
 
 # FIT MODELS
-switches['gf_scale'] = 't0'# w0 or t0 or w0_imp or t0_imp
 switches['ansatz'] = dict()
 switches['ansatz']['models'] = [
         'xpt_n2lo', 'xpt_n3lo',
         'taylor_n2lo', 'taylor_n3lo'
     ]
-switches['ansatz']['models'] = ['xpt_n3lo_FV']
+switches['ansatz']['models'] = ['xpt_n2lo_FV','xpt_n3lo_FV']
 '''
     The full list of models can be rather long.  The sys switches help loop
     over them.  Example other base models are
@@ -35,8 +34,9 @@ switches['ansatz']['models'] = ['xpt_n3lo_FV']
         ma_n3lo_FV
 '''
 
-switches['w0'] = 'callat' # or milc
-
+# Gradient Flow scale
+switches['gf_scale']         = 'w0_imp'# w0 or t0 or w0_imp or t0_imp
+switches['w0']               = 'callat' # or milc, defines eps_a
 # SYSTEMATIC SWITCHES
 switches['sys'] = dict()     # these cause the fitter to loop over various options
 switches['sys']['Lam_chi']   = False # FF = F, O, [Of = O with fixed m_Omega value as x-par]
@@ -50,17 +50,17 @@ switches['print_lattice']    = False # print data for paper - no fitting will oc
 
 # Fitting options
 switches['model_avg']         = True # perform Bayes Model Avg
-switches['print_fit']         = False # print lsqfit results?
+switches['print_fit']         = True # print lsqfit results?
 switches['report_phys']       = True  # report physical point for each fit?
 switches['bs_bias']           = True  # shift bs avg to b0?
-switches['save_fits']         = True  # save fits in pickle file?
+switches['save_fits']         = False  # save fits in pickle file?
 switches['prior_search']      = False # perform a crude grid search to optimize
 switches['prior_verbose']     = False # NNLO and NNNLO prior widths
 switches['scipy']             = True # use scipy minimizer instead of gsl?
 switches['freeze_mO']         = False
 
 # w0 interpolation fit options
-switches['w0_interpolate']    = True
+switches['w0_interpolate']    = False
 switches['w0_a_model']        = 'w0_n2lo_a0_FV_all' # w0_n2lo_a0_FV_all, w0_n2lo_FV_all
 switches['print_w0_interp']   = True
 

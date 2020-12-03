@@ -35,12 +35,18 @@ def main():
     priors     = ip.priors
     phys_point = ip.phys_point
     check_fit  = ip.check_fit
-    if switches['gf_scale'] in ['w0','w0_imp']:
+    if switches['gf_scale'] in ['w0']:
         a_sign  = -1
-        a_scale = 1
-    elif switches['gf_scale'] in ['t0','t0_imp']:
+        a_scale = 1.
+    elif switches['gf_scale'] in ['w0_imp']:
+        a_sign  = -1
+        a_scale = 1.3
+    elif switches['gf_scale'] in ['t0']:
         a_sign  = 1
-        a_scale = 2
+        a_scale = 1.8
+    elif switches['gf_scale'] in ['t0_imp']:
+        a_sign  = 0
+        a_scale = 1.4
 
     # if check_fit: - add support
     if switches['check_fit']:
