@@ -102,6 +102,7 @@ def main():
         switches['w0_aa_lst'] = aa
         fitEnv     = FitEnv(gv_data, fit_model, switches)
         p_copy = copy.deepcopy(priors)
+        p_copy = ip.make_interp_priors(p_copy,switches['gf_scale'])
         tmp_w0_result = fitEnv.fit_w0(p_copy)
         phys_point = copy.deepcopy(phys_point)
         for k in tmp_w0_result.p:
@@ -128,6 +129,7 @@ def main():
             fit_model  = chipt.FitModel(model_list, _fv=fv, _FF=FF)
             fitEnv     = FitEnv(gv_data, fit_model, switches)
             p_copy = copy.deepcopy(priors)
+            p_copy = ip.make_interp_priors(p_copy,switches['gf_scale'])
             tmp_w0_result = fitEnv.fit_w0(p_copy)
             phys_point = copy.deepcopy(phys_point)
             for k in tmp_w0_result.p:
@@ -227,9 +229,9 @@ def main():
                 print(w0_results['all'].format(maxline=True))
             print('----------------------------------------------------------------')
             print('             GLOBAL                |        INDIVIDUAL          ')
-            if switches['gf_scale'] == 'w0':
+            if switches['gf_scale'] in ['w0','w0_imp']:
                 print('a      w_0 / a     a / fm          |   w_0 / a     a / fm       ')
-            elif switches['gf_scale'] == 't0':
+            elif switches['gf_scale'] in ['t0','t0_imp']:
                 print('a      t_0 / a^2   a / fm          |   t_0 / a^2   a / fm       ')
             print('----------------------------------------------------------------')
             for a in aa:

@@ -21,7 +21,7 @@ switches['ensembles_fit'] = [
     'a15m135XL','a12m130' ,'a09m135',]
 
 # FIT MODELS
-switches['gf_scale'] = 't0'# w0 or t0
+switches['gf_scale'] = 't0'# w0 or t0 or w0_imp or t0_imp
 switches['ansatz'] = dict()
 switches['ansatz']['models'] = [
         'xpt_n2lo', 'xpt_n3lo',
@@ -53,7 +53,7 @@ switches['model_avg']         = True # perform Bayes Model Avg
 switches['print_fit']         = False # print lsqfit results?
 switches['report_phys']       = True  # report physical point for each fit?
 switches['bs_bias']           = True  # shift bs avg to b0?
-switches['save_fits']         = False  # save fits in pickle file?
+switches['save_fits']         = True  # save fits in pickle file?
 switches['prior_search']      = False # perform a crude grid search to optimize
 switches['prior_verbose']     = False # NNLO and NNNLO prior widths
 switches['scipy']             = True # use scipy minimizer instead of gsl?
@@ -128,10 +128,20 @@ def make_priors(priors, s, a_sign, a_scale):
 
     return priors
 
-priors[('a15','w0_0')] = gv.gvar(1.0,1)
-priors[('a12','w0_0')] = gv.gvar(1.5,1)
-priors[('a09','w0_0')] = gv.gvar(2.0,1)
-priors[('a06','w0_0')] = gv.gvar(3.0,1)
+def make_interp_priors(priors,gf):
+    if gf in ['w0','w0_imp']:
+        priors[('a15','w0_0')] = gv.gvar(1.0,1)
+        priors[('a12','w0_0')] = gv.gvar(1.5,1)
+        priors[('a09','w0_0')] = gv.gvar(2.0,1)
+        priors[('a06','w0_0')] = gv.gvar(3.0,1)
+    elif gf in ['t0','t0_imp']:
+        priors[('a15','w0_0')] = gv.gvar(1.0,1)
+        priors[('a12','w0_0')] = gv.gvar(1.5,1)
+        priors[('a09','w0_0')] = gv.gvar(2.0,1)
+        priors[('a06','w0_0')] = gv.gvar(6.0,1)
+    else:
+        sys.exit('we do not recognize the gf_scale '+gf)
+    return priors
 
 priors['k_l'] = gv.gvar(0,2)
 priors['k_s'] = gv.gvar(0,2)
@@ -140,7 +150,7 @@ priors['k_a'] = gv.gvar(2,2)
 priors['k_ll']  = gv.gvar(0,2)
 priors['k_lln'] = gv.gvar(0,2)
 priors['k_ls']  = gv.gvar(0,2)
-priors['k_ss']  = gv.gvar(0,2)
+priors['k_ss']  = gv.gvar(-2,2)
 
 priors['k_aa'] = gv.gvar(0,2)
 priors['k_la'] = gv.gvar(0,2)
