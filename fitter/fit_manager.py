@@ -632,6 +632,7 @@ class fit_manager(object):
         ]
         plt.legend(handles=handles, labels=[label])#, bbox_to_anchor=(0,1), loc='lower left')
 
+
         plt.xlabel(xlabel)
         if observable == 'w0':
             plt.ylabel('$w_0 / a$')
@@ -794,7 +795,7 @@ class fitter_dict(dict):
     def _make_fitter(self, model_info):
         prepped_data = self._make_fit_data(model_info)
         #print(model_info)
-        fitter = fit.fitter(fit_data=prepped_data, prior=self.prior, prior_interpolation=self.prior_interpolation, model_info=model_info, observable=self.observable)
+        fitter = fit.fitter(fit_data=prepped_data, prior=self.prior, prior_interpolation=self.prior_interpolation, model_info=model_info, observable=self.observable, ensemble_mapping=self.ensembles)
         return fitter
 
 

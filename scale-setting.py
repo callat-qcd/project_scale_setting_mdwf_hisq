@@ -46,6 +46,10 @@ parser.add_argument(
     '-mc', '--milc', dest='use_milc_aw0', default=False, action='store_true',
     help="use milc's determinations of a/w0"
 )
+parser.add_argument(
+    '-o', '--original', dest='improved_observables', default=True, action='store_false',
+    help="Use original, not discretization improved t0/a^2 and w0/a values"
+)
 
 # fitting/model-averaging options
 parser.add_argument(
@@ -69,7 +73,9 @@ data_loader = dl.data_loader(
     empirical_priors=args['empirical_priors'],
     data_file=args['data_file'], 
     use_charm_reweighting=args['use_charm_reweighting'],
-    use_milc_aw0=args['use_milc_aw0']
+    use_milc_aw0=args['use_milc_aw0'],
+    improved_observables=args['improved_observables'],
+
 )
 data_loader.save_settings()
 
@@ -140,6 +146,8 @@ if args['perform_fits']:
     t1 = time.time()
     print("Total time (s): ", t1 - t0, "\n")
 
+
+
 # Average results
 if args['average_models']:
     model_average = md.model_average(collection['name'])
@@ -154,7 +162,6 @@ if args['average_models']:
     fig = model_average.plot_comparison(param='sqrt_t0', observable='t0')
     data_loader.save_fig(fig, output_filename='/figs/t0_comparison_fits')
     str_output += '![image](./figs/t0_comparison_fits.png)\n' 
-
 
     # w0/t0 histogram figs
     fig = model_average.plot_histogram(param='w0', observable='w0', compare='order')

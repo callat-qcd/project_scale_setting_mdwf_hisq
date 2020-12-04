@@ -35,7 +35,8 @@ class data_loader(object):
             empirical_priors=None,
             data_file=None, 
             use_charm_reweighting=None,
-            use_milc_aw0=None):
+            use_milc_aw0=None,
+            improved_observables=None):
 
         self.project_path = os.path.normpath(os.path.join(os.path.realpath(__file__), os.pardir, os.pardir))
 
@@ -88,6 +89,7 @@ class data_loader(object):
             'empirical_priors' : None,
             'use_charm_reweighting' : False,
             'use_milc_aw0' : False,
+            'improved_observables' : True,
         }
 
         # Override values with those from yaml file
@@ -107,6 +109,7 @@ class data_loader(object):
             'empirical_priors' : empirical_priors,
             'use_charm_reweighting' : use_charm_reweighting,
             'use_milc_aw0' : use_milc_aw0,
+            'improved_observables' : improved_observables,
         }
         for key in collection:
             if collection[key] is None:
@@ -143,13 +146,17 @@ class data_loader(object):
                     data[ens]['mO'] = f[ens]['m_omega'][:]
 
                     to_gvar = lambda arr : gv.gvar(arr[0], arr[1])
-                    if self.collection['use_milc_aw0']:
-                        data[ens]['a/w'] = to_gvar(f[ens]['aw0_milc'][:])
+                    if self.collection['improved_observables']:
+                        data[ens]['a/w'] = 1.0 / to_gvar(f[ens]['w0a_callat_imp'][:])
+                        data[ens]['t/a^2'] = to_gvar(f[ens]['t0aSq_imp'][:])
                     else:
                         data[ens]['a/w'] = 1.0 / to_gvar(f[ens]['w0a_callat'][:])
+                        data[ens]['t/a^2'] = to_gvar(f[ens]['t0aSq'][:])
 
 
-                    data[ens]['t/a^2'] = to_gvar(f[ens]['t0aSq'][:])
+                    if self.collection['use_milc_aw0']:
+                        data[ens]['a/w'] = to_gvar(f[ens]['aw0_milc'][:])
+                    
 
                     # arrays
                     for param in ['Fpi', 'mk', 'mpi']:

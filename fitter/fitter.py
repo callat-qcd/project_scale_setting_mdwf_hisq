@@ -8,7 +8,7 @@ import fitter.special_functions as sf
 
 class fitter(object):
 
-    def __init__(self, prior, fit_data, model_info, observable, prior_interpolation=None):
+    def __init__(self, prior, fit_data, model_info, observable, ensemble_mapping=None, prior_interpolation=None):
         self.prior = prior
         self.prior_interpolation = prior_interpolation
         self.fit_data = fit_data
@@ -26,6 +26,7 @@ class fitter(object):
         self._fit_interpolation = None
         self._simultaneous = False
         self._y = None
+        self._ensemble_mapping = ensemble_mapping # Necessary for LO t0, w0 interpolations 
 
 
     def __str__(self):
@@ -59,17 +60,15 @@ class fitter(object):
 
             make_gvar = lambda g : gv.gvar(gv.mean(g), gv.sdev(g))
             if self.observable == 'w0':
-                y_data = make_gvar(self.fit_data['a/w'])
-                data = {self.model_info['name']+'_interpolation' : 1 / y_data }
+                data = {self.model_info['name']+'_interpolation' : 1 / make_gvar(self.fit_data['a/w']) }
             elif self.observable == 't0':
-                y_data = make_gvar(self.fit_data['t/a^2'])
-                data = {self.model_info['name']+'_interpolation' : y_data }
+                data = {self.model_info['name']+'_interpolation' : make_gvar(self.fit_data['t/a^2']) }
 
             if simultaneous:
                 data[self.model_info['name']] = self.y
 
 
-            models = self._make_models(interpolation=True, y_data=y_data, simultaneous=simultaneous)
+            models = self._make_models(interpolation=True, simultaneous=simultaneous)
             prior = self._make_prior(interpolation=True, simultaneous=simultaneous)
 
             fitter = lsqfit.MultiFitter(models=models)
@@ -245,7 +244,7 @@ class fitter(object):
             }
 
             datatag = model_info_interpolation['name']
-            models = np.append(models, model_interpolation(datatag=datatag, model_info=model_info_interpolation, y_data=y_data))
+            models = np.append(models, model_interpolation(datatag=datatag, model_info=model_info_interpolation, ens_mapping=self._ensemble_mapping))
             if not simultaneous:
                 return models
 
@@ -264,29 +263,8 @@ class fitter(object):
         if interpolation or simultaneous:
             prior = self.prior_interpolation
 
-            if self.observable == 'w0': 
-                param = 'a/w'
-                groupings = {
-                    'a06' : 0.3453,
-                    'a09' : 0.5257,
-                    'a12' : 0.7151,
-                    'a15' : 0.8894
-                }
-
-            elif self.observable == 't0':
-                param = 't/a^2'
-                groupings = {
-                    'a06' : 6.4079,
-                    'a09' : 2.9773,
-                    'a12' : 1.7399,
-                    'a15' : 1.2136
-                }
-
-            # priors for LO LECs, which depend on lattice spacing (eg, w0_ch/a06)
-            relative_error = lambda c, v: np.abs((c - v)/(c))
-            for aXX in groupings:
-                if np.any([relative_error(groupings[aXX], val) < 0.1 for val in gv.mean(fit_data[param])]):
-                    newprior['c0'+aXX] = prior['c0'+aXX]
+            for aXX in np.unique([ens[:3] for ens in self._ensemble_mapping]):
+                newprior['c0'+aXX] = prior['c0'+aXX]
 
             # add priors for other LECs
             for key in set(list(prior)).difference(['c0a06', 'c0a09', 'c0a12', 'c0a15']):
@@ -595,12 +573,12 @@ class model(lsqfit.MultiFitterModel):
 
 class model_interpolation(lsqfit.MultiFitterModel):
 
-    def __init__(self, datatag, model_info, y_data, **kwargs):
+    def __init__(self, datatag, model_info, ens_mapping=None, **kwargs):
         super(model_interpolation, self).__init__(datatag)
 
         # Model info
         self.model_info = model_info
-        self.y_data = y_data
+        self.ens_mapping = ens_mapping
 
 
     def fitfcn(self, p, fit_data=None, xi=None, latt_spacing=None):
@@ -666,16 +644,15 @@ class model_interpolation(lsqfit.MultiFitterModel):
             output = p['c0a15']
 
         else:
-            relative_error = lambda c, v: np.abs((c - v.mean)/(c))
             output = xi['l'] *xi['s'] *0 # returns correct shape
-            for j, y in enumerate(self.y_data):
-                if (relative_error(0.3453, y) < 0.1) or (relative_error(6.4079, y) < 0.1):
+            for j, ens in enumerate(self.ens_mapping):
+                if ens[:3] == 'a06':
                     output[j] = p['c0a06']
-                elif (relative_error(0.5257, y) < 0.1) or (relative_error(2.9773, y) < 0.1):
+                elif ens[:3] == 'a09':
                     output[j] = p['c0a09']
-                elif (relative_error(0.7151, y) < 0.1) or (relative_error(1.7399, y) < 0.1):
+                elif ens[:3] == 'a12':
                     output[j] = p['c0a12']
-                elif (relative_error(0.8894, y) < 0.1) or (relative_error(1.2136, y) < 0.1):
+                elif ens[:3] == 'a15':
                     output[j] = p['c0a15']
                 else:
                     output[j] = 0

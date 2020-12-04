@@ -119,8 +119,11 @@ class model_average(object):
 
 
     def average(self, param, observable=None, models=None, split_unc=False, include_unc=True):
-        if observable is None:
-            observable = param
+        if (observable is None) and (param == 'w0'):
+            observable = 'w0'
+        elif (observable is None) and (param == 'sqrt_t0'):
+            observable = 't0'
+
         if models is None:
             models = self.get_model_names(observable=observable)
 
