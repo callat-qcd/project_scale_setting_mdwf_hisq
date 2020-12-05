@@ -127,6 +127,9 @@ class fitter(object):
         elif self.empbayes_grouping == 'alphas_eps2a':
             zkeys['alphas'] = ['A_alpha', 'A_a']
 
+        elif self.empbayes_grouping == 'disc_only':
+            zkeys['disc'] = ['A_a', 'A_aa', 'A_al', 'A_as']
+
         all_keys = np.array([k for g in zkeys for k in zkeys[g]])
         prior_keys = list(self._make_prior())
         ignored_keys = set(all_keys) - set(prior_keys)
