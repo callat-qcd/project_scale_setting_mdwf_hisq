@@ -31,7 +31,7 @@ parser.add_argument(
     help='exclude specified ensembles from fit'
 )
 parser.add_argument(
-    '-em', '--empirical_priors', dest='empirical_priors', type=str, choices=['all', 'order', 'disc', 'alphas'], default=None,
+    '-em', '--empirical_priors', dest='empirical_priors', type=str, choices=['all', 'order', 'disc', 'alphas', 'disc_only'], default=None,
     help='determine empirical priors for models'
 )
 parser.add_argument(
@@ -110,7 +110,8 @@ if args['empirical_priors'] is not None:
         )
 
         optimal_prior = fit_manager.optimize_prior(empbayes_grouping=args['empirical_priors'])
-        data_loader.save_prior(fit_manager.model, optimal_prior)
+        data_loader.save_prior('w0_'+fit_manager.model, optimal_prior['w0'])
+        data_loader.save_prior('t0_'+fit_manager.model, optimal_prior['t0'])
 
         
     t1 = time.time()

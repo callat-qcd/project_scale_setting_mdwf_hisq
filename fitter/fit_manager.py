@@ -359,11 +359,13 @@ class fit_manager(object):
         return self.fitfcn_interpolation(latt_spacing=latt_spacing, simultaneous=simultaneous, observable='t0')
 
 
-    def optimize_prior(self, empbayes_grouping='order', observable=None):
-        temp_prior = self.fitter[observable]._make_empbayes_fit(empbayes_grouping).prior
-        prior = gv.BufferDict()
-        for key in self.fit_keys[observable]:
-            prior[key] = temp_prior[key]
+    def optimize_prior(self, empbayes_grouping='order'):
+        prior = {}
+        for observable in ['w0', 't0']:
+            temp_prior = self.fitter[observable]._make_empbayes_fit(empbayes_grouping).prior
+            prior[observable] = gv.BufferDict()
+            for key in self.fit_keys[observable]:
+                prior[observable][key] = temp_prior[key]
 
         return prior
 

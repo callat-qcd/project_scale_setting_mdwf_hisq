@@ -432,7 +432,7 @@ class data_loader(object):
                     return None
 
                 output = gv.gvar(prior_file[key])
-                self.save_prior(model=key, prior=output)
+                self.save_prior(mdl_key=key, prior=output)
 
                 return output
 
@@ -634,14 +634,14 @@ class data_loader(object):
         return None
 
 
-    def save_prior(self, model, prior):
+    def save_prior(self, mdl_key, prior):
         filepath = self.project_path+'/results/'+self.collection['name']+'/priors.yaml'
         if os.path.exists(filepath):
             with open(filepath, 'r') as file:
                 yaml_content = yaml.safe_load(file) or {}
-                yaml_content.update({model : {str(key) : str(prior[key]) for key in prior}})
+                yaml_content.update({mdl_key : {str(key) : str(prior[key]) for key in prior}})
         else:
-            yaml_content = {model : {str(key) : str(prior[key]) for key in prior}}
+            yaml_content = {mdl_key : {str(key) : str(prior[key]) for key in prior}}
 
         with open(filepath, 'w') as file:
             yaml.safe_dump(yaml_content, file)
