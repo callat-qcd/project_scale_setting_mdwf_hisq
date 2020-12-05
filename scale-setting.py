@@ -43,11 +43,11 @@ parser.add_argument(
     help='use charm reweightings on a06m310L'
 )
 parser.add_argument(
-    '-mc', '--milc', dest='use_milc_aw0', default=False, action='store_true',
+    '-mc', '--milc', dest='use_milc_aw0', default=None, action='store_true',
     help="use milc's determinations of a/w0"
 )
 parser.add_argument(
-    '-o', '--original', dest='improved_observables', default=True, action='store_false',
+    '-o', '--original', dest='improved_observables', default=None, action='store_false',
     help="Use original, not discretization improved t0/a^2 and w0/a values"
 )
 
