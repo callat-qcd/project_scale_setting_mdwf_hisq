@@ -35,17 +35,18 @@ def main():
     priors     = ip.priors
     phys_point = ip.phys_point
     check_fit  = ip.check_fit
+    # optimize discretization prior widths for d_a and n2lo terms
     if switches['gf_scale'] in ['w0']:
-        a_sign  = -1
-        a_scale = 1.
+        a_S     = 0.5
+        a_scale = 1.2
     elif switches['gf_scale'] in ['w0_imp']:
-        a_sign  = -1
-        a_scale = 1.3
+        a_S     = 0.5
+        a_scale = 1.4
     elif switches['gf_scale'] in ['t0']:
-        a_sign  = 1
+        a_S     = 0.5
         a_scale = 1.8
-    elif switches['gf_scale'] in ['t0_imp']:
-        a_sign  = 0
+    elif switches['gf_scale'] in ['t0_imp','t0_imp_1','t0_imp_2','t0_imp_3']:
+        a_S     = 0.5
         a_scale = 1.4
 
     # if check_fit: - add support
@@ -93,16 +94,16 @@ def main():
             fit_model  = chipt.FitModel(model_list, _fv=fv, _FF=FF)
             fitEnv     = FitEnv(gv_data, fit_model, switches)
             if FF == 'F':
-                priors = ip.make_priors(priors,1, a_sign, a_scale)
+                priors = ip.make_priors(priors,1, a_S, a_scale)
             elif FF == 'O':
-                priors = ip.make_priors(priors,2, a_sign, a_scale)
+                priors = ip.make_priors(priors,2, a_S, a_scale)
             analysis.prior_width_scan(model, fitEnv, fit_model, priors, switches)
         sys.exit()
     # do analysis
     ''' Perform w0 / a interpolation? '''
     if switches['w0_interpolate']:
         w0_results  = dict()
-        model = switches['w0_a_model']
+        model = switches['gf_scale'].split('_')[0]+'_'+switches['w0_a_model']
         model_list, FF, fv, aa = analysis.gather_w0_elements(model)
         fit_model  = chipt.FitModel(model_list, _fv=fv, _FF=FF)
         switches['w0_aa_lst'] = aa
@@ -155,15 +156,20 @@ def main():
         print(model)
         model_list, FF, fv = analysis.gather_model_elements(model)
         if FF == 'F':
-            priors = ip.make_priors(priors,1, a_sign, a_scale)
+            priors = ip.make_priors(priors,1, a_S, a_scale)
         elif FF == 'O':
-            priors = ip.make_priors(priors,2, a_sign, a_scale)
+            priors = ip.make_priors(priors,2, a_S, a_scale)
         fit_model  = chipt.FitModel(model_list, _fv=fv, _FF=FF)
         fitEnv     = FitEnv(gv_data, fit_model, switches)
 
         do_fit = False
         if switches['save_fits'] or switches['debug_save_fit']:
-            pickled_fit = 'pickled_fits/'+model+'_'+switches['gf_scale']+'_nlo_x_'+str(ip.nlo_x)+'_nlo_a_'+str(ip.nlo_a)
+            pickled_fit = 'pickled_fits/'+model+'_'+switches['gf_scale']
+            if switches['fixed_eps_a']:
+                pickled_fit += '_fixed_eps_a'
+            else:
+                pickled_fit += '_variable_eps_a'
+            pickled_fit += '_nlo_x_'+str(ip.nlo_x)+'_nlo_a_'+str(ip.nlo_a)
             pickled_fit += '_n2lo_x_'+str(ip.n2lo_x)+'_n2lo_a_'+str(ip.n2lo_a)
             pickled_fit += '_n3lo_x_'+str(ip.n3lo_x)+'_n3lo_a_'+str(ip.n3lo_a)+'.p'
             if os.path.exists(pickled_fit):
@@ -223,7 +229,7 @@ def main():
         w0_mO_model_avg, model_sig = model_avg.bayes_model_avg(to_fm)
 
         if switches['w0_interpolate']:
-            model                  = switches['w0_a_model']
+            model                  = switches['gf_scale'].split('_')[0]+'_'+switches['w0_a_model']
             switches['w0_aa_lst']  = aa
             model_list, FF, fv, aa = analysis.gather_w0_elements(model)
             fit_model  = chipt.FitModel(model_list, _fv=fv, _FF=FF)
@@ -237,7 +243,7 @@ def main():
             print('             GLOBAL                |        INDIVIDUAL          ')
             if switches['gf_scale'] in ['w0','w0_imp']:
                 print('a      w_0 / a     a / fm          |   w_0 / a     a / fm       ')
-            elif switches['gf_scale'] in ['t0','t0_imp']:
+            elif switches['gf_scale'] in ['t0','t0_imp','t0_imp_1','t0_imp_2','t0_imp_3']:
                 print('a      t_0 / a^2   a / fm          |   t_0 / a^2   a / fm       ')
             print('----------------------------------------------------------------')
             for a in aa:
@@ -249,12 +255,12 @@ def main():
                     w0_a_i = w0_results[a].phys['w0_'+a]
                     if switches['gf_scale'] in ['w0','w0_imp']:
                         a_fm_i = w0_mO_model_avg * to_fm / w0_results[a].phys['w0_'+a]
-                    elif switches['gf_scale'] in ['t0','t0_imp']:
+                    elif switches['gf_scale'] in ['t0','t0_imp','t0_imp_1','t0_imp_2','t0_imp_3']:
                         a_fm_i = w0_mO_model_avg * to_fm / np.sqrt(w0_results[a].phys['w0_'+a])
                     var_a_i = "(%02d)" %(int(("%.1e" %a_fm_i.sdev)[0:3:2])*model_sig/w0_mO_model_avg.sdev)
                 if switches['gf_scale'] in ['w0','w0_imp']:
                     a_fm_g  = w0_mO_model_avg*to_fm / w0_results['all'].phys['w0_a_'+a]
-                elif switches['gf_scale'] in ['t0','t0_imp']:
+                elif switches['gf_scale'] in ['t0','t0_imp','t0_imp_1','t0_imp_2','t0_imp_3']:
                     a_fm_g  = w0_mO_model_avg*to_fm / np.sqrt(w0_results['all'].phys['w0_a_'+a])
                 var_a_g = "(%02d)" %(int(("%.1e" %a_fm_g.sdev)[0:3:2])*model_sig/w0_mO_model_avg.sdev)
                 print("%s:  %10s  %11s%4s  |  %10s  %11s%4s " \
@@ -307,7 +313,7 @@ class FitEnv:
         elif switches['gf_scale'] == 't0':
             self.y      = xyp_dict['y_t0']
             self.y_w0   = {ens: xyp_dict['p'][(ens,'t0a2')] for ens in self.ensembles}
-        elif switches['gf_scale'] == 't0_imp':
+        elif switches['gf_scale'] in ['t0_imp','t0_imp_1','t0_imp_2','t0_imp_3']:
             self.y      = xyp_dict['y_t0_imp']
             self.y_w0   = {ens: xyp_dict['p'][(ens,'t0a2_imp')] for ens in self.ensembles}
         self.pruned_y   = {ens : self.y[ens] for ens in self.ensembles}
@@ -405,7 +411,7 @@ def report_phys_point(fit_result, phys_point_params, model_list, FF, report=Fals
         if fit_result.gf_scale in ['w0','w0_imp']:
             print('  w0 * m_O              = %s' %fit_result.phys['w0_mO'])
             print('  w0                    = %s' %(fit_result.phys['w0']))
-        elif fit_result.gf_scale in ['t0','t0_imp']:
+        elif fit_result.gf_scale in ['t0','t0_imp','t0_imp_1','t0_imp_2','t0_imp_3']:
             print('  t0^1/2 * m_O          = %s' %fit_result.phys['w0_mO'])
             print('  t0^1/2                = %s' %(fit_result.phys['w0']))
 

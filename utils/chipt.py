@@ -164,6 +164,12 @@ class FitModel:
         return a_result
 
     ''' w0/a extrapolation functions
+        We use the same functions for w0/a and t0/a**2
+        We therefore have to construct the eps_a,0 terms differently since they
+        use the LO parameter to define eps_a.  For these terms, we define two
+        new functions with t0 in the name.
+        w0: w0_0 = w0/a_LO
+        t0: w0_0 = t0/a**2_LO
     '''
     def w0_lo(self, x,p,cP):
         return p['w0_0']
@@ -173,6 +179,9 @@ class FitModel:
 
     def w0_nlo_a0(self, x, p, cP):
         return p['w0_0'] * p['k_a'] / (2 * p['w0_0'])**2
+
+    def t0_nlo_a0(self, x, p, cP):
+        return p['w0_0'] * p['k_a'] / (4* p['w0_0'])
 
     def w0_nlo_a(self, x, p, cP):
         return p['w0_0'] * cP['a2']
@@ -189,6 +198,13 @@ class FitModel:
         a_result  = p['w0_0'] * p['k_aa'] / (2*p['w0_0'])**4
         a_result += p['w0_0'] * p['k_la'] * cP['p2'] / (2*p['w0_0'])**2
         a_result += p['w0_0'] * p['k_sa'] * cP['s2'] / (2*p['w0_0'])**2
+
+        return a_result
+
+    def t0_n2lo_a0(self, x, p, cP):
+        a_result  = p['w0_0'] * p['k_aa'] / (4*p['w0_0'])**2
+        a_result += p['w0_0'] * p['k_la'] * cP['p2'] / (4*p['w0_0'])
+        a_result += p['w0_0'] * p['k_sa'] * cP['s2'] / (4*p['w0_0'])
 
         return a_result
 

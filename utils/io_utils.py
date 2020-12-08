@@ -110,9 +110,29 @@ def format_h5_data(data_path, switches):
 
             t0_a2 = data.get_node('/'+ens+'/t0aSq').read()
             p[(ens,'t0a2')] = gv.gvar(t0_a2[0],t0_a2[1])
+            p[(ens,'at0')]  = 1 / np.sqrt(p[(ens,'t0a2')])
 
             t0_imp = data.get_node('/'+ens+'/t0aSq_imp').read()
             p[(ens,'t0a2_imp')] = gv.gvar(t0_imp[0],t0_imp[1])
+            p[(ens,'at0_imp')]  = 1 / np.sqrt(p[(ens,'t0a2_imp')])
+
+            # try using definition of eps_a from a particular GF scale
+            if not switches['fixed_eps_a']:
+                eps_a_dict = {
+                    'w0':p[(ens,'aw0')], 'w0_imp':p[(ens,'aw0_imp')],
+                    't0':p[(ens,'at0')], 't0_imp':p[(ens,'at0_imp')]
+                    }
+                p[(ens,'aw0')] = eps_a_dict[switches['gf_scale']]
+            else:
+                pass
+                #p[(ens,'aw0')] = p[(ens,'at0')]
+
+            if switches['gf_scale'] in ['t0_imp_1','t0_imp_2','t0_imp_3']:
+                imp_study = True
+                t0_imp_n = data.get_node('/'+ens+'/t0aSq_imp_'+switches['gf_scale'].split('_')[-1]).read()
+                p[(ens,'t0a2_imp_n')] = gv.gvar(t0_imp_n[0],t0_imp_n[1])
+            else:
+                imp_study = False
         elif switches['w0'] == 'milc':
             a_w0 = data.get_node('/'+ens+'/aw0_milc').read()
             p[(ens,'aw0')] = gv.gvar(a_w0[0], a_w0[1])
@@ -120,14 +140,18 @@ def format_h5_data(data_path, switches):
         y_w0[ens]     = gvdata['m_omega'] * p[(ens,'w0a')]
         y_w0_imp[ens] = gvdata['m_omega'] * p[(ens,'w0a_imp')]
         y_t0[ens]     = gvdata['m_omega'] * np.sqrt(p[(ens,'t0a2')])
-        y_t0_imp[ens] = gvdata['m_omega'] * np.sqrt(p[(ens,'t0a2_imp')])
+        if imp_study:
+            y_t0_imp[ens] = gvdata['m_omega'] * np.sqrt(p[(ens,'t0a2_imp_n')])
+        else:
+            y_t0_imp[ens] = gvdata['m_omega'] * np.sqrt(p[(ens,'t0a2_imp')])
+
         if switches['gf_scale'] == 'w0':
             print("%9s %s" %(ens,y_w0[ens]))
         elif switches['gf_scale'] == 'w0_imp':
             print("%9s %s" %(ens,y_w0_imp[ens]))
         elif switches['gf_scale'] == 't0':
             print("%9s %s" %(ens,y_t0[ens]))
-        elif switches['gf_scale'] == 't0_imp':
+        elif switches['gf_scale'] in ['t0_imp','t0_imp_1','t0_imp_2','t0_imp_3']:
             print("%9s %s" %(ens,y_t0_imp[ens]))
 
         # MASSES
@@ -142,8 +166,9 @@ def format_h5_data(data_path, switches):
             # ens mO w0_o w0_i w0_omO w0_imO t0_o t0_i t0_omO t0_imO
             fits_y.append('%9s& %s& %s& %s& %s& %s& %s& %s& %s& %s\\\\' \
                 %(ens, gvdata['m_omega'],\
-                p[(ens,'w0a')],  p[(ens,'w0a_imp')],  y_w0[ens], y_w0_imp[ens],\
-                p[(ens,'t0a2')], p[(ens,'t0a2_imp')], y_t0[ens], y_t0_imp[ens]))
+                p[(ens,'t0a2')], p[(ens,'t0a2_imp')], y_t0[ens], y_t0_imp[ens],\
+                p[(ens,'w0a')],  p[(ens,'w0a_imp')],  y_w0[ens], y_w0_imp[ens]\
+                ))
             # ens lFsq sFsq lOsq sOsq mpiL eps_a alphaS
             fits_x.append('%9s& %s& %s& %s& %s& %.2f& %s& %s\\\\' \
                 %(ens,\
@@ -154,7 +179,7 @@ def format_h5_data(data_path, switches):
                 x[ens]['mpiL'], (p[(ens,'aw0')] / 2)**2, x[ens]['alphaS']))
 
     if switches['print_lattice']:
-        print(r'ensemble& $am_\O$& $w_{0,\rm orig}/a$& $w_{0,\rm imp}/a$& $w_{0,\rm orig} m_\O$& $w_{0,\rm imp} m_\O$& $t_{0,\rm orig}/a^2$& $t_{0,\rm imp}/a^2$& $\sqrt{t_{0,\rm orig}}m_\O$& $\sqrt{t_{0,\rm imp}}m_\O$\\')
+        print(r'ensemble& $am_\O$& $t_{0,\rm orig}/a^2$& $t_{0,\rm imp}/a^2$& $\sqrt{t_{0,\rm orig}}m_\O$& $\sqrt{t_{0,\rm imp}}m_\O$& $w_{0,\rm orig}/a$& $w_{0,\rm imp}/a$& $w_{0,\rm orig} m_\O$& $w_{0,\rm imp} m_\O$ \\')
         print(r'\hline')
         for l in fits_y:
             print(l)

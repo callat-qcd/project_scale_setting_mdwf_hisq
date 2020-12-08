@@ -15,7 +15,7 @@ fig_width = 6.75 # in inches, 2x as wide as APS column
 gr        = 1.618034333 # golden ratio
 fig_size  = (fig_width, fig_width / gr)
 fig_size2 = (fig_width, 2 * fig_width / gr)
-plt_axes  = [0.145,0.145,0.85,0.85]
+plt_axes  = [0.15,0.15,0.845,0.845]
 plt_axes2 = [0.150,0.07,0.845,0.92]
 fs_text   = 20 # font size of text
 fs_leg    = 16 # legend font size
@@ -136,8 +136,8 @@ def plot_lF_a(data,switches,phys_point):
     handles, lbls = ax.get_legend_handles_labels()
     ax.legend(handles[::-1], lbls[::-1], loc=1, fontsize=fs_leg, ncol=4)
     ax.set_ylabel(r'$l_F^2 = m_\pi^2 / (4\pi F_\pi)^2$', fontsize=fs_text)
-    ax.set_xlabel(r'$\epsilon_a^2 = (a / 2 w_0)^2$', fontsize=fs_text)
-    ax.axis([0,.21, 0.001,0.114])
+    ax.set_xlabel(r'$\epsilon_a^2 = (a / 2 w_{0,\rm orig})^2$', fontsize=fs_text)
+    ax.axis([0,.219, 0.001,0.114])
     lF_phys = phys_point['p']['mpi']**2 / phys_point['p']['Lam_F']**2
     ax.axhspan(lF_phys.mean-lF_phys.sdev, lF_phys.mean+lF_phys.sdev,color='k',alpha=0.3)
     ax.tick_params(direction='in',labelsize=tick_size)
@@ -156,7 +156,7 @@ def plot_raw_data(data,switches,phys_point):
         if ens in ls_labels:
             lbl = ls_labels[ens]
         lF_sq = data['p'][(ens,'mpi')]**2 / data['p'][(ens,'Lam_F')]**2
-        wm    = data['y'][ens]
+        wm    = data['y_w0'][ens]
         ax.errorbar(lF_sq.mean,wm.mean, xerr=lF_sq.sdev,yerr=wm.sdev,
             color=colors[a],marker='o',markersize=8,label=lbl,linestyle='None')
 
@@ -195,7 +195,7 @@ class ExtrapolationPlots:
             self.ea_ylim_zoom = (1.351, 1.559)
             self.lf_ylim = (1.351, 1.559)
             self.plot_name = self.switches['gf_scale']
-        elif self.switches['gf_scale'] in ['t0','t0_imp']:
+        elif self.switches['gf_scale'] in ['t0','t0_imp','t0_imp_1','t0_imp_2','t0_imp_3']:
             self.ea_ylim = (1.181, 1.399)
             self.ea_ylim_zoom = (1.201, 1.349)
             self.plot_name = 'sqrtt0'
@@ -211,7 +211,8 @@ class ExtrapolationPlots:
         y_plot = []
         x_plot = []
         a_range = np.sqrt(np.arange(0, .16**2, .16**2 / 50))
-        eps_aSq_range = np.arange(0,.21,.21/500)
+        eps_aSq_max   = 1.01*((self.fitEnv.p[('a15m400',  'aw0')] / 2)**2).mean
+        eps_aSq_range = np.arange(0,eps_aSq_max,eps_aSq_max/500)
         for aa in eps_aSq_range:
             #self.shift_xp['p']['aw0'] = a_fm / self.shift_xp['p']['w0']
             #x_plot.append((self.shift_xp['p']['aw0'] / 2)**2)
@@ -223,7 +224,7 @@ class ExtrapolationPlots:
         i06 = np.where(x > ((self.fitEnv.p[('a06m310L', 'aw0')] / 2)**2).mean)[0][0]
         i09 = np.where(x > ((self.fitEnv.p[('a09m310',  'aw0')] / 2)**2).mean)[0][0]
         i12 = np.where(x > ((self.fitEnv.p[('a12m310',  'aw0')] / 2)**2).mean)[0][0]
-        i15 = np.where(x > ((self.fitEnv.p[('a15m400',  'aw0')] / 2)**2).mean)[0][0]
+        i15 = np.where(x > ((self.fitEnv.p[('a15m400',  'aw0')] / 2)**2).mean)[0][-1]
         y   = np.array([k.mean for k in y_plot])
         dy  = np.array([k.sdev for k in y_plot])
 
@@ -253,19 +254,35 @@ class ExtrapolationPlots:
         labels, handles = zip(*sorted(zip(labels, handles), key=lambda t: t[0]))
         self.ax_cont.legend(handles, labels, ncol=2, columnspacing=0, handletextpad=0.1, fontsize=fs_leg)
 
-        self.ax_cont.set_xlabel(r'$\epsilon_a^2 = a^2 / (2 w_0)^2$',fontsize=fs_text)
+        if self.switches['fixed_eps_a']:
+            x_lbl = 'a^2 / (2 w_{0,\\rm orig})^2'
+        else:
+            x_lbl_dict = {
+                'w0':'a^2 / (2 w_{0,\\rm orig})^2', 'w0_imp':'a^2 / (2 w_{0,\\rm imp})^2',
+                't0':'a^2 / (4 t_{0,\\rm orig})',   't0_imp':'a^2 / (4 t_{0,\\rm imp})'
+                }
+            x_lbl = x_lbl_dict[self.switches['gf_scale']]
+        self.ax_cont.set_xlabel(r'$\epsilon_a^2 = %s$' %x_lbl,fontsize=fs_text)
         if self.switches['gf_scale'] == 'w0':
             self.ax_cont.set_ylabel(r'$w_{0,\rm orig}\, m_\Omega$',fontsize=fs_text)
         elif self.switches['gf_scale'] == 'w0_imp':
             self.ax_cont.set_ylabel(r'$w_{0,\rm imp}\, m_\Omega$',fontsize=fs_text)
         elif self.switches['gf_scale'] == 't0':
             self.ax_cont.set_ylabel(r'$\sqrt{t_{0,\rm orig}}\, m_\Omega$',fontsize=fs_text)
-        elif self.switches['gf_scale'] == 't0_imp':
+        elif self.switches['gf_scale'] in ['t0_imp','t0_imp_1','t0_imp_2','t0_imp_3']:
             self.ax_cont.set_ylabel(r'$\sqrt{t_{0,\rm imp}}\, m_\Omega$',fontsize=fs_text)
-        self.ax_cont.text(0.0175, 1.375, r'%s' %(self.model.replace('_','\_')),\
+
+        if self.switches['gf_scale'] in ['w0','w0_imp']:
+            y_t = 1.375
+            x_t = 0.0175
+        else:
+            y_t = 1.22
+            x_t = 0.125
+
+        self.ax_cont.text(x_t, y_t, r'%s' %(self.model.replace('_','\_')),\
             horizontalalignment='left', verticalalignment='center', \
             fontsize=fs_text, bbox={'facecolor':'None','boxstyle':'round'})
-        self.ax_cont.set_xlim(0,.21)
+        self.ax_cont.set_xlim(0,eps_aSq_max)
         self.ax_cont.set_ylim(self.ea_ylim)
 
         if self.switches['save_figs']:
@@ -355,7 +372,7 @@ class ExtrapolationPlots:
             facecolor='None',edgecolor='k',hatch='/')
         for aa in ['a15','a12','a09','a06']:
             ax_x.fill_between(x, y[aa]-dy[aa], y[aa]+dy[aa],
-                color=colors[aa],alpha=.3)
+                color=colors[aa],alpha=.45)
             #ax_x.plot(x, y[aa], color=colors[aa])
 
         # plot physical eps_pi**2
@@ -363,7 +380,11 @@ class ExtrapolationPlots:
             ax_x.axvline(eps_pisq_phys.mean,linestyle='--',color='#a6aaa9')
             ax_x.axvspan(eps_pisq_phys.mean -eps_pisq_phys.sdev, eps_pisq_phys.mean +eps_pisq_phys.sdev,
                 alpha=0.4, color='#a6aaa9')
-            ax_x.text(0.06, 1.375, r'%s' %(self.model.replace('_','\_')),\
+            if self.switches['gf_scale'] in ['w0','w0_imp']:
+                y_t = 1.375
+            else:
+                y_t = 1.22
+            ax_x.text(0.06, y_t, r'%s' %(self.model.replace('_','\_')),\
                 horizontalalignment='left', verticalalignment='center', \
                 fontsize=fs_text, bbox={'facecolor':'None','boxstyle':'round'})
 
@@ -395,9 +416,13 @@ class ExtrapolationPlots:
         ax_x.set_xlabel(eps_FF[self.FF],fontsize=fs_text)
         ax_x.set_xlim(xlim_FF[self.FF])
         if self.switches['gf_scale'] == 'w0':
-            ax_x.set_ylabel(r'$w_0 m_\Omega$',fontsize=fs_text)
+            ax_x.set_ylabel(r'$w_{0,\rm orig} m_\Omega$',fontsize=fs_text)
+        elif self.switches['gf_scale'] == 'w0_imp':
+            ax_x.set_ylabel(r'$w_{0,\rm imp} m_\Omega$',fontsize=fs_text)
         elif self.switches['gf_scale'] == 't0':
-            ax_x.set_ylabel(r'$\sqrt{t_0} m_\Omega$',fontsize=fs_text)
+            ax_x.set_ylabel(r'$\sqrt{t_{0,\rm orig}} m_\Omega$',fontsize=fs_text)
+        elif self.switches['gf_scale'] == 't0_imp':
+            ax_x.set_ylabel(r'$\sqrt{t_{0,\rm imp}} m_\Omega$',fontsize=fs_text)
         ax_x.set_ylim(self.lf_ylim)
 
         if self.switches['save_figs']:
@@ -630,7 +655,7 @@ def plot_w0(model, model_list, fitEnv, fit_result, switches, shift_point):
         gf_lbl = r'w_{0,\rm imp} / a'
     elif switches['gf_scale'] == 't0':
         gf_lbl = r't_{0,\rm orig} / a^2'
-    elif switches['gf_scale'] == 't0_imp':
+    elif switches['gf_scale'] in ['t0_imp','t0_imp_1','t0_imp_2','t0_imp_3']:
         gf_lbl = r't_{0,\rm imp} / a^2'
 
     eps_pisq_phys = (gv.gvar(shift_point['p']['mpi'] / shift_point['p']['Lam_F']))**2
@@ -644,7 +669,7 @@ def plot_w0(model, model_list, fitEnv, fit_result, switches, shift_point):
         ylim = {'a15':(1.081,1.159), 'a12':(1.301,1.434), 'a09':(1.701,1.999), 'a06':(2.51,3.09)}
     elif switches['gf_scale'] == 't0':
         ylim = {'a15':(1.161,1.254), 'a12':(1.61,1.779), 'a09':(2.61,3.12), 'a06':(5.71,6.79)}
-    elif switches['gf_scale'] == 't0_imp':
+    elif switches['gf_scale'] in ['t0_imp','t0_imp_1','t0_imp_2','t0_imp_3']:
         ylim = {'a15':(0.931,1.009), 'a12':(1.326,1.49), 'a09':(2.351,2.79), 'a06':(5.41,6.39)}
     for i_a, aa in enumerate(switches['w0_aa_lst']):
         ax = plt.axes([0.11,.07+i_a*.232,.885,.232])

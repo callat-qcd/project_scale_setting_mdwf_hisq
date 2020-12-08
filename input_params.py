@@ -26,7 +26,7 @@ switches['ansatz']['models'] = [
         'xpt_n2lo', 'xpt_n3lo',
         'taylor_n2lo', 'taylor_n3lo'
     ]
-switches['ansatz']['models'] = ['xpt_n2lo_FV','xpt_n3lo_FV']
+#switches['ansatz']['models'] = ['xpt_n3lo_FV']
 '''
     The full list of models can be rather long.  The sys switches help loop
     over them.  Example other base models are
@@ -35,14 +35,16 @@ switches['ansatz']['models'] = ['xpt_n2lo_FV','xpt_n3lo_FV']
 '''
 
 # Gradient Flow scale
-switches['gf_scale']         = 'w0_imp'# w0 or t0 or w0_imp or t0_imp
+switches['gf_scale']         = 'w0'# w0 or t0 or w0_imp or t0_imp
+switches['fixed_eps_a']      = True # True, use a/2w_0,orig, False, use a/GF_0,{orig/imp}
+
 switches['w0']               = 'callat' # or milc, defines eps_a
 # SYSTEMATIC SWITCHES
 switches['sys'] = dict()     # these cause the fitter to loop over various options
-switches['sys']['Lam_chi']   = False # FF = F, O, [Of = O with fixed m_Omega value as x-par]
+switches['sys']['Lam_chi']   = True # FF = F, O, [Of = O with fixed m_Omega value as x-par]
 switches['scales']           = ['F','O'] # Of can also be added
-switches['sys']['alphaS']    = False # include alphaS at NLO?
-switches['sys']['FV']        = False # turn on/off FV corrections
+switches['sys']['alphaS']    = True # include alphaS at NLO?
+switches['sys']['FV']        = True # turn on/off FV corrections
                                # scale is used when the loop over scales is not triggered
 switches['scale']            = 'F' # F: Lam = 4pi Fpi; O: Lam = m_O
 
@@ -50,7 +52,7 @@ switches['print_lattice']    = False # print data for paper - no fitting will oc
 
 # Fitting options
 switches['model_avg']         = True # perform Bayes Model Avg
-switches['print_fit']         = True # print lsqfit results?
+switches['print_fit']         = False # print lsqfit results?
 switches['report_phys']       = True  # report physical point for each fit?
 switches['bs_bias']           = True  # shift bs avg to b0?
 switches['save_fits']         = False  # save fits in pickle file?
@@ -60,9 +62,9 @@ switches['scipy']             = True # use scipy minimizer instead of gsl?
 switches['freeze_mO']         = False
 
 # w0 interpolation fit options
-switches['w0_interpolate']    = False
-switches['w0_a_model']        = 'w0_n2lo_a0_FV_all' # w0_n2lo_a0_FV_all, w0_n2lo_FV_all
-switches['print_w0_interp']   = True
+switches['w0_interpolate']    = True
+switches['w0_a_model']        = 'n2lo_a0_FV_all' # n2lo_a0_FV_all, n2lo_FV_all
+switches['print_w0_interp']   = False
 
 # check reweighting and stochastic uncertainty improvement
 switches['reweight']          = False
@@ -73,7 +75,7 @@ switches['deflate_a12m220ms'] = False
 # Plotting options
 switches['save_figs']         = True  # save figures
 switches['make_extrap']       = False # make plots
-switches['plot_interp']       = True
+switches['plot_interp']       = False
 switches['make_hist']         = False # make plots
 switches['make_fv']           = False
 switches['plot_ls']           = False # make parameter space plots
@@ -97,11 +99,11 @@ n2lo_a = 1
 n3lo_x = 1
 n3lo_a = 1
 
-def make_priors(priors, s, a_sign, a_scale):
-    priors['c_l']    = gv.gvar(1   ,nlo_x * s)
-    priors['c_s']    = gv.gvar(1   ,nlo_x * s)
-    priors['d_a']    = gv.gvar(a_sign*0.5, nlo_a*a_scale)
-    priors['d_a_aS'] = gv.gvar(0 ,  0.7)
+def make_priors(priors, s, a_S, a_scale):
+    priors['c_l']    = gv.gvar(1 , nlo_x * s)
+    priors['c_s']    = gv.gvar(1 , nlo_x * s)
+    priors['d_a']    = gv.gvar(0., nlo_a*a_scale)
+    priors['d_a_aS'] = gv.gvar(0 , a_S)
 
     priors['c_ll']  = gv.gvar(0., n2lo_x * s**2)
     priors['c_ls']  = gv.gvar(0., n2lo_x * s**2)
@@ -134,7 +136,7 @@ def make_interp_priors(priors,gf):
         priors[('a12','w0_0')] = gv.gvar(1.5,1)
         priors[('a09','w0_0')] = gv.gvar(2.0,1)
         priors[('a06','w0_0')] = gv.gvar(3.0,1)
-    elif gf in ['t0','t0_imp']:
+    elif gf in ['t0','t0_imp','t0_imp_1','t0_imp_2','t0_imp_3']:
         priors[('a15','w0_0')] = gv.gvar(1.0,1)
         priors[('a12','w0_0')] = gv.gvar(1.5,1)
         priors[('a09','w0_0')] = gv.gvar(2.0,1)

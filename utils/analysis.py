@@ -62,10 +62,10 @@ class BayesModelAvg:
 
     def print_weighted_models(self):
         i_weights = np.argsort(self.weights)[::-1]
-        if self.gf_scale == 'w0':
-            print(r"%28s & chi2/dof &   $Q$ &  logGBF& weight& $w_0 m_\O$& w_0\\" %'model')
-        elif self.gf_scale == 't0':
-            print(r"%28s & chi2/dof &   $Q$ &  logGBF& weight& $\sqrt(t_0) m_\O$& \sqrt(t_0)\\" %'model')
+        if self.gf_scale in ['w0', 'w0_imp']:
+            print(r"%55s & chi2/dof &   $Q$ &  logGBF& weight& $w_0 m_\O$& w_0\\" %'model')
+        elif self.gf_scale in ['t0', 't0_imp']:
+            print(r"%55s & chi2/dof &   $Q$ &  logGBF& weight& $\sqrt(t_0) m_\O$& \sqrt(t_0)\\" %'model')
         print(r'\hline')
         for a_i, a_model in enumerate(np.array(self.r_list)[i_weights]):
             chi2    = self.results[a_model].chi2
@@ -75,7 +75,7 @@ class BayesModelAvg:
             w_i     = self.weights[i_weights][a_i]
             phys    = self.results[a_model].phys['w0_mO']
             phys_w0 = self.results[a_model].phys['w0']
-            print(r'%28s &  %.3f   &  %.3f&  %.3f&  %.3f&  %10s  & %s\\'
+            print(r'%55s &  %.3f   &  %.3f&  %.3f&  %.3f&  %10s  & %s\\'
                 %(a_model.replace('_','\_'), chi2/dof, Q, logGBF, w_i, phys, phys_w0))
 
     def bayes_model_avg(self,to_fm):
@@ -126,14 +126,14 @@ class BayesModelAvg:
 
         if self.gf_scale in ['w0','w0_imp']:
             print('%28s &         %s +- %.4f' %('Bayes Model Avg: '+self.gf_scale+'_mO', self.avg['w0_mO'], np.sqrt(self.model_var)))
-        elif self.gf_scale in ['t0','t0_imp']:
+        elif self.gf_scale in ['t0','t0_imp','t0_imp_1','t0_imp_2','t0_imp_3']:
             print('%28s &         %s +- %.4f' %('Bayes Model Avg: '+self.gf_scale+'^1/2 mO', self.avg['w0_mO'], np.sqrt(self.model_var)))
         for k in var_avg:
             e = '%.4f' %np.sqrt(var_avg[k])
             print('%28s           %9s     %s' %('',e[-2:],k))
         if self.gf_scale in ['w0','w0_imp']:
             print('%28s &         %s +- %.4f' %(self.gf_scale+' / fm', self.avg['w0_mO']*to_fm, np.sqrt(self.model_var)*to_fm.mean))
-        elif self.gf_scale in ['t0','t0_imp']:
+        elif self.gf_scale in ['t0','t0_imp','t0_imp_1','t0_imp_2','t0_imp_3']:
             print('%28s &         %s +- %.4f' %(self.gf_scale+'^1/2 / fm', self.avg['w0_mO']*to_fm, np.sqrt(self.model_var)*to_fm.mean))
         for k in var_avg:
             e = '%.4f' %(np.sqrt(var_avg[k])*to_fm.mean)
@@ -297,6 +297,7 @@ def gather_model_elements(model):
     return model_elements, FF, fv
 
 def gather_w0_elements(model):
+    gf     = model.split('_')[0]
     aa     = model.split('_')[-1]
     order  = model.split('_')[1]
     a0     = 'a0' in model
@@ -312,7 +313,10 @@ def gather_w0_elements(model):
 
     if aa == 'all':
         if a0:
-            model_elements += ['w0_nlo_a0']
+            # we extrapolate w0/a or t0/a**2
+            # if we use the LO parameter for discretization effects
+            # we have to normalize the term correctly
+            model_elements += [gf+'_nlo_a0']
         else:
             model_elements += ['w0_nlo_a']
 
@@ -320,7 +324,7 @@ def gather_w0_elements(model):
         model_elements += ['w0_n2lo']
         if aa == 'all':
             if a0:
-                model_elements += ['w0_n2lo_a0']
+                model_elements += [gf+'_n2lo_a0']
             else:
                 model_elements += ['w0_n2lo_a']
 
