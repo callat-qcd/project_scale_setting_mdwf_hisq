@@ -115,7 +115,7 @@ class FitModel:
     # Fit functions
     def xpt_nlo(self,x,p,cP):
         #print('DEBUG p:',p)
-        a_result  = p['c0']
+        a_result  = p['c_0']
         a_result +=   p['c_l'] * cP['p2']\
                     + p['c_s'] * cP['s2']\
                     + p['d_a'] * cP['a2']

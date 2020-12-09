@@ -207,19 +207,26 @@ def uncertainty_breakdown(result,key,print_error=False):
     stat = dict()
     xpt  = dict()
     disc = dict()
+    miss = dict()
+    t_fv = dict()
     for k in result.prior:
         if isinstance(k, tuple):
             stat[k] = result.prior[k]
-        elif 's' in k:
+        elif 'd_' in k:
             disc[k] = result.prior[k]
-        else:
+        elif 'c_' in k:
             xpt[k]  = result.prior[k]
+        elif k == 't_fv':
+            t_fv[k] = result.prior[k]
+        else:
+            miss[k] = result.prior[k]
     phys_point = {k:v for k,v in result.phys_point['p'].items() if ('Lam' in k) or k in ['mpi','mk']}
     uncertainties = dict()
     uncertainties['stat_xy']    = result.phys[key].partialsdev(result.y,stat)
     uncertainties['xpt']        = result.phys[key].partialsdev(xpt)
     uncertainties['cont']       = result.phys[key].partialsdev(disc)
     uncertainties['phys_point'] = result.phys[key].partialsdev(phys_point)
+    uncertainties['fv']         = result.phys[key].partialsdev(t_fv)
     if print_error:
         for k in uncertainties:
             print('%10s   %f' %(k,uncertainties[k]))

@@ -55,7 +55,7 @@ switches['model_avg']         = True # perform Bayes Model Avg
 switches['print_fit']         = False # print lsqfit results?
 switches['report_phys']       = True  # report physical point for each fit?
 switches['bs_bias']           = True  # shift bs avg to b0?
-switches['save_fits']         = False  # save fits in pickle file?
+switches['save_fits']         = True  # save fits in pickle file?
 switches['prior_search']      = False # perform a crude grid search to optimize
 switches['prior_verbose']     = False # NNLO and NNNLO prior widths
 switches['scipy']             = True # use scipy minimizer instead of gsl?
@@ -90,7 +90,7 @@ switches['debug_bs']          = False # debug shape of bs lists
 
 # Taylor priors - beyond NLO - use "XPT" NiLO priors
 priors = dict()
-priors['c0']   = gv.gvar(1,1)
+priors['c_0']   = gv.gvar(1,1)
 
 nlo_x  = 1
 nlo_a  = 1
