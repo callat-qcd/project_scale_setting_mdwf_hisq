@@ -187,7 +187,7 @@ if args['average_models']:
     str_output += '\n## Representative model'
 
     #for j, model in enumerate(model_average.get_model_names(observable='w0', by_weight=True)[:5]):
-    for j, model in enumerate(['Fpi_n3lo_log_log2_fv']):
+    for j, model in enumerate(['Fpi_n3lo_log_log2_fv_w0impr']):
         print('Making figs for model:', model)
 
         # Load data

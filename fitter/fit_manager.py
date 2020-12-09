@@ -344,7 +344,7 @@ class fit_manager(object):
             for param in self._input_prior[observable+'_interpolation'] if param in param_keys}
 
         model = self.fitter[observable]._make_models(interpolation=True, y_data=None)[0]
-        return model.fitfcn(p=posterior, fit_data=fit_data, xi=xi, latt_spacing=latt_spacing)
+        return model.fitfcn(p=posterior, fit_data=fit_data, xi=xi, latt_spacing=latt_spacing, observable=observable)
 
 
     def fmt_error_budget(self, **kwargs):
@@ -426,13 +426,16 @@ class fit_manager(object):
             '15' : '#ec5d57',
         }
 
-        latt_spacings = {a_xx[1:] : 1/self.interpolate_w0a(a_xx) for a_xx in ['a06', 'a09' , 'a12', 'a15']}
-        latt_spacings['00'] = gv.gvar(0, 0)
+        if observable == 'w0':
+            latt_spacings = {a_xx[1:] : (1/(2 *self.interpolate_w0a(a_xx)))**2 for a_xx in ['a06', 'a09' , 'a12', 'a15']}
+        elif observable == 't0':
+            latt_spacings = {a_xx[1:] : 1/self.interpolate_t0a2(a_xx)/4 for a_xx in ['a06', 'a09' , 'a12', 'a15']}
+        latt_spacings['00'] = gv.gvar(0,0)
 
         for j, xx in enumerate(reversed(latt_spacings)):
             xi = {}
             phys_data = self.phys_point_data
-            phys_data['a/w'] = latt_spacings[xx]
+            phys_data['eps2_a'] = latt_spacings[xx]
 
             min_max = lambda mydict : (gv.mean(np.nanmin([mydict[key] for key in mydict.keys()])), 
                                        gv.mean(np.nanmax([mydict[key] for key in mydict.keys()])))
@@ -452,8 +455,20 @@ class fit_manager(object):
 
             elif param == 'a':
                 plt.axvline(0, label='phys. point', ls='--')
-                min_max = min_max({ens : self.fit_data[ens]['a/w']**2 / 4 for ens in self.ensembles})
-                xi['a'] = np.linspace(0, min_max[1])
+                if self.model_info['eps2a_defn'] == 'w0_original':
+                    eps2_a_arr = [self.fit_data[ens]['a/w:orig']**2 / 4 for ens in self.ensembles] 
+                elif self.model_info['eps2a_defn'] == 'w0_improved':
+                    eps2_a_arr = [self.fit_data[ens]['a/w:impr']**2 / 4 for ens in self.ensembles] 
+                elif self.model_info['eps2a_defn'] == 't0_original':
+                    eps2_a_arr = [1 / self.fit_data[ens]['t/a^2:orig'] / 4  for ens in self.ensembles] 
+                elif self.model_info['eps2a_defn'] == 't0_improved':
+                    eps2_a_arr = [1 / self.fit_data[ens]['t/a^2:impr'] / 4  for ens in self.ensembles] 
+                elif self.model_info['eps2a_defn'] == 'variable':
+                    if observable == 'w0':
+                        eps2_a_arr = [self.fit_data[ens]['a/w']**2 / 4 for ens in self.ensembles] 
+                    elif observable == 't0':
+                        eps2_a_arr = [1 / self.fit_data[ens]['t/a^2'] / 4  for ens in self.ensembles] 
+                xi['a'] = np.linspace(0, gv.mean(np.max(eps2_a_arr)))
                 x_fit = xi['a']
 
                 
@@ -489,9 +504,28 @@ class fit_manager(object):
                     label = r'$s^2_F$'
 
             elif param == 'a':
-                x[ens] = self.fit_data[ens]['a/w']**2 / 4
+                if self.model_info['eps2a_defn'] == 'w0_original':
+                    x[ens] = self.fit_data[ens]['a/w:orig']**2 / 4
+                    label = r'$\epsilon^2_a = (a / 2 w_{0,\mathrm{orig}})^2$'
+                elif self.model_info['eps2a_defn'] == 'w0_improved':
+                    x[ens] = self.fit_data[ens]['a/w:impr']**2 / 4
+                    label = r'$\epsilon^2_a = (a / 2 w_{0,\mathrm{impr}})^2$'
+                elif self.model_info['eps2a_defn'] == 't0_original':
+                    x[ens] = 1 / self.fit_data[ens]['t/a^2:orig'] / 4
+                    label = r'$\epsilon^2_a = t_{0,\mathrm{orig}} / 4 a^2$'
+                elif self.model_info['eps2a_defn'] == 't0_improved':
+                    x[ens] = 1 / self.fit_data[ens]['t/a^2:impr'] / 4
+                    label = r'$\epsilon^2_a = t_{0,\mathrm{impr}} / 4 a^2$'
+                elif self.model_info['eps2a_defn'] == 'variable':
+                    if observable == 'w0':
+                        x[ens] = self.fit_data[ens]['a/w']**2 / 4
+                        label = '$\epsilon^2_a = (a / 2 w_{0,\mathrm{var}})^2$'
+                    elif observable == 't0':
+                        x[ens] = 1 / self.fit_data[ens]['t/a^2'] / 4
+                        label = '$\epsilon^2_a = t_{0,\mathrm{var}} / 4 a^2$'
+
                 y[ens] = (self.shift_latt_to_phys(ens=ens, phys_params=['xi_l', 'xi_s', 'alpha_s'], observable=observable))
-                label = '$\epsilon^2_a = (a / 2 w_0)^2$'
+                #label = '$\epsilon^2_a = (a / 2 w_0)^2$'
 
         for ens in reversed(self.ensembles):
             C = gv.evalcov([x[ens], y[ens]])
@@ -797,7 +831,13 @@ class fitter_dict(dict):
     def _make_fitter(self, model_info):
         prepped_data = self._make_fit_data(model_info)
         #print(model_info)
-        fitter = fit.fitter(fit_data=prepped_data, prior=self.prior, prior_interpolation=self.prior_interpolation, model_info=model_info, observable=self.observable, ensemble_mapping=self.ensembles)
+        fitter = fit.fitter(
+            fit_data=prepped_data, 
+            prior=self.prior, 
+            prior_interpolation=self.prior_interpolation, 
+            model_info=model_info, 
+            observable=self.observable, 
+            ensemble_mapping=self.ensembles)
         return fitter
 
 

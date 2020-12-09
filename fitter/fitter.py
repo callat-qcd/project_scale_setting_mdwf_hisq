@@ -13,13 +13,10 @@ class fitter(object):
         self.prior_interpolation = prior_interpolation
         self.fit_data = fit_data
         self.model_info = model_info.copy()
-
-
-
+        self.observable = observable
         
         # attributes of fitter object to fill later
         self.empbayes_grouping = None
-        self.observable = observable
         self._counter = {'iters' : 0, 'evals' : 0} # To force empbayes_fit to converge?
         self._empbayes_fit = None
         self._fit = None
@@ -247,7 +244,7 @@ class fitter(object):
             }
 
             datatag = model_info_interpolation['name']
-            models = np.append(models, model_interpolation(datatag=datatag, model_info=model_info_interpolation, ens_mapping=self._ensemble_mapping))
+            models = np.append(models, model_interpolation(datatag=datatag, model_info=model_info_interpolation, ens_mapping=self._ensemble_mapping, observable=self.observable))
             if not simultaneous:
                 return models
 
@@ -338,10 +335,23 @@ class fitter(object):
             newprior['A_alpha'] = prior['A_alpha']
 
         # Move fit_data into prior
-        for key in ['mpi', 'mk', 'lam_chi', 'a/w', 'L', 'alpha_s']:
+        for key in ['mpi', 'mk', 'lam_chi', 'L', 'alpha_s']:
             if key in fit_data:
                 newprior[key] = fit_data[key]
 
+        if self.model_info['eps2a_defn'] == 'w0_original':
+            newprior['eps2_a'] = fit_data['a/w:orig']**2 / 4
+        elif self.model_info['eps2a_defn'] == 'w0_improved':
+            newprior['eps2_a'] = fit_data['a/w:impr']**2 / 4
+        elif self.model_info['eps2a_defn'] == 't0_original':
+            newprior['eps2_a'] = 1 / fit_data['t/a^2:orig'] / 4
+        elif self.model_info['eps2a_defn'] == 't0_improved':
+            newprior['eps2_a'] = 1 / fit_data['t/a^2:impr'] / 4
+        elif self.model_info['eps2a_defn'] == 'variable':
+            if self.observable == 'w0':
+                newprior['eps2_a'] = fit_data['a/w']**2 / 4
+            elif self.observable == 't0':
+                newprior['eps2_a'] = 1 / fit_data['t/a^2'] / 4
 
         for key in self.model_info['exclude']:
             if key in newprior.keys():
@@ -380,7 +390,7 @@ class model(lsqfit.MultiFitterModel):
         if 's' not in xi:
             xi['s'] = (2 *p['mk']**2 - p['mpi']**2) / p['lam_chi']**2
         if 'a' not in xi:
-            xi['a'] = p['a/w']**2 / 4
+            xi['a'] = p['eps2_a'] #p['a/w']**2 / 4
 
 
         # lo
@@ -576,15 +586,16 @@ class model(lsqfit.MultiFitterModel):
 
 class model_interpolation(lsqfit.MultiFitterModel):
 
-    def __init__(self, datatag, model_info, ens_mapping=None, **kwargs):
+    def __init__(self, datatag, model_info, ens_mapping=None, observable=None, **kwargs):
         super(model_interpolation, self).__init__(datatag)
 
         # Model info
         self.model_info = model_info
         self.ens_mapping = ens_mapping
+        self.observable = observable
 
 
-    def fitfcn(self, p, fit_data=None, xi=None, latt_spacing=None):
+    def fitfcn(self, p, fit_data=None, xi=None, latt_spacing=None, observable=None):
         if fit_data is not None:
             for key in fit_data.keys():
                 p[key] = fit_data[key]
@@ -604,7 +615,10 @@ class model_interpolation(lsqfit.MultiFitterModel):
         y_ch = self.fitfcn_lo_ct(p, xi, latt_spacing)
 
         if 'a' not in xi:
-            xi['a'] =  1 / (2 *y_ch)**2
+            if self.observable == 'w0':
+                xi['a'] =  1 / (2 *y_ch)**2
+            elif self.observable == 't0':
+                xi['a'] =  1 / (4 *y_ch)
 
         # lo
         #output = w0ch_a

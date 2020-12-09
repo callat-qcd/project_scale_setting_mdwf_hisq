@@ -52,38 +52,38 @@ class data_loader(object):
         defaults = {
             'name' : name, 
             'models' : [
-                'Fpi_n2lo',
-                'Fpi_n2lo_alphas',
-                'Fpi_n2lo_alphas_fv',
-                'Fpi_n2lo_fv',
-                'Fpi_n2lo_log',
-                'Fpi_n2lo_log_alphas',
-                'Fpi_n2lo_log_alphas_fv',
-                'Fpi_n2lo_log_fv',
-                'Fpi_n3lo',
-                'Fpi_n3lo_alphas',
-                'Fpi_n3lo_alphas_fv',
-                'Fpi_n3lo_fv',
-                'Fpi_n3lo_log_log2',
-                'Fpi_n3lo_log_log2_alphas',
-                'Fpi_n3lo_log_log2_alphas_fv',
-                'Fpi_n3lo_log_log2_fv',
-                'Om_n2lo',
-                'Om_n2lo_alphas',
-                'Om_n2lo_alphas_fv',
-                'Om_n2lo_fv',
-                'Om_n2lo_log',
-                'Om_n2lo_log_alphas',
-                'Om_n2lo_log_alphas_fv',
-                'Om_n2lo_log_fv',
-                'Om_n3lo',
-                'Om_n3lo_alphas',
-                'Om_n3lo_alphas_fv',
-                'Om_n3lo_fv',
-                'Om_n3lo_log_log2',
-                'Om_n3lo_log_log2_alphas',
-                'Om_n3lo_log_log2_alphas_fv',
-                'Om_n3lo_log_log2_fv'],
+                'Fpi_n2lo_w0orig',
+                'Fpi_n2lo_alphas_w0orig',
+                'Fpi_n2lo_alphas_fv_w0orig',
+                'Fpi_n2lo_fv_w0orig',
+                'Fpi_n2lo_log_w0orig',
+                'Fpi_n2lo_log_alphas_w0orig',
+                'Fpi_n2lo_log_alphas_fv_w0orig',
+                'Fpi_n2lo_log_fv_w0orig',
+                'Fpi_n3lo_w0orig',
+                'Fpi_n3lo_alphas_w0orig',
+                'Fpi_n3lo_alphas_fv_w0orig',
+                'Fpi_n3lo_fv_w0orig',
+                'Fpi_n3lo_log_log2_w0orig',
+                'Fpi_n3lo_log_log2_alphas_w0orig',
+                'Fpi_n3lo_log_log2_alphas_fv_w0orig',
+                'Fpi_n3lo_log_log2_fv_w0orig',
+                'Om_n2lo_w0orig',
+                'Om_n2lo_alphas_w0orig',
+                'Om_n2lo_alphas_fv_w0orig',
+                'Om_n2lo_fv_w0orig',
+                'Om_n2lo_log_w0orig',
+                'Om_n2lo_log_alphas_w0orig',
+                'Om_n2lo_log_alphas_fv_w0orig',
+                'Om_n2lo_log_fv_w0orig',
+                'Om_n3lo_w0orig',
+                'Om_n3lo_alphas_w0orig',
+                'Om_n3lo_alphas_fv_w0orig',
+                'Om_n3lo_fv_w0orig',
+                'Om_n3lo_log_log2_w0orig',
+                'Om_n3lo_log_log2_alphas_w0orig',
+                'Om_n3lo_log_log2_alphas_fv_w0orig',
+                'Om_n3lo_log_log2_fv_w0orig'],
             'excluded_ensembles' : None,
             'data_file' : 'omega_pi_k_spec',
             'empirical_priors' : None,
@@ -157,6 +157,11 @@ class data_loader(object):
                     if self.collection['use_milc_aw0']:
                         data[ens]['a/w'] = to_gvar(f[ens]['aw0_milc'][:])
                     
+                    # For fixed eps2_a = (a / 2 w)^2
+                    data[ens]['a/w:orig'] = 1.0 / to_gvar(f[ens]['w0a_callat'][:])
+                    data[ens]['a/w:impr'] = 1.0 / to_gvar(f[ens]['w0a_callat_imp'][:])
+                    data[ens]['t/a^2:orig'] = to_gvar(f[ens]['t0aSq'][:])
+                    data[ens]['t/a^2:impr'] = to_gvar(f[ens]['t0aSq_imp'][:])
 
                     # arrays
                     for param in ['Fpi', 'mk', 'mpi']:
@@ -205,6 +210,12 @@ class data_loader(object):
             
             gv_data[ens]['a/w'] = self.bs_data[ens]['a/w']
             gv_data[ens]['t/a^2'] = self.bs_data[ens]['t/a^2']
+
+            gv_data[ens]['a/w:orig'] = self.bs_data[ens]['a/w:orig']
+            gv_data[ens]['a/w:impr'] = self.bs_data[ens]['a/w:impr']
+            gv_data[ens]['t/a^2:orig'] = self.bs_data[ens]['t/a^2:orig']
+            gv_data[ens]['t/a^2:impr'] = self.bs_data[ens]['t/a^2:impr']
+
             gv_data[ens]['L'] = gv.gvar(self.bs_data[ens]['L'], self.bs_data[ens]['L'] / 10**6)
             gv_data[ens]['alpha_s'] = gv.gvar(self.bs_data[ens]['alpha_s'], self.bs_data[ens]['alpha_s'] / 10**6)
 
@@ -214,7 +225,7 @@ class data_loader(object):
     @property
     def phys_point_data(self):
         phys_point_data = {
-            'a/w' : gv.gvar(0),
+            'eps2_a' : gv.gvar(0),
             'a' : gv.gvar(0),
             'alpha_s' : gv.gvar(0.0),
             'L' : gv.gvar(np.infty),
@@ -358,9 +369,21 @@ class data_loader(object):
 
         model_info['exclude'] = []
 
+        # Definition of eps2_a
+        if '_w0orig' in name:
+            model_info['eps2a_defn'] = 'w0_original'
+        elif '_w0impr' in name:
+            model_info['eps2a_defn'] = 'w0_improved'
+        elif '_t0orig' in name:
+            model_info['eps2a_defn'] = 't0_original'
+        elif '_t0impr' in name:
+            model_info['eps2a_defn'] = 't0_improved'
+        elif '_variable' in name:
+            model_info['eps2a_defn'] = 'variable'
+        else:
+            model_info['eps2a_defn'] = None
+
         model_info['name']  = self.get_model_name_from_info(model_info)
-
-
         return model_info
 
 
@@ -396,9 +419,20 @@ class data_loader(object):
         if model_info['include_alphas']:
             name += '_alphas'
 
-
         if model_info['include_fv']:
             name += '_fv'
+
+        # Definition of eps2_a
+        if model_info['eps2a_defn'] == 'w0_original':
+            name += '_w0orig'
+        elif model_info['eps2a_defn'] == 'w0_improved':
+            name += '_w0impr'
+        elif model_info['eps2a_defn'] == 't0_original':
+            name += '_t0orig'
+        elif model_info['eps2a_defn'] == 't0_improved':
+            name += '_t0impr'
+        elif model_info['eps2a_defn'] == 'variable':
+            name += '_variable'
 
         return name
 

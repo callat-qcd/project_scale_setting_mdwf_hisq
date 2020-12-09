@@ -115,7 +115,7 @@ class model_average(object):
             return r'$t_0^{1/2}$ (fm)'
 
         else:
-            return param
+            return param.replace('_', ' ')
 
 
     def average(self, param, observable=None, models=None, split_unc=False, include_unc=True):
@@ -485,8 +485,8 @@ class model_average(object):
         data = self._get_phys_point_data()
         if parameter == 'a':
             xlabel = r'$\epsilon^2_a = (a/2w_0)^2$'
-
             x = np.linspace(0, (0.16/(2 *0.1710))**2, 50)
+            
         elif parameter in ['mpi', 'pi', 'p', 'l']:
             xlabel = r'$l^2$'# = m_\pi^2 / (4 \pi F_\pi)^2$'
             x = (np.linspace(10, 400, 50) / (4 *np.pi *self._get_phys_point_data()['Fpi']))**2
@@ -606,7 +606,7 @@ class model_average(object):
             xlabel = self._param_keys_dict(param)
         if title is None:
             title = ""
-
+ 
         param_avg = self.average(param=param, observable=observable)
         pm = lambda g, k : g.mean + k *g.sdev
         x = np.linspace(pm(param_avg, -4), pm(param_avg, +4), 2000)
