@@ -89,7 +89,7 @@ if args['empirical_priors'] is None:
     if collection['empirical_priors'] is not None:
         args['empirical_priors'] = collection['empirical_priors']
 
-if args['empirical_priors'] is not None:
+if args['empirical_priors'] is not None and args['perform_fits']:
     t0 = time.time()
     bar = Bar('Optimizing priors', max=len(model_list))
     for j, model in enumerate(model_list):
@@ -187,7 +187,7 @@ if args['average_models']:
     str_output += '\n## Representative model'
 
     #for j, model in enumerate(model_average.get_model_names(observable='w0', by_weight=True)[:5]):
-    for j, model in enumerate(['Fpi_n3lo_log_log2_fv_w0impr']):
+    for j, model in enumerate(['Fpi_n3lo_log_log2_fv_w0orig']):
         print('Making figs for model:', model)
 
         # Load data

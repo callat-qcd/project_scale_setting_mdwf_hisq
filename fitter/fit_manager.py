@@ -108,9 +108,9 @@ class fit_manager(object):
 
                 inputs = {}
 
-                # xpt/chiral contributiosn
-                inputs.update({str(param)+' [xpt]' : self.prior[observable][param] for param in chiral_keys if param in self.prior[observable]})
+                # xpt/chiral contributions
                 inputs.update({str(param)+' [disc]' : self.prior[observable][param] for param in disc_keys if param in self.prior[observable]})
+                inputs.update({str(param)+' [xpt]' : self.prior[observable][param] for param in chiral_keys if param in self.prior[observable]})
 
                 # phys point contributions
                 inputs.update({str(param)+' [pp]' : self.phys_point_data[param] for param in list(phys_keys)})
