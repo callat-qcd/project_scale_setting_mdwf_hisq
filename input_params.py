@@ -26,7 +26,7 @@ switches['ansatz']['models'] = [
         'xpt_n2lo', 'xpt_n3lo',
         'taylor_n2lo', 'taylor_n3lo'
     ]
-#switches['ansatz']['models'] = ['xpt_n3lo_FV']
+switches['ansatz']['models'] = ['xpt_n3lo_FV']
 '''
     The full list of models can be rather long.  The sys switches help loop
     over them.  Example other base models are
@@ -41,10 +41,10 @@ switches['fixed_eps_a']      = True # True, use a/2w_0,orig, False, use a/GF_0,{
 switches['w0']               = 'callat' # or milc, defines eps_a
 # SYSTEMATIC SWITCHES
 switches['sys'] = dict()     # these cause the fitter to loop over various options
-switches['sys']['Lam_chi']   = True # FF = F, O, [Of = O with fixed m_Omega value as x-par]
+switches['sys']['Lam_chi']   = False # FF = F, O, [Of = O with fixed m_Omega value as x-par]
 switches['scales']           = ['F','O'] # Of can also be added
-switches['sys']['alphaS']    = True # include alphaS at NLO?
-switches['sys']['FV']        = True # turn on/off FV corrections
+switches['sys']['alphaS']    = False # include alphaS at NLO?
+switches['sys']['FV']        = False # turn on/off FV corrections
                                # scale is used when the loop over scales is not triggered
 switches['scale']            = 'F' # F: Lam = 4pi Fpi; O: Lam = m_O
 
@@ -74,10 +74,10 @@ switches['deflate_a12m220ms'] = False
 
 # Plotting options
 switches['save_figs']         = True  # save figures
-switches['make_extrap']       = False # make plots
+switches['make_extrap']       = True # make plots
 switches['plot_interp']       = False
 switches['make_hist']         = False # make plots
-switches['make_fv']           = False
+switches['make_fv']           = True
 switches['plot_ls']           = False # make parameter space plots
 
 # DEBUGGING
