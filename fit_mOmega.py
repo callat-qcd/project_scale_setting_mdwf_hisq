@@ -246,6 +246,9 @@ def main():
             elif switches['gf_scale'] in ['t0','t0_imp','t0_imp_1','t0_imp_2','t0_imp_3']:
                 print('a      t_0 / a^2   a / fm          |   t_0 / a^2   a / fm       ')
             print('----------------------------------------------------------------')
+
+            a_dict = gv.BufferDict()
+            w_dict = gv.BufferDict()
             for a in aa:
                 if a == 'a06':
                     w0_a_i = 'N / A'
@@ -272,7 +275,17 @@ def main():
                     a_fm_i,
                     var_a_i
                     ))
+                a_dict[a] = a_fm_g
+                w_dict[a] = w0_results['all'].phys['w0_a_'+a]
             print('----------------------------------------------------------------')
+            print('w0/a correlation')
+            print('    a15          a12        a09        a06')
+            print(gv.evalcorr([w_dict['a15'],w_dict['a12'],w_dict['a09'],w_dict['a06']]))
+            print('\na/fm correlation')
+            print('    a15          a12        a09        a06')
+            print(gv.evalcorr([a_dict['a15'],a_dict['a12'],a_dict['a09'],a_dict['a06']]))
+            gv.dump(w_dict, 'pickled_fits/w0_a_results.p', add_dependencies=True)
+            gv.dump(a_dict, 'pickled_fits/a_fm_results.p', add_dependencies=True)
 
         if switches['make_hist']:
             model_avg.plot_bma_hist('FF',    save_fig=switches['save_figs'])
