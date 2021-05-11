@@ -1,3 +1,5 @@
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.4748248.svg)](https://doi.org/10.5281/zenodo.4748248)
+
 # Scale setting with m<sub>&Omega;</sub> and w<sub>0</sub>
 
 This repository performs the chiral, continuum and infinite volume extrapolations of `w_0 m_Omega` to perform a scale setting on the [MDWF on gradient-flowed HISQ](https://arxiv.org/abs/1701.07559) action.  The present results accompany the scale setting publication available at [arXiv:2011.12166](https://arxiv.org/abs/2011.12166).
