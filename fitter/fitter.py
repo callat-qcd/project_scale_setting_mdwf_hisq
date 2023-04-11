@@ -130,7 +130,7 @@ class fitter(object):
         elif self.empbayes_grouping == 'disc_only':
             zkeys['disc'] = ['A_a', 'A_aa', 'A_al', 'A_as']
 
-        all_keys = np.array([k for g in zkeys for k in zkeys[g]])
+        all_keys = [obs+'::'+key for key in [k for g in zkeys for k in zkeys[g]] for obs in self.observables]
         prior_keys = list(self._make_prior())
         ignored_keys = set(all_keys) - set(prior_keys)
 
@@ -180,7 +180,7 @@ class fitter(object):
 
 
     def _make_fitargs(self, z):
-        y_data = self.y
+        y_data = {self.model_info['name']+'_'+obs : self.y[obs] for obs in self.observables}
         prior = self._make_prior()
 
         # Ideally:
@@ -206,7 +206,6 @@ class fitter(object):
                 if param in zkeys[group]:
                     z[group] = sig_fig(capped(z[group], zmin, zmax))
                     prior[param] = gv.gvar(0, 1) *z[group]
-
 
         self._counter['iters'] += 1
         fitfcn = self._make_models()[-1].fitfcn

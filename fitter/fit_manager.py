@@ -45,6 +45,7 @@ class fit_manager(object):
             self.fitter['w0'] = fitter_dict(fit_data=fit_data, input_prior=prior, observables=['w0'])[model_info]
             self.fitter['t0'] = fitter_dict(fit_data=fit_data, input_prior=prior, observables=['t0'])[model_info]
 
+        self.simultaneous = simultaneous
         self._input_prior = prior
         self._phys_point_data = phys_point_data
         self._fit = {}
@@ -161,6 +162,11 @@ class fit_manager(object):
 
     @property
     def fit(self):
+        if self.simultaneous:
+            temp_fit = self.fitter['w0t0'].fit
+            self._fit['w0'] = temp_fit
+            self._fit['t0'] = temp_fit
+
         if 'w0' not in self._fit:
             temp_fit = self.fitter['w0'].fit
             self._fit['w0'] = temp_fit
@@ -203,10 +209,12 @@ class fit_manager(object):
     @property
     def fit_keys(self):
         output = {}
-        for observable in ['w0', 't0']:
-            keys1 = list(self._input_prior[observable].keys())
-            keys2 = list(self.fit[observable].p.keys())
-            output[observable] = np.intersect1d(keys1, keys2)
+
+        observables = ['w0', 't0']
+        keys1 = [obs+'::'+key for obs in ['w0', 't0'] for key in list(self._input_prior[obs].keys())]
+        for obs in observables:
+            keys2 = list(self.fit[obs].p.keys())
+            output[obs] = np.intersect1d(keys1, keys2)
         return output
 
     @property
