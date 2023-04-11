@@ -25,7 +25,7 @@ import fitter.fitter as fit
 
 class fit_manager(object):
 
-    def __init__(self, phys_point_data, fit_data=None, prior=None, model_info=None):
+    def __init__(self, phys_point_data, fit_data=None, prior=None, model_info=None, simultaneous=False):
 
         for ens in sorted(list(fit_data)):
             if model_info['chiral_cutoff'] == 'mO':
@@ -39,8 +39,11 @@ class fit_manager(object):
         self.model_info = model_info
         self.fit_data = fit_data
         self.fitter = {}
-        self.fitter['w0'] = fitter_dict(fit_data=fit_data, input_prior=prior, observable='w0')[model_info]
-        self.fitter['t0'] = fitter_dict(fit_data=fit_data, input_prior=prior, observable='t0')[model_info]
+        if simultaneous:
+            self.fitter['w0t0'] = fitter_dict(fit_data=fit_data, input_prior=prior, observables=['w0', 't0'])[model_info]
+        else:
+            self.fitter['w0'] = fitter_dict(fit_data=fit_data, input_prior=prior, observables=['w0'])[model_info]
+            self.fitter['t0'] = fitter_dict(fit_data=fit_data, input_prior=prior, observables=['t0'])[model_info]
 
         self._input_prior = prior
         self._phys_point_data = phys_point_data
@@ -63,8 +66,6 @@ class fit_manager(object):
                 for a_xx in ['a06', 'a09', 'a12', 'a15']:
                     t0_a2 = self.interpolate_t0a2(latt_spacing=a_xx)
                     output += 't0/{}^2: {}'.format(a_xx, t0_a2).ljust(22)  + '=> %s/fm: %s\n'%(a_xx, self.sqrt_t0 / np.sqrt(t0_a2))
-
-
 
             output += '\nParameters:\n'
             my_str = self.fit[obs].format(pstyle='m')
@@ -101,7 +102,6 @@ class fit_manager(object):
             phys_keys = list(self.phys_point_data)
             stat_key = 'lam_chi' # Since the input data is correlated, only need a single variable as a proxy for all
 
-
             if verbose:
                 if output is None:
                     output = ''
@@ -124,8 +124,6 @@ class fit_manager(object):
                 kwargs.setdefault('percent', False)
                 kwargs.setdefault('ndecimal', 10)
                 kwargs.setdefault('verify', True)
-
-                
 
                 if observable == 'w0':
                     output += 'observable: ' + observable + '\n' + gv.fmt_errorbudget(outputs={'w0' : self.w0}, inputs=inputs, **kwargs) + '\n---\n'
@@ -328,19 +326,17 @@ class fit_manager(object):
         if posterior is None:
             posterior = self.posterior[observable].copy()
 
-        model_info = self.model_info.copy()
-
         model = self.fitter[observable]._make_models()[0]
         return model.fitfcn(p=posterior, fit_data=fit_data, xi=xi, debug=debug)
 
 
     # observable = 'w0' or 't0'
-    def fitfcn_interpolation(self, latt_spacing, fit_data=None, posterior=None, xi=None, simultaneous=False, observable=None):
+    def fitfcn_interpolation(self, latt_spacing, fit_data=None, posterior=None, xi=None, simultaneous_interpolation=False, observable=None):
         if fit_data is None:
             fit_data = self.phys_point_data.copy()
 
-        param_keys = set(list(self._input_prior[observable+'_interpolation'])).intersection(set(list(self.fitter['w0'].fit_interpolation(simultaneous).p)))
-        posterior = {param : self.fitter[observable].fit_interpolation(simultaneous).p[param] 
+        param_keys = set(list(self._input_prior[observable+'_interpolation'])).intersection(set(list(self.fitter['w0'].fit_interpolation(simultaneous_interpolation).p)))
+        posterior = {param : self.fitter[observable].fit_interpolation(simultaneous_interpolation).p[param] 
             for param in self._input_prior[observable+'_interpolation'] if param in param_keys}
 
         model = self.fitter[observable]._make_models(interpolation=True, y_data=None)[0]
@@ -351,12 +347,12 @@ class fit_manager(object):
         return self._get_error_budget(verbose=True, **kwargs)
 
 
-    def interpolate_w0a(self, latt_spacing, simultaneous=False):
-        return self.fitfcn_interpolation(latt_spacing=latt_spacing, simultaneous=simultaneous, observable='w0')
+    def interpolate_w0a(self, latt_spacing, simultaneous_interpolation=False):
+        return self.fitfcn_interpolation(latt_spacing=latt_spacing, simultaneous_interpolation=simultaneous_interpolation, observable='w0')
 
 
-    def interpolate_t0a2(self, latt_spacing, simultaneous=False):
-        return self.fitfcn_interpolation(latt_spacing=latt_spacing, simultaneous=simultaneous, observable='t0')
+    def interpolate_t0a2(self, latt_spacing, simultaneous_interpolation=False):
+        return self.fitfcn_interpolation(latt_spacing=latt_spacing, simultaneous_interpolation=simultaneous_interpolation, observable='t0')
 
 
     def optimize_prior(self, empbayes_grouping='order'):
@@ -778,18 +774,20 @@ class fit_manager(object):
 
 
 class fitter_dict(dict):
-    def __init__(self, fit_data, input_prior, observable):
+    def __init__(self, fit_data, input_prior, observables):
+        self.prior = {}
+        self.prior_interpolation = {}
 
-        if observable == 'w0':
-            self.prior = input_prior['w0']
-            self.prior_interpolation = input_prior['w0_interpolation']
-        elif observable == 't0':
-            self.prior = input_prior['t0']
-            self.prior_interpolation = input_prior['t0_interpolation']
-
+        for obs in observables:
+            if obs == 'w0':
+                self.prior[obs] = input_prior['w0']
+                self.prior_interpolation[obs] = input_prior['w0_interpolation']
+            elif obs == 't0':
+                self.prior[obs] = input_prior['t0']
+                self.prior_interpolation[obs] = input_prior['t0_interpolation']
 
         self.fit_data = fit_data
-        self.observable = observable
+        self.observables = observables
         self.ensembles = sorted(list(fit_data))
 
 
@@ -836,7 +834,7 @@ class fitter_dict(dict):
             prior=self.prior, 
             prior_interpolation=self.prior_interpolation, 
             model_info=model_info, 
-            observable=self.observable, 
+            observables=self.observables, 
             ensemble_mapping=self.ensembles)
         return fitter
 

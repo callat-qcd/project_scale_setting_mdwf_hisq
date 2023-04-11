@@ -19,7 +19,7 @@ mpl.rcParams['xtick.direction'] = 'in'
 mpl.rcParams['ytick.direction'] = 'in'
 mpl.rcParams['xtick.labelsize'] = 12
 mpl.rcParams['ytick.labelsize'] = 12
-mpl.rcParams['text.usetex'] = True
+mpl.rcParams['text.usetex'] = False
 
 
 import fitter.fitter as fit
@@ -71,7 +71,7 @@ class model_average(object):
                 
 
             model_list = self.get_model_names(observable=observable, by_weight=True)
-            weight = lambda model_k : np.exp(self.fit_results[observable][model_k]['logGBF']) / np.sum([np.exp(self.fit_results[observable][model_l]['logGBF']) for model_l in model_list])
+            weight = lambda model_k : 1/ np.sum([np.exp(self._get_logGBF(observable=observable, model=model_l)-self._get_logGBF(observable=observable, model=model_k)) for model_l in model_list])
             output += '\n---\n'
             output += 'Highest Weight: \n'
             for k in range(np.min([5, len(model_list)])):
@@ -97,6 +97,10 @@ class model_average(object):
             return self.fit_results[observable][model]['prior']
         else:
             return None
+        
+    
+    def _get_logGBF(self, observable, model):
+        return self.fit_results[observable][model]['logGBF']
 
 
     def _get_phys_point_data(self):
@@ -157,7 +161,7 @@ class model_average(object):
 
         # calculate P( M_k | D )
         prob_Mk_given_D = lambda model_k : (
-             np.exp(self.fit_results[observable][model_k]['logGBF']) / np.sum([np.exp(self.fit_results[observable][model_l]['logGBF']) for model_l in nonempty_keys])
+             1 / np.sum([np.exp(self._get_logGBF(observable=observable, model=model_l) - self._get_logGBF(observable=observable, model=model_k)) for model_l in nonempty_keys])
         )
 
         # Get central value
@@ -214,8 +218,8 @@ class model_average(object):
 
     def get_model_names(self, observable, by_weight=False):
         if by_weight:
-            temp = {model : self.fit_results[observable][model]['logGBF'] for model in self.fit_results[observable]}
-            sorted_list = [model for model, logGBF
+            temp = {model : self._get_logGBF(observable=observable, model=model) for model in self.fit_results[observable]}
+            sorted_list = [model for model, _
                            in sorted(temp.items(), key=lambda item: item[1], reverse=True)]
             return sorted_list
 
@@ -351,7 +355,7 @@ class model_average(object):
         ax_logGBF = plt.axes([0.60,0.10,0.09,0.8])
 
         # Get max logGBF
-        logGBF_max = np.nanmax([gv.mean(gv.gvar(self.fit_results[observable][model]['logGBF']))
+        logGBF_max = np.nanmax([gv.mean(gv.gvar(self._get_logGBF(observable=observable, model=model)))
                                for model in self.fit_results[observable].keys()])
 
         y=y_other
@@ -370,7 +374,7 @@ class model_average(object):
                 color = colors[4]
 
 
-            logGBF = gv.mean(gv.gvar(self.fit_results[observable][name]['logGBF']))
+            logGBF = gv.mean(gv.gvar(self._get_logGBF(observable=observable, model=name)))
             x = np.exp(logGBF - logGBF_max)
 
             alpha = 1
@@ -501,7 +505,7 @@ class model_average(object):
         else:
             return None
 
-        total_GBF = np.sum([np.exp(self.fit_results[observable][model_l]['logGBF']) for model_l in self.fit_results[observable].keys()])
+        total_GBF = np.sum([np.exp(self._get_logGBF(observable=observable, model=model_l)) for model_l in self.fit_results[observable].keys()])
 
         pm = lambda g, k : gv.mean(g) + k*gv.sdev(g)
 
@@ -554,7 +558,7 @@ class model_average(object):
 
             y = self.fitfcn(name, model_info, observable=observable)(p=p, fit_data=data, xi=xi) 
             #y = y / self._get_phys_point_data()['mO'] *self._get_phys_point_data()['hbarc']
-            weight = np.exp(self.fit_results[observable][name]['logGBF']) / total_GBF
+            weight = np.exp(self._get_logGBF(observable=observable, model=name)) / total_GBF
             plt.fill_between(pm(x, 0), pm(y, -1), pm(y, 1), 
                              alpha=np.max([np.min([weight, 1]), 0.1]), color=color,
                              rasterized=False, label=model_info['order']) #
@@ -617,7 +621,7 @@ class model_average(object):
         temp_dict = {choice : 0 for choice in choices}
         for model in self.get_model_names(observable=observable):
             model_info = self._get_model_info_from_name(model)
-            temp_dict[model_info[compare]] += np.exp(self.fit_results[observable][model]['logGBF'])
+            temp_dict[model_info[compare]] += np.exp(self._get_logGBF(observable=observable, model=model))
             choices = sorted(temp_dict, key=temp_dict.get, reverse=True)
 
         # Set colors
@@ -651,7 +655,7 @@ class model_average(object):
         for j, choice in enumerate(sorted(np.append(['All'], choices), key=by_order, reverse=True)):
 
             # read Bayes Factors
-            logGBF_list = [self.fit_results[observable][model]['logGBF'] for model in self.get_model_names(observable=observable)]
+            logGBF_list = [self._get_logGBF(observable=observable, model=model) for model in self.get_model_names(observable=observable)]
 
             # initiate a bunch of parameters
             y = 0
@@ -690,7 +694,7 @@ class model_average(object):
                     #r = gv.gvar(self.fit_results[observable][model][param])
                     y_dict[model] = r
 
-                    w = 1/sum(np.exp(np.array(logGBF_list)-self.fit_results[observable][model]['logGBF']))
+                    w = 1/sum(np.exp(np.array(logGBF_list)-self._get_logGBF(observable=observable, model=model)))
                     sqrtw = np.sqrt(w) # sqrt scales the std dev correctly
                     wd[model] = w
                     w_lst.append(w)

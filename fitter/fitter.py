@@ -8,12 +8,12 @@ import fitter.special_functions as sf
 
 class fitter(object):
 
-    def __init__(self, prior, fit_data, model_info, observable, ensemble_mapping=None, prior_interpolation=None):
+    def __init__(self, prior, fit_data, model_info, observables, ensemble_mapping=None, prior_interpolation=None, simultaneous_extrapolation=True):
         self.prior = prior
         self.prior_interpolation = prior_interpolation
         self.fit_data = fit_data
         self.model_info = model_info.copy()
-        self.observable = observable
+        self.observables = observables
         
         # attributes of fitter object to fill later
         self.empbayes_grouping = None
@@ -21,7 +21,8 @@ class fitter(object):
         self._empbayes_fit = None
         self._fit = None
         self._fit_interpolation = None
-        self._simultaneous = False
+        self._simultaneous_interpolation = False
+        self._simultaneous_extrapolation = simultaneous_extrapolation
         self._y = None
         self._ensemble_mapping = ensemble_mapping # Necessary for LO t0, w0 interpolations 
 
@@ -34,7 +35,7 @@ class fitter(object):
     def fit(self):
         if self._fit is None:
             models = self._make_models()
-            y_data = {self.model_info['name'] : self.y}
+            y_data = {self.model_info['name']+'_'+obs : self.y[obs] for obs in self.observables}
             prior = self._make_prior()
 
             fitter = lsqfit.MultiFitter(models=models)
@@ -46,27 +47,28 @@ class fitter(object):
 
 
     #@property
-    def fit_interpolation(self, simultaneous=None):
-        if simultaneous is None:
-            simultaneous = self._simultaneous
+    def fit_interpolation(self, simultaneous_interpolation=None):
+        if simultaneous_interpolation is None:
+            simultaneous_interpolation = self._simultaneous_interpolation
 
-        if self._fit_interpolation is None or simultaneous != self._simultaneous:
-            self._simultaneous = simultaneous
+        if self._fit_interpolation is None or simultaneous_interpolation != self._simultaneous_interpolation:
+            self._simultaneous_interpolation = simultaneous_interpolation
             #make_gvar = lambda g : gv.gvar(gv.mean(g), gv.sdev(g))
             #y_data = make_gvar(1 / self.fit_data['a/w'])
 
             make_gvar = lambda g : gv.gvar(gv.mean(g), gv.sdev(g))
-            if self.observable == 'w0':
-                data = {self.model_info['name']+'_interpolation' : 1 / make_gvar(self.fit_data['a/w']) }
-            elif self.observable == 't0':
-                data = {self.model_info['name']+'_interpolation' : make_gvar(self.fit_data['t/a^2']) }
+            data = {}
+            for obs in self.observables:
+                if obs == 'w0':
+                    data[self.model_info['name']+'_interpolation_w0'] = 1 / make_gvar(self.fit_data['a/w'])
+                elif obs == 't0':
+                    data[self.model_info['name']+'_interpolation_t0'] = make_gvar(self.fit_data['t/a^2'])
 
-            if simultaneous:
-                data[self.model_info['name']] = self.y
+                if simultaneous_interpolation:
+                    data[self.model_info['name']+'_'+obs] = self.y[obs]
 
-
-            models = self._make_models(interpolation=True, simultaneous=simultaneous)
-            prior = self._make_prior(interpolation=True, simultaneous=simultaneous)
+                models = self._make_models(interpolation=True, simultaneous_interpolation=simultaneous_interpolation)
+                prior = self._make_prior(interpolation=True, simultaneous_interpolation=simultaneous_interpolation)
 
             fitter = lsqfit.MultiFitter(models=models)
             fit = fitter.lsqfit(data=data, prior=prior, fast=False, mopt=False)
@@ -77,24 +79,25 @@ class fitter(object):
 
     @property
     def y(self):
-        make_gvar = lambda g : gv.gvar(gv.mean(g), gv.sdev(g))
+        if self._y is None:
+            make_gvar = lambda g : gv.gvar(gv.mean(g), gv.sdev(g))
 
-        if self._y is not None:
-            return self._y
+            output = {}
+            for obs in self.observables:
 
-        if self.observable == 'w0':
-            if self.model_info['chiral_cutoff'] == 'Fpi':
-                output = self.fit_data['mO'] / self.fit_data['a/w']
-            else: # In Omega-type fits, shifting lam_chi will also shift y, leading to nonsensical fits 
-                output = make_gvar(self.fit_data['mO'] / self.fit_data['a/w'])
-        elif self.observable == 't0':
-            if self.model_info['chiral_cutoff'] == 'Fpi':
-                output = np.sqrt(self.fit_data['t/a^2']) *self.fit_data['mO'] 
-            else: # In Omega-type fits, shifting lam_chi will also shift y, leading to nonsensical fits 
-                output = make_gvar(np.sqrt(self.fit_data['t/a^2']) *self.fit_data['mO'])
+                if obs == 'w0':
+                    if self.model_info['chiral_cutoff'] == 'Fpi':
+                        output['w0'] = self.fit_data['mO'] / self.fit_data['a/w']
+                    else: # In Omega-type fits, shifting lam_chi will also shift y, leading to nonsensical fits 
+                        output['w0'] = make_gvar(self.fit_data['mO'] / self.fit_data['a/w'])
+                elif obs == 't0':
+                    if self.model_info['chiral_cutoff'] == 'Fpi':
+                        output['t0'] = np.sqrt(self.fit_data['t/a^2']) *self.fit_data['mO'] 
+                    else: # In Omega-type fits, shifting lam_chi will also shift y, leading to nonsensical fits 
+                        output['t0'] = make_gvar(np.sqrt(self.fit_data['t/a^2']) *self.fit_data['mO'])
 
-        self._y = output
-        return output
+            self._y = output
+        return self._y
 
 
     def _empbayes_groupings(self):
@@ -224,7 +227,7 @@ class fitter(object):
         return (dict(data=y_data, fcn=fitfcn, prior=prior), plaus)
 
 
-    def _make_models(self, model_info=None, interpolation=False, y_data=None, simultaneous=False):
+    def _make_models(self, model_info=None, interpolation=False, y_data=None, simultaneous_interpolation=False):
         if model_info is None:
             model_info = self.model_info.copy()
 
@@ -245,129 +248,141 @@ class fitter(object):
 
             datatag = model_info_interpolation['name']
             models = np.append(models, model_interpolation(datatag=datatag, model_info=model_info_interpolation, ens_mapping=self._ensemble_mapping, observable=self.observable))
-            if not simultaneous:
+            if not simultaneous_interpolation:
                 return models
 
-        datatag = model_info['name']
-        models = np.append(models, model(datatag=datatag, model_info=model_info))
+        for obs in self.observables:
+            datatag = model_info['name']+'_'+obs
+            models = np.append(models, model(datatag=datatag, model_info=model_info, observable=obs))
 
         return models
 
 
-    def _make_prior(self, fit_data=None, interpolation=False, simultaneous=False):
+    def _make_prior(self, fit_data=None, interpolation=False, simultaneous_interpolation=False):
         if fit_data is None:
             fit_data = self.fit_data
 
-        newprior = gv.BufferDict()
-
-        if interpolation or simultaneous:
+        output = gv.BufferDict()
+        if interpolation or simultaneous_interpolation:
             prior = self.prior_interpolation
 
-            for aXX in np.unique([ens[:3] for ens in self._ensemble_mapping]):
-                newprior['c0'+aXX] = prior['c0'+aXX]
+            for obs in self.observables:
+                for aXX in np.unique([ens[:3] for ens in self._ensemble_mapping]):
+                    output[obs+'::c0'+aXX] = prior[obs]['c0'+aXX]
 
-            # add priors for other LECs
-            for key in set(list(prior)).difference(['c0a06', 'c0a09', 'c0a12', 'c0a15']):
-                newprior[key] = prior[key]
+                # add priors for other LECs
+                for key in set(list(prior[obs])).difference(['c0a06', 'c0a09', 'c0a12', 'c0a15']):
+                    output[obs+'::'+key] = prior[obs][key]
 
             for key in ['mpi', 'mk', 'lam_chi']:
-                newprior[key] = fit_data[key]
+                output[key] = fit_data[key]
 
-            if not simultaneous:
-                return newprior
-
+            if not simultaneous_interpolation:
+                return output
 
         prior = self.prior
 
-        # xpt terms
-        # lo
-        newprior['c0'] = prior['c0']
+        newprior = gv.BufferDict()
+        for obs in self.observables:
 
-        # nlo
-        if self.model_info['order'] in ['nlo', 'n2lo', 'n3lo']:
-            newprior['A_l'] = prior['A_l']
-            newprior['A_s'] = prior['A_s']
-            newprior['A_a'] = prior['A_a']
+            # xpt terms
+            # lo
+            newprior['c0'] = prior[obs]['c0']
 
-        # n2lo
-        if self.model_info['order'] in ['n2lo', 'n3lo']:
-            newprior['A_aa'] = prior['A_aa']
-            newprior['A_al'] = prior['A_al']
-            newprior['A_as'] = prior['A_as']
-            newprior['A_ll'] = prior['A_ll']
-            newprior['A_ls'] = prior['A_ls']
-            newprior['A_ss'] = prior['A_ss']
+            # nlo
+            if self.model_info['order'] in ['nlo', 'n2lo', 'n3lo']:
+                newprior['A_l'] = prior[obs]['A_l']
+                newprior['A_s'] = prior[obs]['A_s']
+                newprior['A_a'] = prior[obs]['A_a']
 
-            if self.model_info['include_log']:
-                newprior['A_ll_g'] = prior['A_ll_g']
+            # n2lo
+            if self.model_info['order'] in ['n2lo', 'n3lo']:
+                newprior['A_aa'] = prior[obs]['A_aa']
+                newprior['A_al'] = prior[obs]['A_al']
+                newprior['A_as'] = prior[obs]['A_as']
+                newprior['A_ll'] = prior[obs]['A_ll']
+                newprior['A_ls'] = prior[obs]['A_ls']
+                newprior['A_ss'] = prior[obs]['A_ss']
 
-        # n3lo
-        if self.model_info['order'] in ['n3lo']:
-            newprior['A_aaa'] = prior['A_aaa']
-            newprior['A_aal'] = prior['A_aal']
-            newprior['A_aas'] = prior['A_aas']
-            newprior['A_all'] = prior['A_all']
-            newprior['A_als'] = prior['A_als']
-            newprior['A_ass'] = prior['A_ass']
+                if self.model_info['include_log']:
+                    newprior['A_ll_g'] = prior[obs]['A_ll_g']
 
-            newprior['A_lll'] = prior['A_lll']
-            newprior['A_lls'] = prior['A_lls']
-            newprior['A_lss'] = prior['A_lss']
+            # n3lo
+            if self.model_info['order'] in ['n3lo']:
+                newprior['A_aaa'] = prior[obs]['A_aaa']
+                newprior['A_aal'] = prior[obs]['A_aal']
+                newprior['A_aas'] = prior[obs]['A_aas']
+                newprior['A_all'] = prior[obs]['A_all']
+                newprior['A_als'] = prior[obs]['A_als']
+                newprior['A_ass'] = prior[obs]['A_ass']
 
-            newprior['A_sss'] = prior['A_sss']
+                newprior['A_lll'] = prior[obs]['A_lll']
+                newprior['A_lls'] = prior[obs]['A_lls']
+                newprior['A_lss'] = prior[obs]['A_lss']
 
-            if self.model_info['include_log']:
-                newprior['A_lll_g'] = prior['A_lll_g']
-                newprior['A_lls_g'] = prior['A_lls_g']
-            if self.model_info['include_log2']:
-                newprior['A_lll_gg'] = prior['A_lll_gg']
+                newprior['A_sss'] = prior[obs]['A_sss']
 
-        # latt terms
-        if self.model_info['latt_ct'] in ['nlo', 'n2lo', 'n3lo']:
-            newprior['A_a'] = prior['A_a']
-        if self.model_info['latt_ct'] in ['n2lo', 'n3lo']:
-            newprior['A_aa'] = prior['A_aa']
-        if self.model_info['latt_ct'] in ['n3lo']:
-            newprior['A_aaa'] = prior['A_aaa']
+                if self.model_info['include_log']:
+                    newprior['A_lll_g'] = prior[obs]['A_lll_g']
+                    newprior['A_lls_g'] = prior[obs]['A_lls_g']
+                if self.model_info['include_log2']:
+                    newprior['A_lll_gg'] = prior[obs]['A_lll_gg']
 
-        # alpha_s corrections
-        if self.model_info['include_alphas']:
-            newprior['A_alpha'] = prior['A_alpha']
+            # latt terms
+            if self.model_info['latt_ct'] in ['nlo', 'n2lo', 'n3lo']:
+                newprior['A_a'] = prior[obs]['A_a']
+            if self.model_info['latt_ct'] in ['n2lo', 'n3lo']:
+                newprior['A_aa'] = prior[obs]['A_aa']
+            if self.model_info['latt_ct'] in ['n3lo']:
+                newprior['A_aaa'] = prior[obs]['A_aaa']
+
+            # alpha_s corrections
+            if self.model_info['include_alphas']:
+                newprior['A_alpha'] = prior[obs]['A_alpha']
+
+            for key in self.model_info['exclude']:
+                if key in newprior.keys():
+                    del(newprior[key])
+
+            for key in newprior:
+                output[obs+'::'+key] = newprior[key]
 
         # Move fit_data into prior
         for key in ['mpi', 'mk', 'lam_chi', 'L', 'alpha_s']:
             if key in fit_data:
-                newprior[key] = fit_data[key]
+                output[key] = fit_data[key]
 
         if self.model_info['eps2a_defn'] == 'w0_original':
-            newprior['eps2_a'] = fit_data['a/w:orig']**2 / 4
+            output['eps2_a'] = fit_data['a/w:orig']**2 / 4
         elif self.model_info['eps2a_defn'] == 'w0_improved':
-            newprior['eps2_a'] = fit_data['a/w:impr']**2 / 4
+            output['eps2_a'] = fit_data['a/w:impr']**2 / 4
         elif self.model_info['eps2a_defn'] == 't0_original':
-            newprior['eps2_a'] = 1 / fit_data['t/a^2:orig'] / 4
+            output['eps2_a'] = 1 / fit_data['t/a^2:orig'] / 4
         elif self.model_info['eps2a_defn'] == 't0_improved':
-            newprior['eps2_a'] = 1 / fit_data['t/a^2:impr'] / 4
+            output['eps2_a'] = 1 / fit_data['t/a^2:impr'] / 4
         elif self.model_info['eps2a_defn'] == 'variable':
-            if self.observable == 'w0':
-                newprior['eps2_a'] = fit_data['a/w']**2 / 4
-            elif self.observable == 't0':
-                newprior['eps2_a'] = 1 / fit_data['t/a^2'] / 4
+            for obs in self.observables:
+                if obs == 'w0':
+                    output['w0::eps2_a'] = fit_data['a/w']**2 / 4
+                elif obs == 't0':
+                    output['t0::eps2_a'] = 1 / fit_data['t/a^2'] / 4
 
-        for key in self.model_info['exclude']:
-            if key in newprior.keys():
-                del(newprior[key])
-
-        return newprior
+        return output
 
 
 class model(lsqfit.MultiFitterModel):
 
-    def __init__(self, datatag, model_info, **kwargs):
+    def __init__(self, datatag, model_info, observable, **kwargs):
         super(model, self).__init__(datatag)
 
         # Model info
         self.debug = False
         self.model_info = model_info
+        self.observable = observable
+
+    
+    def key(self, key):
+        return self.observable+'::'+key
 
 
     def fitfcn(self, p, fit_data=None, xi=None, debug=None):
@@ -390,11 +405,14 @@ class model(lsqfit.MultiFitterModel):
         if 's' not in xi:
             xi['s'] = (2 *p['mk']**2 - p['mpi']**2) / p['lam_chi']**2
         if 'a' not in xi:
-            xi['a'] = p['eps2_a'] #p['a/w']**2 / 4
+            if self.model_info['eps2a_defn'] == 'variable':
+                xi['a'] = p[self.key('eps2_a')] #p['a/w']**2 / 4
+            else:
+                xi['a'] = p['eps2_a']
 
 
         # lo
-        output = p['c0']
+        output = p[self.key('c0')]
 
         if self.debug:
             self.debug_table['lo_ct'] = output
@@ -448,7 +466,7 @@ class model(lsqfit.MultiFitterModel):
 
 
     def fitfcn_nlo_ct(self, p, xi):
-        output = p['A_l'] *xi['l'] + p['A_s'] *xi['s'] + p['A_a'] *xi['a']
+        output = p[self.key('A_l')] *xi['l'] + p[self.key('A_s')] *xi['s'] + p[self.key('A_a')] *xi['a']
 
         if self.debug:
             self.debug_table['nlo_ct'] = output
@@ -458,12 +476,12 @@ class model(lsqfit.MultiFitterModel):
 
     def fitfcn_n2lo_ct(self, p, xi):     
         output = ( 
-            + p['A_aa'] *xi['a'] *xi['a']
-            + p['A_al'] *xi['a'] *xi['l']
-            + p['A_as'] *xi['a'] *xi['s']
-            + p['A_ll'] *xi['l'] *xi['l']
-            + p['A_ls'] *xi['l'] *xi['s']
-            + p['A_ss'] *xi['s'] *xi['s']
+            + p[self.key('A_aa')] *xi['a'] *xi['a']
+            + p[self.key('A_al')] *xi['a'] *xi['l']
+            + p[self.key('A_as')] *xi['a'] *xi['s']
+            + p[self.key('A_ll')] *xi['l'] *xi['l']
+            + p[self.key('A_ls')] *xi['l'] *xi['s']
+            + p[self.key('A_ss')] *xi['s'] *xi['s']
         )
 
         if self.debug:
@@ -474,9 +492,9 @@ class model(lsqfit.MultiFitterModel):
 
     def fitfcn_n2lo_log(self, p, xi):
         if self.model_info['include_fv']:
-            output = p['A_ll_g'] *xi['l']**2 *sf.fcn_I_m(xi['l'], p['L'], p['lam_chi'], 10)
+            output = p[self.key('A_ll_g')] *xi['l']**2 *sf.fcn_I_m(xi['l'], p['L'], p['lam_chi'], 10)
         else:
-            output = p['A_ll_g'] *xi['l']**2 *np.log(xi['l'])
+            output = p[self.key('A_ll_g')] *xi['l']**2 *np.log(xi['l'])
 
         if self.debug:
             self.debug_table['n2lo_log'] = output
@@ -487,18 +505,18 @@ class model(lsqfit.MultiFitterModel):
     def fitfcn_n3lo_ct(self, p, xi):
 
         output = (
-            + p['A_aaa'] *xi['a'] *xi['a'] *xi['a']
-            + p['A_aal'] *xi['a'] *xi['a'] *xi['l']
-            + p['A_aas'] *xi['a'] *xi['a'] *xi['s']
-            + p['A_all'] *xi['a'] *xi['l'] *xi['l']
-            + p['A_als'] *xi['a'] *xi['l'] *xi['s']
-            + p['A_ass'] *xi['a'] *xi['s'] *xi['s']
+            + p[self.key('A_aaa')] *xi['a'] *xi['a'] *xi['a']
+            + p[self.key('A_aal')] *xi['a'] *xi['a'] *xi['l']
+            + p[self.key('A_aas')] *xi['a'] *xi['a'] *xi['s']
+            + p[self.key('A_all')] *xi['a'] *xi['l'] *xi['l']
+            + p[self.key('A_als')] *xi['a'] *xi['l'] *xi['s']
+            + p[self.key('A_ass')] *xi['a'] *xi['s'] *xi['s']
 
-            + p['A_lll'] *xi['l'] *xi['l'] *xi['l']
-            + p['A_lls'] *xi['l'] *xi['l'] *xi['s']
-            + p['A_lss'] *xi['l'] *xi['s'] *xi['s']
+            + p[self.key('A_lll')] *xi['l'] *xi['l'] *xi['l']
+            + p[self.key('A_lls')] *xi['l'] *xi['l'] *xi['s']
+            + p[self.key('A_lss')] *xi['l'] *xi['s'] *xi['s']
 
-            + p['A_sss'] *xi['s'] *xi['s'] *xi['s']
+            + p[self.key('A_sss')] *xi['s'] *xi['s'] *xi['s']
         )
 
         if self.debug:
@@ -510,13 +528,13 @@ class model(lsqfit.MultiFitterModel):
     def fitfcn_n3lo_log(self, p, xi):
         if self.model_info['include_fv']:
             output = (
-                + p['A_lll_g'] *xi['l']**3 *sf.fcn_I_m(xi['l'], p['L'], p['lam_chi'], 10)
-                + p['A_lls_g'] *xi['l']**2 *xi['s'] *sf.fcn_I_m(xi['l'], p['L'], p['lam_chi'], 10)
+                + p[self.key('A_lll_g')] *xi['l']**3 *sf.fcn_I_m(xi['l'], p['L'], p['lam_chi'], 10)
+                + p[self.key('A_lls_g')] *xi['l']**2 *xi['s'] *sf.fcn_I_m(xi['l'], p['L'], p['lam_chi'], 10)
             )
         else:
             output = (
-                + p['A_lll_g'] *xi['l']**3 *np.log(xi['l'])
-                + p['A_lls_g'] *xi['l']**2 *xi['s'] *np.log(xi['l'])
+                + p[self.key('A_lll_g')] *xi['l']**3 *np.log(xi['l'])
+                + p[self.key('A_lls_g')] *xi['l']**2 *xi['s'] *np.log(xi['l'])
             )
 
         if self.debug:
@@ -527,12 +545,12 @@ class model(lsqfit.MultiFitterModel):
 
     def fitfcn_n3lo_log_sq(self, p, xi):
         if self.model_info['include_fv']:
-            output = p['A_lll_gg'] *xi['l']**3 *(
+            output = p[self.key('A_lll_gg')] *xi['l']**3 *(
                 + (sf.fcn_I_m(xi['l'], p['L'], p['lam_chi'], 10))**2
                 #- (np.log(xi['l']))**2
             )
         else:
-            output = p['A_lll_gg'] *xi['l']**3 *(np.log(xi['l']))**2
+            output = p[self.key('A_lll_gg')] *xi['l']**3 *(np.log(xi['l']))**2
 
         if self.debug:
             self.debug_table['n3lo_log_sq'] = output
@@ -541,7 +559,7 @@ class model(lsqfit.MultiFitterModel):
 
 
     def fitfcn_nlo_latt_alphas(self, p, xi):
-        output = p['A_alpha'] *xi['a'] *p['alpha_s']
+        output = p[self.key('A_alpha')] *xi['a'] *p['alpha_s']
 
         if self.debug:
             self.debug_table['nlo_alphas'] = output
@@ -550,7 +568,7 @@ class model(lsqfit.MultiFitterModel):
 
 
     def fitfcn_nlo_latt_ct(self, p, xi):
-        output = p['A_a'] *xi['a']
+        output = p[self.key('A_a')] *xi['a']
 
         if self.debug:
             self.debug_table['nlo_latt'] = output
@@ -559,7 +577,7 @@ class model(lsqfit.MultiFitterModel):
 
 
     def fitfcn_n2lo_latt_ct(self, p, xi):
-        output = p['A_aa'] *xi['a']**2
+        output = p[self.key('A_aa')] *xi['a']**2
 
         if self.debug:
             self.debug_table['n2lo_latt'] = output
@@ -568,7 +586,7 @@ class model(lsqfit.MultiFitterModel):
 
 
     def fitfcn_n3lo_latt_ct(self, p, xi):
-        output = p['A_aaa'] *xi['a']**3
+        output = p[self.key('A_aaa')] *xi['a']**3
 
         if self.debug:
             self.debug_table['n3lo_latt'] = output
@@ -593,6 +611,10 @@ class model_interpolation(lsqfit.MultiFitterModel):
         self.model_info = model_info
         self.ens_mapping = ens_mapping
         self.observable = observable
+
+    
+    def key(self, key):
+        return self.observable+'::'+key
 
 
     def fitfcn(self, p, fit_data=None, xi=None, latt_spacing=None, observable=None):
@@ -652,25 +674,25 @@ class model_interpolation(lsqfit.MultiFitterModel):
     def fitfcn_lo_ct(self, p, xi, latt_spacing=None):
 
         if latt_spacing == 'a06':
-            output = p['c0a06']
+            output = p[self.key('c0a06')]
         elif latt_spacing == 'a09':
-            output= p['c0a09']
+            output= p[self.key('c0a09')]
         elif latt_spacing == 'a12':
-            output = p['c0a12']
+            output = p[self.key('c0a12')]
         elif latt_spacing == 'a15':
-            output = p['c0a15']
+            output = p[self.key('c0a15')]
 
         else:
             output = xi['l'] *xi['s'] *0 # returns correct shape
             for j, ens in enumerate(self.ens_mapping):
                 if ens[:3] == 'a06':
-                    output[j] = p['c0a06']
+                    output[j] = p[self.key('c0a06')]
                 elif ens[:3] == 'a09':
-                    output[j] = p['c0a09']
+                    output[j] = p[self.key('c0a09')]
                 elif ens[:3] == 'a12':
-                    output[j] = p['c0a12']
+                    output[j] = p[self.key('c0a12')]
                 elif ens[:3] == 'a15':
-                    output[j] = p['c0a15']
+                    output[j] = p[self.key('c0a15')]
                 else:
                     output[j] = 0
 
@@ -679,27 +701,27 @@ class model_interpolation(lsqfit.MultiFitterModel):
 
     def fitfcn_nlo_ct(self, p, xi):
         output = (
-            + p['k_l'] *xi['l'] 
-            + p['k_s'] *xi['s'] 
-            + p['k_a'] *xi['a']
+            + p[self.key('k_l')] *xi['l'] 
+            + p[self.key('k_s')] *xi['s'] 
+            + p[self.key('k_a')] *xi['a']
         )
         return output
 
 
     def fitfcn_n2lo_ct(self, p, xi):     
         output = ( 
-            + p['k_aa'] *xi['a'] *xi['a']
-            + p['k_al'] *xi['a'] *xi['l']
-            + p['k_as'] *xi['a'] *xi['s']
-            + p['k_ll'] *xi['l'] *xi['l']
-            + p['k_ls'] *xi['l'] *xi['s']
-            + p['k_ss'] *xi['s'] *xi['s']
+            + p[self.key('k_aa')] *xi['a'] *xi['a']
+            + p[self.key('k_al')] *xi['a'] *xi['l']
+            + p[self.key('k_as')] *xi['a'] *xi['s']
+            + p[self.key('k_ll')] *xi['l'] *xi['l']
+            + p[self.key('k_ls')] *xi['l'] *xi['s']
+            + p[self.key('k_ss')] *xi['s'] *xi['s']
         )
         return output
 
 
     def fitfcn_n2lo_log(self, p, xi):
-        output = p['k_ll_g'] *xi['l']**2 *np.log(xi['l'])
+        output = p[self.key('k_ll_g')] *xi['l']**2 *np.log(xi['l'])
         return output
 
 

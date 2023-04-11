@@ -5,7 +5,7 @@ import sys
 import time
 import pathlib
 import argparse
-from progress.bar import Bar
+import tqdm
 
 sys.path.append(pathlib.Path(__file__).parent.absolute())
 import fitter.model_average as md
@@ -91,9 +91,10 @@ if args['empirical_priors'] is None:
 
 if args['empirical_priors'] is not None and args['perform_fits']:
     t0 = time.time()
-    bar = Bar('Optimizing priors', max=len(model_list))
-    for j, model in enumerate(model_list):
-        bar.next()
+    pbar = tqdm.tqdm(model_list)
+    pbar.set_description('Optimizing priors: ')
+
+    for j, model in pbar:
         print('\n', model)
 
         # Load data
@@ -120,9 +121,9 @@ if args['empirical_priors'] is not None and args['perform_fits']:
 # Perform scale setting
 if args['perform_fits']:
     t0 = time.time()
-    bar = Bar('Fitting models', max=len(model_list))
-    for j, model in enumerate(model_list):
-        bar.next()
+    pbar = tqdm.tqdm(model_list)
+    pbar.set_description('Fitting models: ')
+    for j, model in pbar:
         print('\n', model)
 
         # Load data
