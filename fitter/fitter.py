@@ -3,6 +3,7 @@ import numpy as np
 import gvar as gv
 import sys
 import os
+import functools
 
 import fitter.special_functions as sf
 
@@ -18,7 +19,6 @@ class fitter(object):
         # attributes of fitter object to fill later
         self.empbayes_grouping = None
         self._counter = {'iters' : 0, 'evals' : 0} # To force empbayes_fit to converge?
-        self._empbayes_fit = None
         self._fit = None
         self._fit_interpolation = None
         self._simultaneous_interpolation = False
@@ -120,7 +120,6 @@ class fitter(object):
             zkeys['chiral'] = ['A_l', 'A_s', 'A_ll', 'A_ss', 'A_ls', 'A_ll_g', 'A_lll', 'A_lls', 'A_lss', 'A_sss', 'A_lll_g', 'A_lls_g', 'A_lll_gg']
             zkeys['disc'] = ['A_a', 'A_alpha', 'A_aa', 'A_al', 'A_as', 'A_aaa', 'A_aal', 'A_aas', 'A_all', 'A_als', 'A_ass']
 
-
         elif self.empbayes_grouping == 'alphas':
             zkeys['alphas'] = ['A_alpha']
 
@@ -144,86 +143,60 @@ class fitter(object):
         for group in list(zkeys):
             if len(zkeys[group]) == 0:
                 del(zkeys[group])
-                
-
+        
         return zkeys
 
-
+    @functools.cache
     def _make_empbayes_fit(self, empbayes_grouping='order'):
-        if (self._empbayes_fit is None) or (empbayes_grouping != self.empbayes_grouping):
-            self.empbayes_grouping = empbayes_grouping
-            self._counter = {'iters' : 0, 'evals' : 0}
+        self.empbayes_grouping = empbayes_grouping
+        self._counter = {'iters' : 0, 'evals' : 0}
 
-            z0 = gv.BufferDict()
-            for group in self._empbayes_groupings():
-                z0[group] = 1.0
+        z0 = gv.BufferDict()
+        for group in self._empbayes_groupings():
+            for obs in self.observables:
+                z0[(obs, group)] = 0 # separate zkeys for each observable
 
 
-            # Might need to change minargs default values for empbayes_fit to converge:
-            # tol=1e-8, svdcut=1e-12, debug=False, maxit=1000, add_svdnoise=False, add_priornoise=False
-            # Note: maxit != maxfev. See https://github.com/scipy/scipy/issues/3334
-            # For Nelder-Mead algorithm, maxfev < maxit < 3 maxfev?
+        # Might need to change minargs default values for empbayes_fit to converge:
+        # tol=1e-8, svdcut=1e-12, debug=False, maxit=1000, add_svdnoise=False, add_priornoise=False
+        # Note: maxit != maxfev. See https://github.com/scipy/scipy/issues/3334
+        # For Nelder-Mead algorithm, maxfev < maxit < 3 maxfev?
 
-            # For debugging. Same as 'callback':
-            # https://github.com/scipy/scipy/blob/c0dc7fccc53d8a8569cde5d55673fca284bca191/scipy/optimize/optimize.py#L651
-            def analyzer(arg):
-                self._counter['evals'] += 1
-                print("\nEvals: ", self._counter['evals'], arg,"\n")
-                print(type(arg[0]))
-                return None
+        # For debugging. Same as 'callback':
+        # https://github.com/scipy/scipy/blob/c0dc7fccc53d8a8569cde5d55673fca284bca191/scipy/optimize/optimize.py#L651
+        def analyzer(arg):
+            self._counter['evals'] += 1
+            print("\nEvals: ", self._counter['evals'], arg,"\n")
+            print(type(arg[0]))
+            return None
+        
+        models = self._make_models()
+        fitter = lsqfit.MultiFitter(models=models)
 
-            fit, z = lsqfit.empbayes_fit(z0, fitargs=self._make_fitargs, maxit=200, analyzer=None)
-            print(z)
-            self._empbayes_fit = fit
-
-        return self._empbayes_fit
+        fit, z = fitter.empbayes_fit(z0, fitargs=self._make_fitargs, maxit=200, analyzer=None, tol=0.1)
+        print(z)
+        return fit
 
 
     def _make_fitargs(self, z):
         y_data = {self.model_info['name']+'_'+obs : self.y[obs] for obs in self.observables}
         prior = self._make_prior()
 
-        # Ideally:
-            # Don't bother with more than the hundredth place
-            # Don't let z=0 (=> null GBF)
-            # Don't bother with negative values (meaningless)
-        # But for some reason, these restrictions (other than the last) cause empbayes_fit not to converge
-        multiplicity = {}
-        for key in z:
-            multiplicity[key] = 0
-            z[key] = np.abs(z[key])
-
-
         # Helps with convergence (minimizer doesn't use extra digits -- bug in lsqfit?)
-        sig_fig = lambda x : np.around(x, int(np.floor(-np.log10(x))+3)) # Round to 3 sig figs
         capped = lambda x, x_min, x_max : np.max([np.min([x, x_max]), x_min])
 
         zkeys = self._empbayes_groupings()
-        zmin = 1e-2
-        zmax = 1e3
-        for group in z.keys():
+        val_min = 1e-2
+        val_max = 1e3
+        for (obs, group) in z.keys():
             for param in prior.keys():
-                if param in zkeys[group]:
-                    z[group] = sig_fig(capped(z[group], zmin, zmax))
-                    prior[param] = gv.gvar(0, 1) *z[group]
+                if param.split('::')[0] == obs and param.split('::')[-1] in zkeys[group]:
+                    prior[param] = gv.gvar(0, capped(np.exp(z[obs, group]), val_min, val_max))
 
         self._counter['iters'] += 1
-        fitfcn = self._make_models()[-1].fitfcn
-        print(self._counter['iters'], ' ', z)#{key : np.round(1. / z[key], 8) for key in z.keys()})
+        print(self._counter['iters'], ' ', z)
 
-        # Penalize models outside logGBF
-        def plausibility(s):
-            plaus = 0
-            for key in s:
-                k = 1 / np.log(z_max[key]/z_min[key])
-                plaus -= np.log(k/s[key]) *multiplicity[key]
-
-            return plaus
-
-        plaus = 0# plausibility(z)
-        #print(plaus)
-
-        return (dict(data=y_data, fcn=fitfcn, prior=prior), plaus)
+        return dict(data=y_data, prior=prior)
 
 
     def _make_models(self, model_info=None, interpolation=False, y_data=None, simultaneous_interpolation=False):
