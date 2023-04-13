@@ -19,6 +19,7 @@ class fitter(object):
         # attributes of fitter object to fill later
         self.empbayes_grouping = None
         self._counter = {'iters' : 0, 'evals' : 0} # To force empbayes_fit to converge?
+        self._fit_interpolation = {} # cache results
         self._simultaneous_interpolation = False
         self._simultaneous_extrapolation = simultaneous_extrapolation
         self._ensemble_mapping = ensemble_mapping # Necessary for LO t0, w0 interpolations 
@@ -40,27 +41,28 @@ class fitter(object):
         return fit
 
 
-    @functools.cache
-    def fit_interpolation(self, simultaneous_interpolation=None):
-        make_gvar = lambda g : gv.gvar(gv.mean(g), gv.sdev(g))
-        data = {}
-        for obs in self.observables:
-            if obs == 'w0':
-                data[self.model_info['name']+'_interpolation_w0'] = 1 / make_gvar(self.fit_data['a/w'])
-            elif obs == 't0':
-                data[self.model_info['name']+'_interpolation_t0'] = make_gvar(self.fit_data['t/a^2'])
+    def fit_interpolation(self, simultaneous_interpolation=False):
+        if simultaneous_interpolation not in self._fit_interpolation:
+            make_gvar = lambda g : gv.gvar(gv.mean(g), gv.sdev(g))
+            data = {}
+            for obs in self.observables:
+                if obs == 'w0':
+                    data[self.model_info['name']+'_interpolation_w0'] = 1 / make_gvar(self.fit_data['a/w'])
+                elif obs == 't0':
+                    data[self.model_info['name']+'_interpolation_t0'] = make_gvar(self.fit_data['t/a^2'])
 
-            if simultaneous_interpolation:
-                data[self.model_info['name']+'_'+obs] = self.y[obs]
+                if simultaneous_interpolation:
+                    data[self.model_info['name']+'_'+obs] = self.y[obs]
 
-            models = self._make_models(interpolation=True, simultaneous_interpolation=simultaneous_interpolation, observable=obs)
-            prior = self._make_prior(interpolation=True, simultaneous_interpolation=simultaneous_interpolation, observable=obs)
+            models = self._make_models(interpolation=True, simultaneous_interpolation=simultaneous_interpolation)
+            prior = self._make_prior(interpolation=True, simultaneous_interpolation=simultaneous_interpolation)
 
-        fitter = lsqfit.MultiFitter(models=models)
-        fit = fitter.lsqfit(data=data, prior=prior, fast=False, mopt=False)
+            fitter = lsqfit.MultiFitter(models=models)
+            fit = fitter.lsqfit(data=data, prior=prior, fast=False, mopt=False)
 
-        return fit
+            self._fit_interpolation[simultaneous_interpolation] = fit
 
+        return self._fit_interpolation[simultaneous_interpolation]
 
     @functools.cached_property
     def y(self):
@@ -182,7 +184,7 @@ class fitter(object):
         return dict(data=y_data, prior=prior)
 
 
-    def _make_models(self, model_info=None, interpolation=False, y_data=None, simultaneous_interpolation=False, observable=None):
+    def _make_models(self, model_info=None, interpolation=False, y_data=None, simultaneous_interpolation=False):
         if model_info is None:
             model_info = self.model_info.copy()
 
@@ -200,8 +202,10 @@ class fitter(object):
                 'exclude': []
             }
 
-            datatag = model_info_interpolation['name']+'_'+observable
-            models = np.append(models, model_interpolation(datatag=datatag, model_info=model_info_interpolation, ens_mapping=self._ensemble_mapping, observable=observable))
+            for obs in self.observables:
+                datatag = model_info_interpolation['name']+'_'+obs
+                models = np.append(models, model_interpolation(datatag=datatag, model_info=model_info_interpolation, ens_mapping=self._ensemble_mapping, observable=obs))
+
             if not simultaneous_interpolation:
                 return models
 
@@ -212,19 +216,22 @@ class fitter(object):
         return models
 
 
-    def _make_prior(self, fit_data=None, interpolation=False, simultaneous_interpolation=False, observable=None):
+    def _make_prior(self, fit_data=None, interpolation=False, simultaneous_interpolation=False):
         if fit_data is None:
             fit_data = self.fit_data
 
         output = gv.BufferDict()
         if interpolation or simultaneous_interpolation:
             prior = self.prior_interpolation
-            for aXX in np.unique([ens[:3] for ens in self._ensemble_mapping]):
-                output[observable+'::c0'+aXX] = prior[observable]['c0'+aXX]
 
-            # add priors for other LECs
-            for key in set(list(prior[observable])).difference(['c0a06', 'c0a09', 'c0a12', 'c0a15']):
-                output[observable+'::'+key] = prior[observable][key]
+            for obs in self.observables:
+            
+                for aXX in np.unique([ens[:3] for ens in self._ensemble_mapping]):
+                    output[obs+'::c0'+aXX] = prior[obs]['c0'+aXX]
+
+                # add priors for other LECs
+                for key in set(list(prior[obs])).difference(['c0a06', 'c0a09', 'c0a12', 'c0a15']):
+                    output[obs+'::'+key] = prior[obs][key]
 
             for key in ['mpi', 'mk', 'lam_chi']:
                 output[key] = fit_data[key]
@@ -334,7 +341,10 @@ class model(lsqfit.MultiFitterModel):
 
     
     def key(self, key):
-        return self.observable+'::'+key
+        if key.startswith(self.observable):
+            return key
+        else:
+            return self.observable+'::'+key
 
 
     def fitfcn(self, p, fit_data=None, xi=None, debug=None):
@@ -566,7 +576,10 @@ class model_interpolation(lsqfit.MultiFitterModel):
 
     
     def key(self, key):
-        return self.observable+'::'+key
+        if key.startswith(self.observable):
+            return key
+        else:
+            return self.observable+'::'+key
 
 
     def fitfcn(self, p, fit_data=None, xi=None, latt_spacing=None, observable=None):
