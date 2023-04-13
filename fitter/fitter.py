@@ -19,11 +19,8 @@ class fitter(object):
         # attributes of fitter object to fill later
         self.empbayes_grouping = None
         self._counter = {'iters' : 0, 'evals' : 0} # To force empbayes_fit to converge?
-        self._fit = None
-        self._fit_interpolation = None
         self._simultaneous_interpolation = False
         self._simultaneous_extrapolation = simultaneous_extrapolation
-        self._y = None
         self._ensemble_mapping = ensemble_mapping # Necessary for LO t0, w0 interpolations 
 
 
@@ -31,73 +28,58 @@ class fitter(object):
         return str(self.fit)
 
 
-    @property
+    @functools.cached_property
     def fit(self):
-        if self._fit is None:
-            models = self._make_models()
-            y_data = {self.model_info['name']+'_'+obs : self.y[obs] for obs in self.observables}
-            prior = self._make_prior()
+        models = self._make_models()
+        y_data = {self.model_info['name']+'_'+obs : self.y[obs] for obs in self.observables}
+        prior = self._make_prior()
 
-            fitter = lsqfit.MultiFitter(models=models)
-            fit = fitter.lsqfit(data=y_data, prior=prior, fast=False, mopt=False)
+        fitter = lsqfit.MultiFitter(models=models)
+        fit = fitter.lsqfit(data=y_data, prior=prior, fast=False, mopt=False)
 
-            self._fit = fit
-
-        return self._fit
+        return fit
 
 
-    #@property
+    @functools.cache
     def fit_interpolation(self, simultaneous_interpolation=None):
-        if simultaneous_interpolation is None:
-            simultaneous_interpolation = self._simultaneous_interpolation
+        make_gvar = lambda g : gv.gvar(gv.mean(g), gv.sdev(g))
+        data = {}
+        for obs in self.observables:
+            if obs == 'w0':
+                data[self.model_info['name']+'_interpolation_w0'] = 1 / make_gvar(self.fit_data['a/w'])
+            elif obs == 't0':
+                data[self.model_info['name']+'_interpolation_t0'] = make_gvar(self.fit_data['t/a^2'])
 
-        if self._fit_interpolation is None or simultaneous_interpolation != self._simultaneous_interpolation:
-            self._simultaneous_interpolation = simultaneous_interpolation
-            #make_gvar = lambda g : gv.gvar(gv.mean(g), gv.sdev(g))
-            #y_data = make_gvar(1 / self.fit_data['a/w'])
+            if simultaneous_interpolation:
+                data[self.model_info['name']+'_'+obs] = self.y[obs]
 
-            make_gvar = lambda g : gv.gvar(gv.mean(g), gv.sdev(g))
-            data = {}
-            for obs in self.observables:
-                if obs == 'w0':
-                    data[self.model_info['name']+'_interpolation_w0'] = 1 / make_gvar(self.fit_data['a/w'])
-                elif obs == 't0':
-                    data[self.model_info['name']+'_interpolation_t0'] = make_gvar(self.fit_data['t/a^2'])
+            models = self._make_models(interpolation=True, simultaneous_interpolation=simultaneous_interpolation, observable=obs)
+            prior = self._make_prior(interpolation=True, simultaneous_interpolation=simultaneous_interpolation, observable=obs)
 
-                if simultaneous_interpolation:
-                    data[self.model_info['name']+'_'+obs] = self.y[obs]
+        fitter = lsqfit.MultiFitter(models=models)
+        fit = fitter.lsqfit(data=data, prior=prior, fast=False, mopt=False)
 
-                models = self._make_models(interpolation=True, simultaneous_interpolation=simultaneous_interpolation)
-                prior = self._make_prior(interpolation=True, simultaneous_interpolation=simultaneous_interpolation)
-
-            fitter = lsqfit.MultiFitter(models=models)
-            fit = fitter.lsqfit(data=data, prior=prior, fast=False, mopt=False)
-            self._fit_interpolation = fit
-
-        return self._fit_interpolation
+        return fit
 
 
-    @property
+    @functools.cached_property
     def y(self):
-        if self._y is None:
-            make_gvar = lambda g : gv.gvar(gv.mean(g), gv.sdev(g))
+        make_gvar = lambda g : gv.gvar(gv.mean(g), gv.sdev(g))
 
-            output = {}
-            for obs in self.observables:
+        output = {}
+        for obs in self.observables:
+            if obs == 'w0':
+                if self.model_info['chiral_cutoff'] == 'Fpi':
+                    output['w0'] = self.fit_data['mO'] / self.fit_data['a/w']
+                else: # In Omega-type fits, shifting lam_chi will also shift y, leading to nonsensical fits 
+                    output['w0'] = make_gvar(self.fit_data['mO'] / self.fit_data['a/w'])
+            elif obs == 't0':
+                if self.model_info['chiral_cutoff'] == 'Fpi':
+                    output['t0'] = np.sqrt(self.fit_data['t/a^2']) *self.fit_data['mO'] 
+                else: # In Omega-type fits, shifting lam_chi will also shift y, leading to nonsensical fits 
+                    output['t0'] = make_gvar(np.sqrt(self.fit_data['t/a^2']) *self.fit_data['mO'])
 
-                if obs == 'w0':
-                    if self.model_info['chiral_cutoff'] == 'Fpi':
-                        output['w0'] = self.fit_data['mO'] / self.fit_data['a/w']
-                    else: # In Omega-type fits, shifting lam_chi will also shift y, leading to nonsensical fits 
-                        output['w0'] = make_gvar(self.fit_data['mO'] / self.fit_data['a/w'])
-                elif obs == 't0':
-                    if self.model_info['chiral_cutoff'] == 'Fpi':
-                        output['t0'] = np.sqrt(self.fit_data['t/a^2']) *self.fit_data['mO'] 
-                    else: # In Omega-type fits, shifting lam_chi will also shift y, leading to nonsensical fits 
-                        output['t0'] = make_gvar(np.sqrt(self.fit_data['t/a^2']) *self.fit_data['mO'])
-
-            self._y = output
-        return self._y
+        return output
 
 
     def _empbayes_groupings(self):
@@ -145,6 +127,7 @@ class fitter(object):
                 del(zkeys[group])
         
         return zkeys
+
 
     @functools.cache
     def _make_empbayes_fit(self, empbayes_grouping='order'):
@@ -199,13 +182,12 @@ class fitter(object):
         return dict(data=y_data, prior=prior)
 
 
-    def _make_models(self, model_info=None, interpolation=False, y_data=None, simultaneous_interpolation=False):
+    def _make_models(self, model_info=None, interpolation=False, y_data=None, simultaneous_interpolation=False, observable=None):
         if model_info is None:
             model_info = self.model_info.copy()
 
         models = np.array([])
         if interpolation:
-
             model_info_interpolation = {
                 'name' : model_info['name'] + '_interpolation',
                 'chiral_cutoff': 'Fpi',
@@ -218,8 +200,8 @@ class fitter(object):
                 'exclude': []
             }
 
-            datatag = model_info_interpolation['name']
-            models = np.append(models, model_interpolation(datatag=datatag, model_info=model_info_interpolation, ens_mapping=self._ensemble_mapping, observable=self.observable))
+            datatag = model_info_interpolation['name']+'_'+observable
+            models = np.append(models, model_interpolation(datatag=datatag, model_info=model_info_interpolation, ens_mapping=self._ensemble_mapping, observable=observable))
             if not simultaneous_interpolation:
                 return models
 
@@ -230,21 +212,19 @@ class fitter(object):
         return models
 
 
-    def _make_prior(self, fit_data=None, interpolation=False, simultaneous_interpolation=False):
+    def _make_prior(self, fit_data=None, interpolation=False, simultaneous_interpolation=False, observable=None):
         if fit_data is None:
             fit_data = self.fit_data
 
         output = gv.BufferDict()
         if interpolation or simultaneous_interpolation:
             prior = self.prior_interpolation
+            for aXX in np.unique([ens[:3] for ens in self._ensemble_mapping]):
+                output[observable+'::c0'+aXX] = prior[observable]['c0'+aXX]
 
-            for obs in self.observables:
-                for aXX in np.unique([ens[:3] for ens in self._ensemble_mapping]):
-                    output[obs+'::c0'+aXX] = prior[obs]['c0'+aXX]
-
-                # add priors for other LECs
-                for key in set(list(prior[obs])).difference(['c0a06', 'c0a09', 'c0a12', 'c0a15']):
-                    output[obs+'::'+key] = prior[obs][key]
+            # add priors for other LECs
+            for key in set(list(prior[observable])).difference(['c0a06', 'c0a09', 'c0a12', 'c0a15']):
+                output[observable+'::'+key] = prior[observable][key]
 
             for key in ['mpi', 'mk', 'lam_chi']:
                 output[key] = fit_data[key]
