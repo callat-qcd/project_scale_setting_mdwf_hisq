@@ -49,6 +49,9 @@ class fit_manager(object):
 
     def __str__(self):
         output = "Model: %s" %(self.model)
+        if self.simultaneous:
+            output += '   [simultaneous]'
+
         for obs in ['w0', 't0']:
             output += '\n---\n'
 
@@ -56,16 +59,36 @@ class fit_manager(object):
                 output += "\nw0: %s\n\n" %(self.w0)
                 for a_xx in ['a06', 'a09', 'a12', 'a15']:
                     w0_a = self.interpolate_w0a(latt_spacing=a_xx)
-                    output += 'w0/{}: {}'.format(a_xx, w0_a).ljust(22)  + '=> %s/fm: %s\n'%(a_xx, self.w0 / w0_a)
+                    output += '  w0/{}: {}'.format(a_xx, w0_a).ljust(22)  + '=> %s/fm: %s\n'%(a_xx, self.w0 / w0_a)
 
             elif obs == 't0':
                 output += "\nsqrt(t0): %s\n\n" %(self.sqrt_t0)
                 for a_xx in ['a06', 'a09', 'a12', 'a15']:
                     t0_a2 = self.interpolate_t0a2(latt_spacing=a_xx)
-                    output += 't0/{}^2: {}'.format(a_xx, t0_a2).ljust(22)  + '=> %s/fm: %s\n'%(a_xx, self.sqrt_t0 / np.sqrt(t0_a2))
+                    output += '  t0/{}^2: {}'.format(a_xx, t0_a2).ljust(22)  + '=> %s/fm: %s\n'%(a_xx, self.sqrt_t0 / np.sqrt(t0_a2))
 
-            output += '\nParameters:\n'
-            my_str = self.fit[obs].format(pstyle='m')
+            if not self.simultaneous:
+                output += '\nParameters:\n'
+                my_str = self.fit[obs].format(pstyle='m')
+                for item in my_str.split('\n'):
+                    for key in self.fit_keys[obs]:
+                        re = key+' '
+                        if re in item:
+                            output += item + '\n'
+
+                output += '\n'
+                output += self.fit[obs].format(pstyle=None)
+
+            output += '\nError Budget:\n'
+            max_len = np.max([len(key) for key in self.error_budget[obs]])
+            for key in {k: v for k, v in sorted(self.error_budget[obs].items(), key=lambda item: item[1], reverse=True)}:
+                output += '  '
+                output += key.ljust(max_len+1)
+                output += '{: .1%}\n'.format((self.error_budget[obs][key]/self.w0.sdev)**2).rjust(7)
+
+        if self.simultaneous:
+            output += '\n---\n\nParameters:\n'
+            my_str = self.fit['w0'].format(pstyle='m')
             for item in my_str.split('\n'):
                 for key in self.fit_keys['w0']:
                     re = key+' '
@@ -75,14 +98,8 @@ class fit_manager(object):
             output += '\n'
             output += self.fit[obs].format(pstyle=None)
 
-            output += '\nError Budget:\n'
-            max_len = np.max([len(key) for key in self.error_budget[obs]])
-            for key in {k: v for k, v in sorted(self.error_budget[obs].items(), key=lambda item: item[1], reverse=True)}:
-                output += '  '
-                output += key.ljust(max_len+1)
-                output += '{: .1%}\n'.format((self.error_budget[obs][key]/self.w0.sdev)**2).rjust(7)
-
         return output
+
 
     @property
     def error_budget(self):
@@ -358,12 +375,12 @@ class fit_manager(object):
 
 
     # observable = 'w0' or 't0'
-    def fitfcn_interpolation(self, latt_spacing, fit_data=None, posterior=None, xi=None, simultaneous_interpolation=False, observable=None):
+    def fitfcn_interpolation(self, latt_spacing, observable, fit_data=None, posterior=None, xi=None, simultaneous_interpolation=False):
         if fit_data is None:
             fit_data = self.phys_point_data.copy()
 
         prior_keys = [observable +'::' + key for key in list(self._input_prior[observable+'_interpolation'])]
-        param_keys = set(prior_keys).intersection(set(list(self.fitter['w0'].fit_interpolation(simultaneous_interpolation).p)))
+        param_keys = set(prior_keys).intersection(set(list(self.fitter[observable].fit_interpolation(simultaneous_interpolation).p)))
 
         posterior = {param : self.fitter[observable].fit_interpolation(simultaneous_interpolation).p[param] 
             for param in prior_keys if param in param_keys}
