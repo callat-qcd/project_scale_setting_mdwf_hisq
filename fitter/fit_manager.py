@@ -781,10 +781,9 @@ class fit_manager(object):
                          color=colors[ens[1:3]], marker='o', mec='w', zorder=3)
 
 
-        handles, labels = plt.gca().get_legend_handles_labels()
-        by_label = dict(zip(labels, handles))
-        plt.legend(by_label.values(), by_label.keys(),
-            ncol=len(by_label), bbox_to_anchor=(0,1), loc='lower left')
+        #handles, labels = plt.gca().get_legend_handles_labels()
+        #by_label = dict(zip(labels, handles))
+        #plt.legend(by_label.values(), by_label.keys())#ncol=len(by_label), bbox_to_anchor=(0,1), loc='lower left')
         plt.grid()
         plt.xlabel(xlabel, fontsize = 24)
         plt.ylabel(ylabel, fontsize = 24)
@@ -809,7 +808,9 @@ class fit_manager(object):
         value_shifted = {}
         for j, ens_j in enumerate(self.ensembles):
             if ens is None or ens_j == ens:
-                value_latt = self.fit[observable].y[observable].values()[0][j]
+                for mdl in self.fit[observable].y:
+                    if mdl.endswith(observable):
+                        value_latt = self.fit[observable].y[mdl][j]
                 value_fit = self._extrapolate_to_ens(ens_j, observable=observable)
                 value_fit_phys = self._extrapolate_to_ens(ens_j, phys_params, observable=observable)
 
