@@ -338,10 +338,13 @@ class model(lsqfit.MultiFitterModel):
         self.debug = False
         self.model_info = model_info
         self.observable = observable
+        self._p = None
 
     
     def key(self, key):
         if key.startswith(self.observable):
+            return key
+        elif key in self._p:
             return key
         else:
             return self.observable+'::'+key
@@ -355,6 +358,8 @@ class model(lsqfit.MultiFitterModel):
         if fit_data is not None:
             for key in fit_data.keys():
                 p[key] = fit_data[key]
+
+        self._p = p
 
         for key in self.model_info['exclude']:
             p[key] = 0
@@ -573,10 +578,13 @@ class model_interpolation(lsqfit.MultiFitterModel):
         self.model_info = model_info
         self.ens_mapping = ens_mapping
         self.observable = observable
+        self._p = None
 
     
     def key(self, key):
         if key.startswith(self.observable):
+            return key
+        elif key in self._p:
             return key
         else:
             return self.observable+'::'+key
@@ -586,6 +594,8 @@ class model_interpolation(lsqfit.MultiFitterModel):
         if fit_data is not None:
             for key in fit_data.keys():
                 p[key] = fit_data[key]
+
+        self._p = p
 
         for key in self.model_info['exclude']:
             p[key] = 0
