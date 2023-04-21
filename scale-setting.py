@@ -51,7 +51,7 @@ parser.add_argument(
     help="Use original, not discretization improved t0/a^2 and w0/a values"
 )
 parser.add_argument(
-    '-s', '--simultaneous', dest='simultaneous', default=False, action='store_true',
+    '-s', '--simultaneous', dest='simultaneous', default=None, action='store_true',
     help="Perform a simultaneous fit to both t0 and w0"
 )
 
@@ -79,10 +79,9 @@ data_loader = dl.data_loader(
     use_charm_reweighting=args['use_charm_reweighting'],
     use_milc_aw0=args['use_milc_aw0'],
     improved_observables=args['improved_observables'],
-
+    simultaneous=args['simultaneous']
 )
 data_loader.save_settings()
-
 
 collection = data_loader.collection
 
@@ -114,7 +113,7 @@ if args['empirical_priors'] is not None and args['perform_fits']:
             phys_point_data=phys_point_data, 
             prior=prior, 
             model_info=model_info,
-            simultaneous=args['simultaneous']
+            simultaneous=collection['simultaneous']
         )
 
         optimal_prior = fit_manager.optimize_prior(empbayes_grouping=args['empirical_priors'])
@@ -148,7 +147,7 @@ if args['perform_fits']:
             phys_point_data=phys_point_data, 
             prior=prior, 
             model_info=model_info,
-            simultaneous=args['simultaneous']
+            simultaneous=collection['simultaneous']
         )
 
         #print(fit_manager)

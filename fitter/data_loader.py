@@ -36,7 +36,8 @@ class data_loader(object):
             data_file=None, 
             use_charm_reweighting=None,
             use_milc_aw0=None,
-            improved_observables=None):
+            improved_observables=None,
+            simultaneous=None):
 
         self.project_path = os.path.normpath(os.path.join(os.path.realpath(__file__), os.pardir, os.pardir))
 
@@ -90,6 +91,7 @@ class data_loader(object):
             'use_charm_reweighting' : False,
             'use_milc_aw0' : False,
             'improved_observables' : True,
+            'simultaneous' : False
         }
 
         # Override values with those from yaml file
@@ -99,6 +101,8 @@ class data_loader(object):
             defaults.update(output)
         except FileNotFoundError:
             pass
+
+        print(defaults)
 
         # Override default/yaml values with those from initializing data_loader object
         collection = {
@@ -110,6 +114,7 @@ class data_loader(object):
             'use_charm_reweighting' : use_charm_reweighting,
             'use_milc_aw0' : use_milc_aw0,
             'improved_observables' : improved_observables,
+            'simultaneous' : simultaneous,
         }
         for key in collection:
             if collection[key] is None:
