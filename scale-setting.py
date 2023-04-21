@@ -50,6 +50,10 @@ parser.add_argument(
     '-o', '--original', dest='improved_observables', default=None, action='store_false',
     help="Use original, not discretization improved t0/a^2 and w0/a values"
 )
+parser.add_argument(
+    '-s', '--simultaneous', dest='simultaneous', default=False, action='store_true',
+    help="Perform a simultaneous fit to both t0 and w0"
+)
 
 # fitting/model-averaging options
 parser.add_argument(
@@ -92,10 +96,12 @@ if args['empirical_priors'] is None:
 if args['empirical_priors'] is not None and args['perform_fits']:
     t0 = time.time()
     pbar = tqdm.tqdm(model_list)
-    pbar.set_description('Optimizing priors: ')
+    text_len = 25 + np.max([len(m) for m in model_list])
+    #pbar.set_description('Optimizing priors: ')
 
-    for j, model in pbar:
-        print('\n', model)
+    for j, model in enumerate(pbar):
+        #print('\n', model)
+        pbar.set_description(f'Optimizing priors ({model})'.ljust(text_len))
 
         # Load data
         gv_data = data_loader.gv_data
@@ -107,7 +113,8 @@ if args['empirical_priors'] is not None and args['perform_fits']:
             fit_data=gv_data,
             phys_point_data=phys_point_data, 
             prior=prior, 
-            model_info = model_info
+            model_info=model_info,
+            simultaneous=args['simultaneous']
         )
 
         optimal_prior = fit_manager.optimize_prior(empbayes_grouping=args['empirical_priors'])
@@ -122,9 +129,10 @@ if args['empirical_priors'] is not None and args['perform_fits']:
 if args['perform_fits']:
     t0 = time.time()
     pbar = tqdm.tqdm(model_list)
-    pbar.set_description('Fitting models: ')
-    for j, model in pbar:
-        print('\n', model)
+    text_len = 22 + np.max([len(m) for m in model_list])
+    
+    for j, model in enumerate(pbar):
+        pbar.set_description(f'Fitting models ({model})'.ljust(text_len))
 
         # Load data
         gv_data = data_loader.gv_data
@@ -139,7 +147,8 @@ if args['perform_fits']:
             fit_data=gv_data,
             phys_point_data=phys_point_data, 
             prior=prior, 
-            model_info = model_info
+            model_info=model_info,
+            simultaneous=args['simultaneous']
         )
 
         #print(fit_manager)
@@ -205,7 +214,8 @@ if args['average_models']:
             fit_data=gv_data,
             phys_point_data=phys_point_data, 
             prior=prior, 
-            model_info = model_info
+            model_info=model_info,
+            simultaneous=args['simultaneous']
         )
 
         str_output += '\n```yaml\n'+str(fit_manager)+'```\n'
