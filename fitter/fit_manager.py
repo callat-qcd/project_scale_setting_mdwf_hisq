@@ -2,6 +2,7 @@ import numpy as np
 import gvar as gv
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d.axes3d import Axes3D
+import copy
 
 # Set defaults for plots
 import matplotlib as mpl
@@ -242,7 +243,7 @@ class fit_manager(object):
     # need to convert to/from lattice units
     def _get_phys_point_data(self, parameter=None):
         if parameter is None:
-            return self._phys_point_data.copy()
+            return copy.deepcopy(self._phys_point_data)
         else:
             return self._phys_point_data[parameter]
 
@@ -253,13 +254,33 @@ class fit_manager(object):
     # Returns dictionary with keys fit parameters, entries gvar results
     def _get_posterior(self, param=None):
         output = {}
-        for observable in ['w0', 't0']:
+        if param not in [None, 'all']:
+            for obs in ['w0', 't0']:
+                output[obs] = {}
+                if param in self.fit[obs].p:
+                    output[obs] = self.fit[obs].p[param]
+                elif obs+'::'+param in self.fit[obs].p:
+                    output[obs] = self.fit[obs].p[obs+'::'+param]
+                else:
+                    raise ValueError('Not a valid posterior key.')
+            return output
+
+        for obs in ['w0', 't0']: 
             if param is None:
-                output[observable] = {param : self.fit[observable].p[param] for param in self.fit_keys[observable]}
+                temp = {param : self.fit[obs].p[param] for param in self.fit_keys[obs]}
             elif param == 'all':
-                output[observable] = self.fit[observable].p
+                temp = self.fit[obs].p
             else:
-                output[observable] = self.fit[observable].p[param]
+                temp = self.fit[obs].p[param]
+
+            output[obs] = gv.BufferDict()
+
+            for pkey in temp:
+                keys = pkey.split('::')
+                if len(keys) == 1:
+                    output[obs][pkey] = temp[pkey]
+                elif keys[0] == obs:
+                    output[obs][keys[1]] = temp[pkey]
 
         return output
 
@@ -301,12 +322,12 @@ class fit_manager(object):
 
     @property
     def sqrt_t0(self):
-        return self.fitfcn(fit_data=self.phys_point_data.copy(), observable='t0') / self.phys_point_data['mO'] *self.phys_point_data['hbarc']
+        return self.fitfcn(fit_data=copy.deepcopy(self.phys_point_data), observable='t0') / self.phys_point_data['mO'] *self.phys_point_data['hbarc']
 
 
     @property
     def w0(self):
-        return self.fitfcn(fit_data=self.phys_point_data.copy(), observable='w0') / self.phys_point_data['mO'] *self.phys_point_data['hbarc']
+        return self.fitfcn(fit_data=copy.deepcopy(self.phys_point_data), observable='w0') / self.phys_point_data['mO'] *self.phys_point_data['hbarc']
 
     def _extrapolate_to_ens(self, ens=None, phys_params=None, observable=None):
         if phys_params is None:
@@ -363,10 +384,10 @@ class fit_manager(object):
 
     def fitfcn(self, fit_data=None, posterior=None, xi=None, debug=False, observable=None):
         if fit_data is None:
-            fit_data = self.phys_point_data.copy()
+            fit_data = copy.deepcopy(self.phys_point_data)
 
         if posterior is None:
-            posterior = self.posterior[observable].copy()
+            posterior = copy.deepcopy(self.posterior[observable])
 
         models = self.fitter[observable]._make_models()
         for mdl in models:
@@ -377,7 +398,7 @@ class fit_manager(object):
     # observable = 'w0' or 't0'
     def fitfcn_interpolation(self, latt_spacing, observable, fit_data=None, posterior=None, xi=None, simultaneous_interpolation=False):
         if fit_data is None:
-            fit_data = self.phys_point_data.copy()
+            fit_data = copy.deepcopy(self.phys_point_data)
 
         prior_keys = [observable +'::' + key for key in list(self._input_prior[observable+'_interpolation'])]
         param_keys = set(prior_keys).intersection(set(list(self.fitter[observable].fit_interpolation(simultaneous_interpolation).p)))
@@ -643,7 +664,7 @@ class fit_manager(object):
         ensembles = [ens for ens in self.ensembles if ens[:3] == latt_spacing]
 
         xi = {}
-        phys_data = self.phys_point_data.copy()
+        phys_data = copy.deepcopy(self.phys_point_data)
 
         min_max = lambda mydict : (gv.mean(np.nanmin([mydict[key] for key in mydict.keys()])), 
                                     gv.mean(np.nanmax([mydict[key] for key in mydict.keys()])))
