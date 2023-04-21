@@ -67,7 +67,7 @@ class model_average(object):
                 output += '   Statistical: % .5f \n' %(error_budget['stat'])
                 output += '   Chiral:      % .5f \n' %(error_budget['chiral'])
                 output += '   Disc:        % .5f \n' %(error_budget['disc'])
-                output += '   Phys point:  % .5f \n' %(error_budget['pp_input'])
+                output += '   Phys point:  % .5f \n' %(error_budget['phys'])
                 
 
             model_list = self.get_model_names(observable=observable, by_weight=True)
@@ -200,7 +200,7 @@ class model_average(object):
 
     def error_budget(self, observable):
         output = {}
-        for key in ['chiral', 'pp_input', 'stat', 'disc']:
+        for key in ['chiral', 'phys', 'stat', 'disc']:
             output[key] = self.average('eb:'+key, observable=observable, include_unc=False)
 
         return output
