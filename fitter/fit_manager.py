@@ -128,15 +128,18 @@ class fit_manager(object):
                 inputs = {}
 
                 # xpt/chiral contributions
-                inputs.update({str(param)+' [disc]' : self.prior[observable][param] for param in disc_keys if param in self.prior[observable]})
-                inputs.update({str(param)+' [xpt]' : self.prior[observable][param] for param in chiral_keys if param in self.prior[observable]})
+                #inputs.update({str(param)+' [disc]' : self.prior[observable][param] for param in disc_keys if param in self.prior[observable]})
+                #inputs.update({str(param)+' [xpt]' : self.prior[observable][param] for param in chiral_keys if param in self.prior[observable]})
+                inputs.update({str(param) : self.fitter[observable].fit.prior[param] for param in self.fitter[observable].fit.prior 
+                               if param not in phys_keys and param not in ['w0::eps2_a', 't0::eps2_a'] })
 
                 # phys point contributions
-                inputs.update({str(param)+' [pp]' : self.phys_point_data[param] for param in list(phys_keys)})
-                del inputs['lam_chi [pp]']
+                inputs.update({str(param)+' [phys]' : self.phys_point_data[param] for param in list(phys_keys)})
+                del inputs['lam_chi [phys]']
 
                 # stat contribtions
-                inputs.update({'x [stat]' : self._get_prior(stat_key)[observable] , 'y [stat]' : self.fitter[observable].y[observable]})
+                #inputs.update({'x [stat]' : self._get_prior(stat_key)[observable] , 'y [stat]' : self.fitter[observable].y[observable]})
+                inputs.update({'x [stat]' : self._get_prior(stat_key)[observable] , 'y[w0] [stat]' : self.fitter[observable].fit_data['a/w'], 'y[t0] [stat]' : self.fitter[observable].fit_data['t/a^2']})
                 
                 if kwargs is None:
                     kwargs = {}
@@ -161,20 +164,25 @@ class fit_manager(object):
                     value = self.sqrt_t0
 
                 output[observable]['disc'] = value.partialsdev(
-                    [self.prior[observable][key] for key in disc_keys if key in self.prior[observable]]
+                    #[self.prior[observable][key] for key in disc_keys if key in self.prior[observable]]
+                    [self.fitter[observable].fit.prior[param] for param in self.fitter[observable].fit.prior 
+                     if param not in phys_keys and param not in ['w0::eps2_a', 't0::eps2_a'] and 'a' in param]
                 )
                 output[observable]['chiral'] = value.partialsdev(
-                    [self.prior[observable][key] for key in chiral_keys if key in self.prior[observable]]
+                    #[self.prior[observable][key] for key in chiral_keys if key in self.prior[observable]]
+                    [self.fitter[observable].fit.prior[param] for param in self.fitter[observable].fit.prior 
+                     if param not in phys_keys and param not in ['w0::eps2_a', 't0::eps2_a'] and 'a' not in param]
                 )
-                output[observable]['pp_input'] = value.partialsdev(
-                    [self.phys_point_data[key] for key in phys_keys]
+                output[observable]['phys'] = value.partialsdev(
+                    [self.phys_point_data[param] for param in list(phys_keys)]
                 )
                 output[observable]['stat'] = value.partialsdev(
-                    [self._get_prior(stat_key)[observable], self.fitter[observable].y[observable]]
+                    #[self._get_prior(stat_key)[observable], self.fitter[observable].y[observable]]
+                    [self._get_prior(stat_key)[observable], self.fitter[observable].fit_data['a/w'], self.fitter[observable].fit_data['t/a^2']]
                     #self.fitter['w0'].y
                 )
 
-        #if self.simultaneous:
+        #if self.simultaneous}:
         #    output['t0'] = output['w0']
 
         return output
