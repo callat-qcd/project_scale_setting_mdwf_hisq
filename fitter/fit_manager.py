@@ -106,20 +106,16 @@ class fit_manager(object):
     def error_budget(self):
         return self._get_error_budget()
 
+
     def _get_error_budget(self, verbose=False, **kwargs):
         output = None
 
-        #if self.simultaneous: 
-        #    observable_list = ['w0']
-        #else:
         observable_list = ['w0', 't0']
 
         for observable in observable_list:
             # Fill these out
-            disc_keys = ['A_a', 'A_alpha', 'A_aa', 'A_al', 'A_as', 'A_aaa', 'A_aal', 'A_aas', 'A_all', 'A_als', 'A_ass']
-            chiral_keys = ['c0', 'A_l', 'A_s', 'A_ll', 'A_ls', 'A_ss', 'A_ll_g', 'A_lll', 'A_lls', 'A_lss', 'A_sss', 'A_lll_g', 'A_lls_g', 'A_lll_gg']
             phys_keys = list(self.phys_point_data)
-            stat_key = 'lam_chi' # Since the input data is correlated, only need a single variable as a proxy for all
+            stat_key = 'lam_chi' # Since the input data is mostly correlated, only need uncorrelated x data
 
             if verbose:
                 if output is None:
@@ -128,18 +124,20 @@ class fit_manager(object):
                 inputs = {}
 
                 # xpt/chiral contributions
-                #inputs.update({str(param)+' [disc]' : self.prior[observable][param] for param in disc_keys if param in self.prior[observable]})
-                #inputs.update({str(param)+' [xpt]' : self.prior[observable][param] for param in chiral_keys if param in self.prior[observable]})
-                inputs.update({str(param) : self.fitter[observable].fit.prior[param] for param in self.fitter[observable].fit.prior 
-                               if param not in phys_keys and param not in ['w0::eps2_a', 't0::eps2_a'] })
+                inputs.update({str(param)+' [disc]' : self.fitter[observable].fit.prior[param] for param in self.fitter[observable].fit.prior 
+                     if param not in phys_keys and param not in ['w0::eps2_a', 't0::eps2_a'] and 'a' in param })
+                
+                inputs.update({str(param)+' [xpt]' : self.fitter[observable].fit.prior[param] for param in self.fitter[observable].fit.prior 
+                     if param not in phys_keys and param not in ['w0::eps2_a', 't0::eps2_a'] and 'a' not in param })
 
                 # phys point contributions
                 inputs.update({str(param)+' [phys]' : self.phys_point_data[param] for param in list(phys_keys)})
-                del inputs['lam_chi [phys]']
+                del(inputs['lam_chi [phys]'])
 
                 # stat contribtions
-                #inputs.update({'x [stat]' : self._get_prior(stat_key)[observable] , 'y [stat]' : self.fitter[observable].y[observable]})
-                inputs.update({'x [stat]' : self._get_prior(stat_key)[observable] , 'y[w0] [stat]' : self.fitter[observable].fit_data['a/w'], 'y[t0] [stat]' : self.fitter[observable].fit_data['t/a^2']})
+                inputs.update({'x [stat]' : self._get_prior(stat_key)[observable]})
+                inputs.update({'a [stat]' : self.fitter[observable].fit.prior['eps2_a']})
+                inputs.update({str(obs)+'[stat]' : self.fitter[observable].y[obs] for obs in self.fitter[observable].y})
                 
                 if kwargs is None:
                     kwargs = {}
@@ -148,9 +146,16 @@ class fit_manager(object):
                 kwargs.setdefault('verify', True)
 
                 if observable == 'w0':
-                    output += 'observable: ' + observable + '\n' + gv.fmt_errorbudget(outputs={'w0' : self.w0}, inputs=inputs, **kwargs) + '\n---\n'
+                    output += 'observable: ' + observable + '\n' + gv.fmt_errorbudget(outputs={'w0' : self.w0}, inputs=inputs, **kwargs)
+                    value = self.w0
                 elif observable == 't0':
-                    output += 'observable: ' + observable + '\n' + gv.fmt_errorbudget(outputs={'t0' : self.sqrt_t0}, inputs=inputs, **kwargs) + '\n---\n'
+                    output += 'observable: ' + observable + '\n' + gv.fmt_errorbudget(outputs={'t0' : self.sqrt_t0}, inputs=inputs, **kwargs)
+                    value = self.sqrt_t0
+
+                output += 'total:  ' +str(gv.sdev(value)) +'\n'
+                output += 'summed: ' +str(np.sqrt(np.sum([value.partialsdev(inputs[key])**2 for key in inputs])))
+
+                output += '\n---\n'
 
             else: 
                 if output is None:
@@ -164,26 +169,19 @@ class fit_manager(object):
                     value = self.sqrt_t0
 
                 output[observable]['disc'] = value.partialsdev(
-                    #[self.prior[observable][key] for key in disc_keys if key in self.prior[observable]]
                     [self.fitter[observable].fit.prior[param] for param in self.fitter[observable].fit.prior 
                      if param not in phys_keys and param not in ['w0::eps2_a', 't0::eps2_a'] and 'a' in param]
                 )
                 output[observable]['chiral'] = value.partialsdev(
-                    #[self.prior[observable][key] for key in chiral_keys if key in self.prior[observable]]
                     [self.fitter[observable].fit.prior[param] for param in self.fitter[observable].fit.prior 
-                     if param not in phys_keys and param not in ['w0::eps2_a', 't0::eps2_a'] and 'a' not in param]
+                    if param not in phys_keys and param not in ['w0::eps2_a', 't0::eps2_a'] and 'a' not in param]
                 )
                 output[observable]['phys'] = value.partialsdev(
                     [self.phys_point_data[param] for param in list(phys_keys)]
                 )
                 output[observable]['stat'] = value.partialsdev(
-                    #[self._get_prior(stat_key)[observable], self.fitter[observable].y[observable]]
-                    [self._get_prior(stat_key)[observable], self.fitter[observable].fit_data['a/w'], self.fitter[observable].fit_data['t/a^2']]
-                    #self.fitter['w0'].y
+                    [self.fitter[observable].fit.prior['eps2_a'], self._get_prior(stat_key)[observable]] + [self.fitter[observable].y[obs] for obs in self.fitter[observable].y]
                 )
-
-        #if self.simultaneous}:
-        #    output['t0'] = output['w0']
 
         return output
 
