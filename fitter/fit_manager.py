@@ -180,7 +180,9 @@ class fit_manager(object):
                     [self.phys_point_data[param] for param in list(phys_keys)]
                 )
                 output[observable]['stat'] = value.partialsdev(
-                    [self.fitter[observable].fit.prior['eps2_a'], self._get_prior(stat_key)[observable]] + [self.fitter[observable].y[obs] for obs in self.fitter[observable].y]
+                    [self.fitter[observable].fit.prior[key] for key in ['eps2_a'] if key in self.fitter[observable].fit.prior]
+                    + [self._get_prior(stat_key)[observable]] 
+                    + [self.fitter[observable].y[obs] for obs in self.fitter[observable].y]
                 )
 
         return output
