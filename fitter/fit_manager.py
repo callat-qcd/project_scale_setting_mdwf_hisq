@@ -6,6 +6,7 @@ import copy
 
 # Set defaults for plots
 import matplotlib as mpl
+'''
 mpl.rcParams['lines.linewidth'] = 1
 mpl.rcParams['figure.figsize']  = [6.75, 6.75/1.618034333]
 mpl.rcParams['font.size']  = 20
@@ -16,6 +17,7 @@ mpl.rcParams['ytick.direction'] = 'in'
 mpl.rcParams['xtick.labelsize'] = 12
 mpl.rcParams['ytick.labelsize'] = 12
 mpl.rcParams['text.usetex'] = True
+'''
 
 import fitter.fitter as fit
 

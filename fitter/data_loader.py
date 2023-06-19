@@ -11,6 +11,7 @@ from pathlib import Path
 
 # Set defaults for plots
 import matplotlib as mpl
+'''
 mpl.rcParams['lines.linewidth'] = 1
 mpl.rcParams['figure.figsize']  = (6.75, 6.75/1.618034333)
 mpl.rcParams['font.size']  = 20
@@ -21,6 +22,7 @@ mpl.rcParams['ytick.direction'] = 'in'
 mpl.rcParams['xtick.labelsize'] = 12
 mpl.rcParams['ytick.labelsize'] = 12
 mpl.rcParams['text.usetex'] = True
+'''
 
 class data_loader(object):
 
@@ -590,21 +592,22 @@ class data_loader(object):
 
         prior_table = ''
         for obs in observables:
-            prior_table += 'observable: %s \n' %(obs)
-            #priors_models = {mdl : self.get_prior(model=mdl)[obs] for mdl in models}
-            priors_models = {}
-            priors_models['default_Fpi'] = self.get_prior(model='Fpi_n3lo_fv', default=True)[obs]
-            priors_models['default_Om'] = self.get_prior(model='Om_n3lo_fv', default=True)[obs]
+            if obs in ['w0', 't0']:
+                prior_table += 'observable: %s \n' %(obs)
+                #priors_models = {mdl : self.get_prior(model=mdl)[obs] for mdl in models}
+                priors_models = {}
+                priors_models['default_Fpi'] = self.get_prior(model='Fpi_n3lo_fv', default=True)[obs]
+                priors_models['default_Om'] = self.get_prior(model='Om_n3lo_fv', default=True)[obs]
 
-
-            length = lambda x : len(x.split('_')[1]) if len(x.split('_')) > 1 else 0
-            prior_table += dict_dict_to_table(priors_models, column0='model', sort_key=length)
-            prior_table += '\n\n'
+                length = lambda x : len(x.split('_')[1]) if len(x.split('_')) > 1 else 0
+                prior_table += dict_dict_to_table(priors_models, column0='model', sort_key=length)
+                prior_table += '\n\n'
 
         for obs in observables:
-            priors_models = {obs+'_interpolation' : self.get_prior(model=models[0])[obs+'_interpolation']}
-            prior_table += dict_dict_to_table(priors_models, column0='model', sort_key=length)
-            prior_table += '\n\n'
+            if obs in ['w0', 't0']:
+                priors_models = {obs+'_interpolation' : self.get_prior(model=models[0])[obs+'_interpolation']}
+                prior_table += dict_dict_to_table(priors_models, column0='model', sort_key=length)
+                prior_table += '\n\n'
 
         # Generate table for models    
         #models = self.collection['models']

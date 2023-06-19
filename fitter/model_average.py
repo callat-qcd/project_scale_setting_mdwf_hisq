@@ -10,6 +10,8 @@ import scipy.stats as stats
 
 # plot defaults
 import matplotlib as mpl
+mpl.rcParams['text.usetex'] = False
+'''
 mpl.rcParams['lines.linewidth'] = 1
 mpl.rcParams['figure.figsize']  = [6.75, 6.75/1.618034333]
 mpl.rcParams['font.size']  = 20
@@ -20,6 +22,7 @@ mpl.rcParams['ytick.direction'] = 'in'
 mpl.rcParams['xtick.labelsize'] = 12
 mpl.rcParams['ytick.labelsize'] = 12
 mpl.rcParams['text.usetex'] = False
+'''
 
 
 import fitter.fitter as fit
@@ -129,7 +132,7 @@ class model_average(object):
         elif param == 'sqrt_t0':
             return r'$t_0^{1/2}$ (fm)'
         elif param == 'sqrt_t0/w0':
-            return r'$t_0^{1/2}/w0$'
+            return r'$t_0^{1/2}/w_0$'
         else:
             return param.replace('_', ' ')
 
@@ -218,13 +221,10 @@ class model_average(object):
         return output
 
 
-    def fitfcn(self, model, data, observable, p=None):
+    def fitfcn(self, model, observable):
         model_info = self._get_model_info_from_name(model).copy()
 
-        if p is None:
-            p = self._get_fit_posterior(model, observable=observable)
-
-        fitfcn = fit.model(datatag='xpt', model_info=model_info).fitfcn
+        fitfcn = fit.model(datatag='xpt', model_info=model_info, observable=observable).fitfcn
         return fitfcn
 
 
@@ -577,7 +577,7 @@ class model_average(object):
 
             p = self.fit_results[observable][name]['posterior']
 
-            y = self.fitfcn(name, model_info, observable=observable)(p=p, fit_data=data, xi=xi) 
+            y = self.fitfcn(name, observable=observable)(p=p, fit_data=data, xi=xi) 
             #y = y / self._get_phys_point_data()['mO'] *self._get_phys_point_data()['hbarc']
             weight = np.exp(self._get_logGBF(observable=observable, model=name)) / total_GBF
             plt.fill_between(pm(x, 0), pm(y, -1), pm(y, 1), 
@@ -626,12 +626,36 @@ class model_average(object):
 
 
     # See self._get_model_info_from_name for possible values for 'compare'
-    def plot_histogram(self, param, observable, title=None, xlabel=None, compare='order'):
+    def plot_histogram(self, observable, title=None, xlabel=None, compare='order'):
+        # compare: ['chiral_cutoff', 'order', 'latt_ct', 'include_log', 
+        #           'include_log2', 'include_fv', 'include_alphas', 'eps2a_defn']
+        def by_order(order):
+            number = -1
+            if order == 'lo':
+                number = 0
+            elif order == 'nlo':
+                number = 1
+            elif order == 'n2lo':
+                number = 2
+            elif order == 'n3lo': #unused
+                number = 2
+            elif order=='All':
+                number = 1000
+
+            return number
+        
+        if observable == 'w0':
+            param = 'w0'
+        elif observable == 't0':
+            param = 'sqrt_t0'
+        elif observable == 't0w0':
+            param = 'sqrt_t0/w0'
+
         if xlabel is None:
             xlabel = self._param_keys_dict(param)
         if title is None:
             title = ""
- 
+
         param_avg = self.average(param=param, observable=observable)
         pm = lambda g, k : g.mean + k *g.sdev
         x = np.linspace(pm(param_avg, -4), pm(param_avg, +4), 2000)
@@ -657,24 +681,10 @@ class model_average(object):
         
         #colors.reverse()
 
-        def by_order(order):
-            number = -1
-            if order == 'lo':
-                number = 0
-            elif order == 'nlo':
-                number = 1
-            elif order == 'n2lo':
-                number = 2
-            elif order == 'n3lo': #unused
-                number = 2
-            elif order=='All':
-                number = 1000
-
-            return number
+        fig, ax = plt.subplots()
 
         #for j, choice in enumerate(np.append(['All'], choices)):
         for j, choice in enumerate(sorted(np.append(['All'], choices), key=by_order, reverse=True)):
-
             # read Bayes Factors
             logGBF_list = [self._get_logGBF(observable=observable, model=model) for model in self.get_model_names(observable=observable)]
 
@@ -727,7 +737,6 @@ class model_average(object):
                     pdf += w*p
                     pdfdict[model] = w*p
 
-
                     c = stats.norm.cdf(x,r.mean,r.sdev)
                     cdf += w*c
                     cdfdict[model] = w*c
@@ -750,14 +759,8 @@ class model_average(object):
             ydict = plot_params['pdfdict']
             cdf = plot_params['cdf']
 
-
-            fig = plt.figure('result histogram')#,figsize=fig_size2)
-            ax = plt.axes()
-
             #for a in ydict.keys():
             #    ax.plot(x,ydict[a], color=colors[j], alpha=1.0, ls='dotted')
-
-
             ax.fill_between(x=x,y1=ysum,facecolor=colors[j], edgecolor='black',alpha=0.4,label=self._param_keys_dict(choice))
             #ax.plot(x, ysum, color=colors[j], alpha=1.0, lw=4.0)
             ax.plot(x, ysum, color='k', alpha=1.0)
@@ -777,8 +780,6 @@ class model_average(object):
                 ax.errorbar(x=[x[uidx68],x[uidx68]],y=[0,ysum[uidx68]],color='black',lw=lw)
 
                 ax.errorbar(x=x,y=ysum,ls='-',color='black',lw=lw)
-
-
                 
             leg = ax.legend(edgecolor='k',fancybox=False)
             ax.set_ylim(bottom=0)
