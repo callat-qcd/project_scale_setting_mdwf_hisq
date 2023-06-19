@@ -31,15 +31,25 @@ class model_average(object):
         self.data_loader = dl.data_loader(collection=collection)
         self.fit_results = self.data_loader.get_fit_collection()
         self.other_results = {
-            #'ETMC' : '0.1782(0)', 
-            #'QCDSF-UKQCD' : '0.179(6)',
-            'HPQCD [2013]' : '0.1715(9)', # hep-lat/1303.1670, Mar 2013
-            'ALPHA [2013]' : '0.1757(13)', # hep-lat/1311.5585, Nov 2013
-            'HotQCD [2015]' : '0.1749(14)',  # hep-lat/1501.07652, Jan 2015
-            'MILC [2015]' : '0.1714(15)', # hep-lat/1503.02769, Mar 2015
-            'BMWc [2020]' : '0.17180(39)', # Unpublished?, ?? 2020
+            'w0' : gv.gvar({
+                    'HPQCD 13A' : '0.1715(09)',
+                    'MILC 15' : '0.1714(15)',
+                    'ETM 20' : '0.1706(18)',
+                    'BMW 20' : '0.17236(69)',
+                    'CalLat 20A' : '0.1709(11)',
+                    'ETM 21' : '0.17383(63)',
+                }),
+            'sqrt_t0' : gv.gvar({
+                    'HPQCD 13A' : '0.14436(61)',
+                    'MILC 15' : '0.1422(14)',
+                    'CalLat 20A' : '0.1416(08)',
+                    'ETM 21' : '0.1420(08)',
+            }),
+            'sqrt_t0/w0' : gv.gvar({
+                    'HPQCD 13A' : '0.835(08)',
+                    'ETM 21' : '0.82930(65)'
+            })
         }
-        self.other_results = gv.gvar(self.other_results)
 
 
     def __str__(self):
@@ -49,6 +59,8 @@ class model_average(object):
                 param = 'w0'
             elif observable == 't0':
                 param = 'sqrt_t0'
+            elif observable == 't0w0':
+                param = 'sqrt_t0/w0'
             
             extrapolated_value = self.average(param, observable=observable, split_unc=True)
             output  += '%s: %s\n'%(param, self.average(param, observable=observable))
@@ -68,7 +80,6 @@ class model_average(object):
                 output += '   Chiral:      % .5f \n' %(error_budget['chiral'])
                 output += '   Disc:        % .5f \n' %(error_budget['disc'])
                 output += '   Phys point:  % .5f \n' %(error_budget['phys'])
-                
 
             model_list = self.get_model_names(observable=observable, by_weight=True)
             weight = lambda model_k : 1/ np.sum([np.exp(self._get_logGBF(observable=observable, model=model_l)-self._get_logGBF(observable=observable, model=model_k)) for model_l in model_list])
@@ -117,7 +128,8 @@ class model_average(object):
             return r'$m_\Omega$'
         elif param == 'sqrt_t0':
             return r'$t_0^{1/2}$ (fm)'
-
+        elif param == 'sqrt_t0/w0':
+            return r'$t_0^{1/2}/w0$'
         else:
             return param.replace('_', ' ')
 
@@ -227,8 +239,15 @@ class model_average(object):
             return sorted(list(self.fit_results[observable]))
 
 
-    def plot_comparison(self, param, observable, title=None, xlabel=None,
+    def plot_comparison(self, observable, title=None, xlabel=None,
                         show_model_avg=True):
+        
+        if observable == 'w0':
+            param = 'w0'
+        elif observable == 't0':
+            param = 'sqrt_t0'
+        elif observable == 't0w0':
+            param = 'sqrt_t0/w0'
 
         if title is None:
             title = ""
@@ -241,6 +260,8 @@ class model_average(object):
         #results = self.fit_results[observable]
 
         fig = plt.figure(figsize=(8, 11))
+        size = fig.get_size_inches()
+        fig.set_size_inches(size[0], size[1]*len(self.fit_results[observable])/20)
 
         # These axes compare fits
         ax_fits = plt.axes([0.10,0.10,0.49,0.8])
@@ -268,9 +289,9 @@ class model_average(object):
 
         y=0
         labels = np.array([])
-        if param == 'w0':
-            for collab in self.other_results:
-                param_value = self.other_results[collab]
+        if param in self.other_results:
+            for collab in self.other_results[param]:
+                param_value = self.other_results[param][collab]
                 color = 'deepskyblue'
                 x = gv.mean(param_value)
                 xerr = gv.sdev(param_value)

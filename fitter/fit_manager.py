@@ -55,7 +55,7 @@ class fit_manager(object):
 
         observables = ['w0', 't0']
         if self.simultaneous:
-            observables.append('t0_w0')
+            observables.append('t0w0')
 
         for obs in observables:
             output += '\n---\n'
@@ -72,7 +72,7 @@ class fit_manager(object):
                     t0_a2 = self.interpolate_t0a2(latt_spacing=a_xx)
                     output += '  t0/{}^2: {}'.format(a_xx, t0_a2).ljust(22)  + '=> %s/fm: %s\n'%(a_xx, self.sqrt_t0 / np.sqrt(t0_a2))
 
-            elif obs == 't0_w0':
+            elif obs == 't0w0':
                 output += "\nsqrt(t0)/w0: %s\n" %(self.sqrt_t0 / self.w0)
 
             if not self.simultaneous:
@@ -94,7 +94,7 @@ class fit_manager(object):
                     val_sdev = self.w0.sdev
                 elif obs == 't0':
                     val_sdev = self.sqrt_t0.sdev
-                elif obs == 't0_w0':
+                elif obs == 't0w0':
                     val_sdev = gv.sdev(self.sqrt_t0 / self.w0)
                 else:
                     val_sdev = None
@@ -129,7 +129,7 @@ class fit_manager(object):
         label_list = ['w0', 't0']
         if self.simultaneous:
             observable_list.append('w0')
-            label_list.append('t0_w0')
+            label_list.append('t0w0')
 
         for label, observable in zip(label_list, observable_list):
             # Fill these out
@@ -189,7 +189,7 @@ class fit_manager(object):
                 elif label == 't0':
                     value = self.sqrt_t0
 
-                elif label == 't0_w0':
+                elif label == 't0w0':
                     value = self.sqrt_t0 / self.w0
 
                 output[label]['disc'] = value.partialsdev(
@@ -250,14 +250,14 @@ class fit_manager(object):
             'posterior' : self.posterior['t0'],
         }
         if self.simultaneous:
-            fit_info['t0_w0'] = {
+            fit_info['t0w0'] = {
                 'name' : self.model,
                 'sqrt_t0/w0' : self.sqrt_t0/self.w0,
                 'logGBF' : self.fit['t0'].logGBF,
                 'chi2/df' : self.fit['t0'].chi2 / self.fit['t0'].dof,
                 'Q' : self.fit['t0'].Q,
                 'phys_point' : self.phys_point_data,
-                'error_budget' : self.error_budget['t0_w0'],
+                'error_budget' : self.error_budget['t0w0'],
                 'prior' : self.prior['t0'],
                 'posterior' : self.posterior['t0'],
             }
