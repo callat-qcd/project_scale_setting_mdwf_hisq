@@ -18,3 +18,4 @@ notes/*.fdb_latexmk
 /tmp/*
 notes/notes.fdb_latexmk
 data/callat_mdwf_hisq_scale_correlators.h5
+results/*-test
