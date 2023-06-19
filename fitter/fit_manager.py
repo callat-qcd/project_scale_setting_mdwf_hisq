@@ -53,7 +53,11 @@ class fit_manager(object):
         if self.simultaneous:
             output += '   [simultaneous]'
 
-        for obs in ['w0', 't0']:
+        observables = ['w0', 't0']
+        if self.simultaneous:
+            observables.append('t0_w0')
+
+        for obs in observables:
             output += '\n---\n'
 
             if obs == 'w0':
@@ -67,6 +71,9 @@ class fit_manager(object):
                 for a_xx in ['a06', 'a09', 'a12', 'a15']:
                     t0_a2 = self.interpolate_t0a2(latt_spacing=a_xx)
                     output += '  t0/{}^2: {}'.format(a_xx, t0_a2).ljust(22)  + '=> %s/fm: %s\n'%(a_xx, self.sqrt_t0 / np.sqrt(t0_a2))
+
+            elif obs == 't0_w0':
+                output += "\nsqrt(t0)/w0: %s\n" %(self.sqrt_t0 / self.w0)
 
             if not self.simultaneous:
                 output += '\nParameters:\n'
@@ -83,9 +90,17 @@ class fit_manager(object):
             output += '\nError Budget:\n'
             max_len = np.max([len(key) for key in self.error_budget[obs]])
             for key in {k: v for k, v in sorted(self.error_budget[obs].items(), key=lambda item: item[1], reverse=True)}:
+                if obs == 'w0':
+                    val_sdev = self.w0.sdev
+                elif obs == 't0':
+                    val_sdev = self.sqrt_t0.sdev
+                elif obs == 't0_w0':
+                    val_sdev = gv.sdev(self.sqrt_t0 / self.w0)
+                else:
+                    val_sdev = None
                 output += '  '
                 output += key.ljust(max_len+1)
-                output += '{: .1%}\n'.format((self.error_budget[obs][key]/self.w0.sdev)**2).rjust(7)
+                output += '{: .1%}\n'.format((self.error_budget[obs][key]/val_sdev)**2).rjust(7)
 
         if self.simultaneous:
             output += '\n---\n\nParameters:\n'
@@ -97,7 +112,7 @@ class fit_manager(object):
                         output += item + '\n'
 
             output += '\n'
-            output += self.fit[obs].format(pstyle=None)
+            output += self.fit['w0'].format(pstyle=None)
 
         return output
 
@@ -111,13 +126,18 @@ class fit_manager(object):
         output = None
 
         observable_list = ['w0', 't0']
+        label_list = ['w0', 't0']
+        if self.simultaneous:
+            observable_list.append('w0')
+            label_list.append('t0_w0')
 
-        for observable in observable_list:
+        for label, observable in zip(label_list, observable_list):
             # Fill these out
             phys_keys = list(self.phys_point_data)
             stat_key = 'lam_chi' # Since the input data is mostly correlated, only need uncorrelated x data
 
             if verbose:
+                print('Warning: verbose flag may be inaccurate')
                 if output is None:
                     output = ''
 
@@ -136,7 +156,8 @@ class fit_manager(object):
 
                 # stat contribtions
                 inputs.update({'x [stat]' : self._get_prior(stat_key)[observable]})
-                inputs.update({'a [stat]' : self.fitter[observable].fit.prior['eps2_a']})
+                if 'eps2_a' in self.fitter[observable].fit.prior:
+                    inputs.update({'a [stat]' : self.fitter[observable].fit.prior['eps2_a']})
                 inputs.update({str(obs)+'[stat]' : self.fitter[observable].y[obs] for obs in self.fitter[observable].y})
                 
                 if kwargs is None:
@@ -145,11 +166,11 @@ class fit_manager(object):
                 kwargs.setdefault('ndecimal', 10)
                 kwargs.setdefault('verify', True)
 
-                if observable == 'w0':
-                    output += 'observable: ' + observable + '\n' + gv.fmt_errorbudget(outputs={'w0' : self.w0}, inputs=inputs, **kwargs)
+                if label == 'w0':
+                    output += 'observable: ' + label + '\n' + gv.fmt_errorbudget(outputs={'w0' : self.w0}, inputs=inputs, **kwargs)
                     value = self.w0
-                elif observable == 't0':
-                    output += 'observable: ' + observable + '\n' + gv.fmt_errorbudget(outputs={'t0' : self.sqrt_t0}, inputs=inputs, **kwargs)
+                elif label == 't0':
+                    output += 'observable: ' + label + '\n' + gv.fmt_errorbudget(outputs={'t0' : self.sqrt_t0}, inputs=inputs, **kwargs)
                     value = self.sqrt_t0
 
                 output += 'total:  ' +str(gv.sdev(value)) +'\n'
@@ -161,25 +182,28 @@ class fit_manager(object):
                 if output is None:
                     output = {}
 
-                output[observable] = {}
-                if observable == 'w0':
+                output[label] = {}
+                if label == 'w0':
                     value = self.w0
 
-                elif observable == 't0':
+                elif label == 't0':
                     value = self.sqrt_t0
 
-                output[observable]['disc'] = value.partialsdev(
+                elif label == 't0_w0':
+                    value = self.sqrt_t0 / self.w0
+
+                output[label]['disc'] = value.partialsdev(
                     [self.fitter[observable].fit.prior[param] for param in self.fitter[observable].fit.prior 
                      if param not in phys_keys and param not in ['w0::eps2_a', 't0::eps2_a'] and 'a' in param]
                 )
-                output[observable]['chiral'] = value.partialsdev(
+                output[label]['chiral'] = value.partialsdev(
                     [self.fitter[observable].fit.prior[param] for param in self.fitter[observable].fit.prior 
                     if param not in phys_keys and param not in ['w0::eps2_a', 't0::eps2_a'] and 'a' not in param]
                 )
-                output[observable]['phys'] = value.partialsdev(
+                output[label]['phys'] = value.partialsdev(
                     [self.phys_point_data[param] for param in list(phys_keys)]
                 )
-                output[observable]['stat'] = value.partialsdev(
+                output[label]['stat'] = value.partialsdev(
                     [self.fitter[observable].fit.prior[key] for key in ['eps2_a'] if key in self.fitter[observable].fit.prior]
                     + [self._get_prior(stat_key)[observable]] 
                     + [self.fitter[observable].y[obs] for obs in self.fitter[observable].y]
@@ -225,6 +249,18 @@ class fit_manager(object):
             'prior' : self.prior['t0'],
             'posterior' : self.posterior['t0'],
         }
+        if self.simultaneous:
+            fit_info['t0_w0'] = {
+                'name' : self.model,
+                'sqrt_t0/w0' : self.sqrt_t0/self.w0,
+                'logGBF' : self.fit['t0'].logGBF,
+                'chi2/df' : self.fit['t0'].chi2 / self.fit['t0'].dof,
+                'Q' : self.fit['t0'].Q,
+                'phys_point' : self.phys_point_data,
+                'error_budget' : self.error_budget['t0_w0'],
+                'prior' : self.prior['t0'],
+                'posterior' : self.posterior['t0'],
+            }
 
         return fit_info
 
