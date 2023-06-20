@@ -665,9 +665,9 @@ class data_loader(object):
         if output_filename is None:
             if not os.path.exists(os.path.normpath(self.project_path+'/tmp/')):
                 os.makedirs(os.path.normpath(self.project_path+'/tmp/'))
-            output_file = os.path.normpath(self.project_path+'/tmp/temp.png')
+            output_file = os.path.normpath(self.project_path+'/tmp/temp.svg')
         else:
-            output_file = os.path.normpath(self.project_path+'/results/'+self.collection['name']+'/'+output_filename+'.png')
+            output_file = os.path.normpath(self.project_path+'/results/'+self.collection['name']+'/'+output_filename+'.svg')
 
         if not os.path.exists(os.path.dirname(output_file)):
             os.makedirs(os.path.dirname(output_file))
