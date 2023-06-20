@@ -233,7 +233,7 @@ class data_loader(object):
             'a' : gv.gvar(0),
             'alpha_s' : gv.gvar(0.0),
             'L' : gv.gvar(np.infty),
-            'hbarc' : gv.gvar(197.3269602),
+            'hbarc' : gv.gvar(197.3269804),
 
             'Fpi' : gv.gvar('92.07(57)'),
             'mpi' : gv.gvar('134.8(3)'), # '138.05638(37)'
@@ -259,7 +259,6 @@ class data_loader(object):
             elif obs == 't0w0':
                 output['sqrt_t0/w0'] = fit_info[obs]['sqrt_t0/w0']
 
-
             output['logGBF'] = gv.gvar(fit_info[obs]['logGBF'])
             output['chi2/df'] = gv.gvar(fit_info[obs]['chi2/df'])
             output['Q'] = gv.gvar(fit_info[obs]['Q'])
@@ -276,6 +275,10 @@ class data_loader(object):
 
             for key in fit_info[obs]['error_budget']:
                 output['error_budget:'+key] = gv.gvar(fit_info[obs]['error_budget'][key])
+
+            for key in fit_info[obs]:
+                if key.startswith('w0/a:') or key.startswith('t0/a2:'):
+                    output[key] = fit_info[obs][key]
 
             gv.dump(output, filename)
         return None
@@ -310,8 +313,10 @@ class data_loader(object):
                 output[obs][model]['name'] = model
                 if obs == 'w0':
                     output[obs][model]['w0'] = fit_info_mdl_key['w0']
+                    output[obs][model]['w0/a'] = {}
                 elif obs == 't0':
                     output[obs][model]['sqrt_t0'] = fit_info_mdl_key['sqrt_t0']
+                    output[obs][model]['t0/a2'] = {}
                 elif obs == 't0w0':
                     output[obs][model]['sqrt_t0/w0'] = fit_info_mdl_key['sqrt_t0/w0']
 
@@ -332,6 +337,13 @@ class data_loader(object):
                         output[obs][model]['phys_point'][key.split(':')[-1]] = fit_info_mdl_key[key]
                     elif key.startswith('error_budget'):
                         output[obs][model]['error_budget'][key.split(':')[-1]] = fit_info_mdl_key[key].mean
+
+                    elif key.startswith('w0/a') and obs == 'w0':
+                        output[obs][model]['w0/a'][key.split(':')[-1]] = fit_info_mdl_key[key]
+                    elif key.startswith('t0/a2') and obs == 't0':
+                        output[obs][model]['t0/a2'][key.split(':')[-1]] = fit_info_mdl_key[key]
+
+
 
             return output
 

@@ -167,43 +167,43 @@ if args['average_models']:
     # w0/t0 comparison figs
     fig = model_average.plot_comparison(observable='w0')
     data_loader.save_fig(fig, output_filename='/figs/w0_comparison_fits')
-    str_output += '![image](./figs/w0_comparison_fits.png)\n' 
+    str_output += '![image](./figs/w0_comparison_fits.svg)\n' 
 
     fig = model_average.plot_comparison(observable='t0')
     data_loader.save_fig(fig, output_filename='/figs/t0_comparison_fits')
-    str_output += '![image](./figs/t0_comparison_fits.png)\n' 
+    str_output += '![image](./figs/t0_comparison_fits.svg)\n' 
 
     if collection['simultaneous']:
         fig = model_average.plot_comparison(observable='t0w0')
         data_loader.save_fig(fig, output_filename='/figs/t0w0_comparison_fits')
-        str_output += '![image](./figs/t0w0_comparison_fits.png)\n' 
+        str_output += '![image](./figs/t0w0_comparison_fits.svg)\n' 
 
     # w0/t0 histogram figs
     fig = model_average.plot_histogram(observable='w0', compare='order')
     data_loader.save_fig(fig, output_filename='/figs/w0_histogram_fit_order')
-    str_output += '![image](./figs/w0_histogram_fit_order.png)\n' 
+    str_output += '![image](./figs/w0_histogram_fit_order.svg)\n' 
 
     fig = model_average.plot_histogram(observable='t0', compare='order')
     data_loader.save_fig(fig, output_filename='/figs/t0_histogram_fit_order')
-    str_output += '![image](./figs/t0_histogram_fit_order.png)\n' 
+    str_output += '![image](./figs/t0_histogram_fit_order.svg)\n' 
 
     if collection['simultaneous']:
         fig = model_average.plot_histogram(observable='t0w0', compare='order')
         data_loader.save_fig(fig, output_filename='/figs/t0w0_histogram_fit_order')
-        str_output += '![image](./figs/t0w0_histogram_fit_order.png)\n' 
+        str_output += '![image](./figs/t0w0_histogram_fit_order.svg)\n' 
 
     # Plot all fits
     fig = model_average.plot_fits('mpi', observable='w0')
     data_loader.save_fig(fig, output_filename='/figs/w0_fits_vs_mpi')
-    str_output += '![image](./figs/w0_fits_vs_mpi.png)\n' 
+    str_output += '![image](./figs/w0_fits_vs_mpi.svg)\n' 
 
     fig = model_average.plot_fits('mpi', observable='t0')
     data_loader.save_fig(fig, output_filename='/figs/t0_fits_vs_mpi')
-    str_output += '![image](./figs/t0_fits_vs_mpi.png)\n' 
+    str_output += '![image](./figs/t0_fits_vs_mpi.svg)\n' 
 
     str_output += '\n## Representative model'
 
-    #for j, model in enumerate(model_average.get_model_names(observable='w0', by_weight=True)[:5]):
+    #for j, model in enumerate(model_average.get_model_names(observable='w0', by_weight=True)[:1]):
     for j, model in enumerate(['Fpi_n3lo_log_log2_fv_w0orig']):
         print('Making figs for model:', model)
 
@@ -216,12 +216,14 @@ if args['average_models']:
         else:
             prior = data_loader.get_prior(model=model)
 
+        print('simultaneous?', collection['simultaneous'])
+
         fit_manager = fm.fit_manager(
             fit_data=gv_data,
             phys_point_data=phys_point_data, 
             prior=prior, 
             model_info=model_info,
-            simultaneous=args['simultaneous']
+            simultaneous=collection['simultaneous']
         )
 
         str_output += '\n```yaml\n'+str(fit_manager)+'```\n'
@@ -232,17 +234,17 @@ if args['average_models']:
             for latt_spacing in np.unique([ens[:3] for ens in fit_manager.ensembles]):
                 fig = fit_manager.plot_interpolation(latt_spacing=latt_spacing, observable='w0')
                 data_loader.save_fig(fig, output_filename='/figs/w0_interpolation_'+latt_spacing)
-                str_output += '![image](./figs/w0_interpolation_'+latt_spacing+'.png)\n' 
+                str_output += '![image](./figs/w0_interpolation_'+latt_spacing+'.svg)\n' 
             str_output += '\n### t0 interpolation\n'
             for latt_spacing in np.unique([ens[:3] for ens in fit_manager.ensembles]):
                 fig = fit_manager.plot_interpolation(latt_spacing=latt_spacing, observable='t0')
                 data_loader.save_fig(fig, output_filename='/figs/t0_interpolation_'+latt_spacing)
-                str_output += '![image](./figs/t0_interpolation_'+latt_spacing+'.png)\n' 
+                str_output += '![image](./figs/t0_interpolation_'+latt_spacing+'.svg)\n' 
 
         # Plot observables vs eps2_a
         str_output += '\n### Lattice dependence\n'
-        str_output += '![image](./figs/fits/'+str(j+1)+'w0_vs_a--'+fit_manager.model+'.png)\n'
-        str_output += '![image](./figs/fits/'+str(j+1)+'sqrt_t0_vs_a--'+fit_manager.model+'.png)\n'
+        str_output += '![image](./figs/fits/'+str(j+1)+'w0_vs_a--'+fit_manager.model+'.svg)\n'
+        str_output += '![image](./figs/fits/'+str(j+1)+'sqrt_t0_vs_a--'+fit_manager.model+'.svg)\n'
         fig = fit_manager.plot_fit('a', observable='w0')
         data_loader.save_fig(fig, output_filename='/figs/fits/'+str(j+1)+'w0_vs_a--'+fit_manager.model)
         fig = fit_manager.plot_fit('a', observable='t0')
@@ -250,8 +252,8 @@ if args['average_models']:
 
         # Plot observables vs l^2
         str_output += '\n### Light quark mass dependence\n'
-        str_output += '![image](./figs/fits/'+str(j+1)+'w0_vs_l--'+fit_manager.model+'.png)\n' 
-        str_output += '![image](./figs/fits/'+str(j+1)+'sqrt_t0_vs_l--'+fit_manager.model+'.png)\n' 
+        str_output += '![image](./figs/fits/'+str(j+1)+'w0_vs_l--'+fit_manager.model+'.svg)\n' 
+        str_output += '![image](./figs/fits/'+str(j+1)+'sqrt_t0_vs_l--'+fit_manager.model+'.svg)\n' 
         fig = fit_manager.plot_fit('pi', observable='w0')
         data_loader.save_fig(fig, output_filename='/figs/fits/'+str(j+1)+'w0_vs_l--'+fit_manager.model)
         fig = fit_manager.plot_fit('pi', observable='t0')
@@ -259,8 +261,8 @@ if args['average_models']:
 
         # Plot observables vs s^2
         str_output += '\n### Strange quark mass dependence\n'
-        str_output += '![image](./figs/fits/'+str(j+1)+'w0_vs_s--'+fit_manager.model+'.png)\n'
-        str_output += '![image](./figs/fits/'+str(j+1)+'sqrt_t0_vs_s--'+fit_manager.model+'.png)\n'
+        str_output += '![image](./figs/fits/'+str(j+1)+'w0_vs_s--'+fit_manager.model+'.svg)\n'
+        str_output += '![image](./figs/fits/'+str(j+1)+'sqrt_t0_vs_s--'+fit_manager.model+'.svg)\n'
         fig = fit_manager.plot_fit('k', observable='w0')
         data_loader.save_fig(fig, output_filename='/figs/fits/'+str(j+1)+'w0_vs_s--'+fit_manager.model)
         fig = fit_manager.plot_fit('k', observable='t0')

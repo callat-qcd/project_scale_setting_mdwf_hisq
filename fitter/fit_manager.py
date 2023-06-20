@@ -264,6 +264,12 @@ class fit_manager(object):
                 'posterior' : self.posterior['t0'],
             }
 
+        # Need to keep track of correlation between spacings 
+        latt_spacings = np.unique([ens[:3] for ens in self.ensembles])
+        for axx in latt_spacings:
+            fit_info['w0']['w0/a:'+str(axx)] = self.interpolate_w0a(latt_spacing=axx, simultaneous_interpolation=True)
+            fit_info['t0']['t0/a2:'+str(axx)] = self.interpolate_t0a2(latt_spacing=axx, simultaneous_interpolation=True)
+
         return fit_info
 
     # Returns names of LECs in prior/posterior
@@ -440,9 +446,8 @@ class fit_manager(object):
             if mdl.observable == observable:
                 return mdl.fitfcn(p=posterior, fit_data=fit_data, xi=xi, debug=debug)
 
-
     # observable = 'w0' or 't0'
-    def fitfcn_interpolation(self, latt_spacing, observable, fit_data=None, posterior=None, xi=None, simultaneous_interpolation=False):
+    def fitfcn_interpolation(self, latt_spacing, observable, fit_data=None, posterior=None, xi=None, simultaneous_interpolation=True):
         if fit_data is None:
             fit_data = copy.deepcopy(self.phys_point_data)
 
@@ -461,11 +466,11 @@ class fit_manager(object):
         return self._get_error_budget(verbose=True, **kwargs)
 
 
-    def interpolate_w0a(self, latt_spacing, simultaneous_interpolation=False):
+    def interpolate_w0a(self, latt_spacing, simultaneous_interpolation=True):
         return self.fitfcn_interpolation(latt_spacing=latt_spacing, simultaneous_interpolation=simultaneous_interpolation, observable='w0')
 
 
-    def interpolate_t0a2(self, latt_spacing, simultaneous_interpolation=False):
+    def interpolate_t0a2(self, latt_spacing, simultaneous_interpolation=True):
         return self.fitfcn_interpolation(latt_spacing=latt_spacing, simultaneous_interpolation=simultaneous_interpolation, observable='t0')
 
 

@@ -93,6 +93,49 @@ class model_average(object):
             output += '\n------\n'
 
         return output
+    
+
+    def _construct_gvar(self, y, weight):
+        models = list(weight)
+
+        # For a single parameter/no correlation
+        if not isinstance(y[list(y)[0]], dict):
+            # Get central value
+            expct_y = 0
+            for mdl in models:
+                expct_y += gv.mean(gv.gvar(y[mdl])) *weight[mdl]
+
+            # Get variance
+            var_y = 0
+            for mdl in models:
+                var_y += gv.var(gv.gvar(y[mdl])) *weight[mdl]
+            for mdl in models:
+                var_y += (gv.mean(gv.gvar(y[mdl])))**2 *weight[mdl]
+
+            var_y -= (expct_y)**2
+
+            return gv.gvar(expct_y, np.sqrt(var_y))
+
+        # Takes a dictionary of parameters, keeping track of correlations among parameters
+        else:
+
+            # Construct means
+            g_mean = [np.sum([gv.mean(gv.gvar(y[mdl][p])) *weight[mdl] for mdl in models]) for p in y[list(y)[0]]]
+            # Construct covariance
+            g_cov = np.ndarray((len(g_mean), len(g_mean)))
+            for i, k1 in enumerate(y[list(y)[0]]):
+                for j, k2 in enumerate(y[list(y)[0]]):
+                    g_cov[i, j] = np.sum([gv.cov(y[mdl][k1], y[mdl][k2]) *weight[mdl] for mdl in models])
+                    g_cov[i, j] += np.sum([gv.mean(y[mdl][k1]) *gv.mean(y[mdl][k2]) *weight[mdl] for mdl in models])
+                    g_cov[i, j] -= np.sum([gv.mean(y[mdl][k1]) *weight[mdl] for mdl in models]) *np.sum([gv.mean(y[mdl][k2]) *weight[mdl] for mdl in models])
+            
+            g = gv.gvar(g_mean, g_cov)
+            output = {}
+            for j, p in enumerate(y[list(y)[0]]):
+                output[p] = g[j]
+
+            return output
+
 
 
     def _get_model_info_from_name(self, name):
@@ -138,9 +181,13 @@ class model_average(object):
 
 
     def average(self, param, observable=None, models=None, split_unc=False, include_unc=True):
-        if (observable is None) and (param == 'w0'):
+
+        def prob_Mk_given_D(model_k):
+            return 1 / np.sum([np.exp(self.fit_results[observable][model_l]['logGBF'] - self.fit_results[observable][model_k]['logGBF']) for model_l in models])
+
+        if (observable is None) and (param.startswith('w0')):
             observable = 'w0'
-        elif (observable is None) and (param == 'sqrt_t0'):
+        elif (observable is None) and (param.startswith('sqrt_t0') or param.startswith('t0/a2')):
             observable = 't0'
 
         if models is None:
@@ -157,6 +204,15 @@ class model_average(object):
             elif param.startswith('eb:') and 'error_budget' in self.fit_results[observable][mdl]:
                 y[mdl] = self.fit_results[observable][mdl]['error_budget'][param.split(':')[-1]]
 
+            elif param == ('w0/a'):
+                y[mdl] = self.fit_results[observable][mdl]['w0/a']
+                y[mdl]['w0'] = self.fit_results[observable][mdl]['w0']
+
+
+            elif param == ('t0/a2'):
+                y[mdl] = self.fit_results[observable][mdl]['t0/a2']
+                y[mdl]['sqrt_t0'] = self.fit_results[observable][mdl]['sqrt_t0']
+
             # w0, t0, etc
             elif param in self.fit_results[observable][mdl]:
                 y[mdl] = self.fit_results[observable][mdl][param]
@@ -164,53 +220,32 @@ class model_average(object):
             else:
                 y[mdl] = None
 
-
         # Only get results that aren't None
-        nonempty_keys = []
+        weight = {}
         for mdl in models:
             if (y[mdl] is not np.nan) and (y[mdl]is not None):
-                nonempty_keys.append(mdl)
-
-        if nonempty_keys == []:
-            return None
-
-        # calculate P( M_k | D )
-        prob_Mk_given_D = lambda model_k : (
-             1 / np.sum([np.exp(self._get_logGBF(observable=observable, model=model_l) - self._get_logGBF(observable=observable, model=model_k)) for model_l in nonempty_keys])
-        )
-
-        # Get central value
-        expct_y = 0
-        for mdl in nonempty_keys:
-            expct_y += gv.mean(gv.gvar(y[mdl])) *prob_Mk_given_D(mdl)
+                weight[mdl] = prob_Mk_given_D(mdl)
 
         if not include_unc:
-            return expct_y
+            return np.sum([gv.mean(gv.gvar(y[mdl])) *prob_Mk_given_D(mdl) for mdl in models])
 
-        # Get variance
-        if not split_unc:
-            var_y = 0
-            for mdl in nonempty_keys:
-                var_y += gv.var(gv.gvar(y[mdl])) *prob_Mk_given_D(mdl)
-            for mdl in nonempty_keys:
-                var_y += (gv.mean(gv.gvar(y[mdl])))**2 *prob_Mk_given_D(mdl)
+        if split_unc: 
+            expct_y = np.sum([gv.mean(gv.gvar(y[mdl])) *prob_Mk_given_D(mdl) for mdl in models])
 
-            var_y -= (expct_y)**2
-
-            return gv.gvar(expct_y, np.sqrt(var_y))
-
-        # Split statistics (unexplained var)/model selection (explained var)
-        if split_unc:
             var_model = 0
-            for mdl in nonempty_keys:
-                var_model += gv.var(gv.gvar(y[mdl])) *prob_Mk_given_D(mdl)
+            for mdl in models:
+                var_model += gv.var(gv.gvar(y[mdl])) *weight[mdl]
 
             var_selection = 0
-            for mdl in nonempty_keys:
-                var_selection += (gv.mean(gv.gvar(y[mdl])))**2 *prob_Mk_given_D(mdl)
+            for mdl in models:
+                var_selection += (gv.mean(gv.gvar(y[mdl])))**2 *weight[mdl]
             var_selection -= (expct_y)**2
 
             return [expct_y, np.sqrt(var_model), np.sqrt(var_selection)]
+
+        return self._construct_gvar(y, weight)
+
+
 
 
     def error_budget(self, observable):
