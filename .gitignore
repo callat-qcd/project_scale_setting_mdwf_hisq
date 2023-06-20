@@ -1,5 +1,6 @@
 .ipynb_checkpoints/
 *.pyc
+*.DS_Store
 $*
 /fitter/__pycache__/
 /notes/*.aux
@@ -18,3 +19,5 @@ notes/*.fdb_latexmk
 /tmp/*
 notes/notes.fdb_latexmk
 data/callat_mdwf_hisq_scale_correlators.h5
+results/*_test
+results/*-test

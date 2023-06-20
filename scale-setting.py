@@ -5,7 +5,7 @@ import sys
 import time
 import pathlib
 import argparse
-from progress.bar import Bar
+import tqdm
 
 sys.path.append(pathlib.Path(__file__).parent.absolute())
 import fitter.model_average as md
@@ -50,6 +50,10 @@ parser.add_argument(
     '-o', '--original', dest='improved_observables', default=None, action='store_false',
     help="Use original, not discretization improved t0/a^2 and w0/a values"
 )
+parser.add_argument(
+    '-s', '--simultaneous', dest='simultaneous', default=None, action='store_true',
+    help="Perform a simultaneous fit to both t0 and w0"
+)
 
 # fitting/model-averaging options
 parser.add_argument(
@@ -75,10 +79,9 @@ data_loader = dl.data_loader(
     use_charm_reweighting=args['use_charm_reweighting'],
     use_milc_aw0=args['use_milc_aw0'],
     improved_observables=args['improved_observables'],
-
+    simultaneous=args['simultaneous']
 )
 data_loader.save_settings()
-
 
 collection = data_loader.collection
 
@@ -91,10 +94,13 @@ if args['empirical_priors'] is None:
 
 if args['empirical_priors'] is not None and args['perform_fits']:
     t0 = time.time()
-    bar = Bar('Optimizing priors', max=len(model_list))
-    for j, model in enumerate(model_list):
-        bar.next()
-        print('\n', model)
+    pbar = tqdm.tqdm(model_list)
+    text_len = 25 + np.max([len(m) for m in model_list])
+    #pbar.set_description('Optimizing priors: ')
+
+    for j, model in enumerate(pbar):
+        #print('\n', model)
+        pbar.set_description(f'Optimizing priors ({model})'.ljust(text_len))
 
         # Load data
         gv_data = data_loader.gv_data
@@ -106,7 +112,8 @@ if args['empirical_priors'] is not None and args['perform_fits']:
             fit_data=gv_data,
             phys_point_data=phys_point_data, 
             prior=prior, 
-            model_info = model_info
+            model_info=model_info,
+            simultaneous=collection['simultaneous']
         )
 
         optimal_prior = fit_manager.optimize_prior(empbayes_grouping=args['empirical_priors'])
@@ -120,10 +127,11 @@ if args['empirical_priors'] is not None and args['perform_fits']:
 # Perform scale setting
 if args['perform_fits']:
     t0 = time.time()
-    bar = Bar('Fitting models', max=len(model_list))
-    for j, model in enumerate(model_list):
-        bar.next()
-        print('\n', model)
+    pbar = tqdm.tqdm(model_list)
+    text_len = 22 + np.max([len(m) for m in model_list])
+    
+    for j, model in enumerate(pbar):
+        pbar.set_description(f'Fitting models ({model})'.ljust(text_len))
 
         # Load data
         gv_data = data_loader.gv_data
@@ -138,7 +146,8 @@ if args['perform_fits']:
             fit_data=gv_data,
             phys_point_data=phys_point_data, 
             prior=prior, 
-            model_info = model_info
+            model_info=model_info,
+            simultaneous=collection['simultaneous']
         )
 
         #print(fit_manager)
@@ -156,37 +165,45 @@ if args['average_models']:
 
 
     # w0/t0 comparison figs
-    fig = model_average.plot_comparison(param='w0', observable='w0')
+    fig = model_average.plot_comparison(observable='w0')
     data_loader.save_fig(fig, output_filename='/figs/w0_comparison_fits')
-    str_output += '![image](./figs/w0_comparison_fits.png)\n' 
+    str_output += '![image](./figs/w0_comparison_fits.svg)\n' 
 
-    fig = model_average.plot_comparison(param='sqrt_t0', observable='t0')
+    fig = model_average.plot_comparison(observable='t0')
     data_loader.save_fig(fig, output_filename='/figs/t0_comparison_fits')
-    str_output += '![image](./figs/t0_comparison_fits.png)\n' 
+    str_output += '![image](./figs/t0_comparison_fits.svg)\n' 
+
+    if collection['simultaneous']:
+        fig = model_average.plot_comparison(observable='t0w0')
+        data_loader.save_fig(fig, output_filename='/figs/t0w0_comparison_fits')
+        str_output += '![image](./figs/t0w0_comparison_fits.svg)\n' 
 
     # w0/t0 histogram figs
-    fig = model_average.plot_histogram(param='w0', observable='w0', compare='order')
+    fig = model_average.plot_histogram(observable='w0', compare='order')
     data_loader.save_fig(fig, output_filename='/figs/w0_histogram_fit_order')
-    str_output += '![image](./figs/w0_histogram_fit_order.png)\n' 
+    str_output += '![image](./figs/w0_histogram_fit_order.svg)\n' 
 
-    fig = model_average.plot_histogram(param='sqrt_t0', observable='t0', compare='order')
+    fig = model_average.plot_histogram(observable='t0', compare='order')
     data_loader.save_fig(fig, output_filename='/figs/t0_histogram_fit_order')
-    str_output += '![image](./figs/t0_histogram_fit_order.png)\n' 
+    str_output += '![image](./figs/t0_histogram_fit_order.svg)\n' 
+
+    if collection['simultaneous']:
+        fig = model_average.plot_histogram(observable='t0w0', compare='order')
+        data_loader.save_fig(fig, output_filename='/figs/t0w0_histogram_fit_order')
+        str_output += '![image](./figs/t0w0_histogram_fit_order.svg)\n' 
 
     # Plot all fits
     fig = model_average.plot_fits('mpi', observable='w0')
     data_loader.save_fig(fig, output_filename='/figs/w0_fits_vs_mpi')
-    str_output += '![image](./figs/w0_fits_vs_mpi.png)\n' 
+    str_output += '![image](./figs/w0_fits_vs_mpi.svg)\n' 
 
     fig = model_average.plot_fits('mpi', observable='t0')
     data_loader.save_fig(fig, output_filename='/figs/t0_fits_vs_mpi')
-    str_output += '![image](./figs/t0_fits_vs_mpi.png)\n' 
+    str_output += '![image](./figs/t0_fits_vs_mpi.svg)\n' 
 
-
-    #str_output += '\n## Highest Weight Models'
     str_output += '\n## Representative model'
 
-    #for j, model in enumerate(model_average.get_model_names(observable='w0', by_weight=True)[:5]):
+    #for j, model in enumerate(model_average.get_model_names(observable='w0', by_weight=True)[:1]):
     for j, model in enumerate(['Fpi_n3lo_log_log2_fv_w0orig']):
         print('Making figs for model:', model)
 
@@ -198,13 +215,15 @@ if args['average_models']:
             prior = data_loader.get_prior(model=model, default=True)
         else:
             prior = data_loader.get_prior(model=model)
-        
+
+        print('simultaneous?', collection['simultaneous'])
 
         fit_manager = fm.fit_manager(
             fit_data=gv_data,
             phys_point_data=phys_point_data, 
             prior=prior, 
-            model_info = model_info
+            model_info=model_info,
+            simultaneous=collection['simultaneous']
         )
 
         str_output += '\n```yaml\n'+str(fit_manager)+'```\n'
@@ -215,18 +234,17 @@ if args['average_models']:
             for latt_spacing in np.unique([ens[:3] for ens in fit_manager.ensembles]):
                 fig = fit_manager.plot_interpolation(latt_spacing=latt_spacing, observable='w0')
                 data_loader.save_fig(fig, output_filename='/figs/w0_interpolation_'+latt_spacing)
-                str_output += '![image](./figs/w0_interpolation_'+latt_spacing+'.png)\n' 
+                str_output += '![image](./figs/w0_interpolation_'+latt_spacing+'.svg)\n' 
             str_output += '\n### t0 interpolation\n'
             for latt_spacing in np.unique([ens[:3] for ens in fit_manager.ensembles]):
                 fig = fit_manager.plot_interpolation(latt_spacing=latt_spacing, observable='t0')
                 data_loader.save_fig(fig, output_filename='/figs/t0_interpolation_'+latt_spacing)
-                str_output += '![image](./figs/t0_interpolation_'+latt_spacing+'.png)\n' 
-
+                str_output += '![image](./figs/t0_interpolation_'+latt_spacing+'.svg)\n' 
 
         # Plot observables vs eps2_a
         str_output += '\n### Lattice dependence\n'
-        str_output += '![image](./figs/fits/'+str(j+1)+'w0_vs_a--'+fit_manager.model+'.png)\n'
-        str_output += '![image](./figs/fits/'+str(j+1)+'sqrt_t0_vs_a--'+fit_manager.model+'.png)\n'
+        str_output += '![image](./figs/fits/'+str(j+1)+'w0_vs_a--'+fit_manager.model+'.svg)\n'
+        str_output += '![image](./figs/fits/'+str(j+1)+'sqrt_t0_vs_a--'+fit_manager.model+'.svg)\n'
         fig = fit_manager.plot_fit('a', observable='w0')
         data_loader.save_fig(fig, output_filename='/figs/fits/'+str(j+1)+'w0_vs_a--'+fit_manager.model)
         fig = fit_manager.plot_fit('a', observable='t0')
@@ -234,24 +252,21 @@ if args['average_models']:
 
         # Plot observables vs l^2
         str_output += '\n### Light quark mass dependence\n'
-        str_output += '![image](./figs/fits/'+str(j+1)+'w0_vs_l--'+fit_manager.model+'.png)\n' 
-        str_output += '![image](./figs/fits/'+str(j+1)+'sqrt_t0_vs_l--'+fit_manager.model+'.png)\n' 
+        str_output += '![image](./figs/fits/'+str(j+1)+'w0_vs_l--'+fit_manager.model+'.svg)\n' 
+        str_output += '![image](./figs/fits/'+str(j+1)+'sqrt_t0_vs_l--'+fit_manager.model+'.svg)\n' 
         fig = fit_manager.plot_fit('pi', observable='w0')
         data_loader.save_fig(fig, output_filename='/figs/fits/'+str(j+1)+'w0_vs_l--'+fit_manager.model)
         fig = fit_manager.plot_fit('pi', observable='t0')
         data_loader.save_fig(fig, output_filename='/figs/fits/'+str(j+1)+'sqrt_t0_vs_l--'+fit_manager.model)        
 
-
-
         # Plot observables vs s^2
         str_output += '\n### Strange quark mass dependence\n'
-        str_output += '![image](./figs/fits/'+str(j+1)+'w0_vs_s--'+fit_manager.model+'.png)\n'
-        str_output += '![image](./figs/fits/'+str(j+1)+'sqrt_t0_vs_s--'+fit_manager.model+'.png)\n'
+        str_output += '![image](./figs/fits/'+str(j+1)+'w0_vs_s--'+fit_manager.model+'.svg)\n'
+        str_output += '![image](./figs/fits/'+str(j+1)+'sqrt_t0_vs_s--'+fit_manager.model+'.svg)\n'
         fig = fit_manager.plot_fit('k', observable='w0')
         data_loader.save_fig(fig, output_filename='/figs/fits/'+str(j+1)+'w0_vs_s--'+fit_manager.model)
         fig = fit_manager.plot_fit('k', observable='t0')
         data_loader.save_fig(fig, output_filename='/figs/fits/'+str(j+1)+'sqrt_t0_vs_s--'+fit_manager.model)
-
 
     # Save fit info to /results/{collection}/README.md
     data_loader.save_results_summary(str_output)

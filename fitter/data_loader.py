@@ -1,7 +1,5 @@
-import pandas as pd
 import numpy as np
 import gvar as gv
-import sys
 import datetime
 import re
 import os
@@ -9,11 +7,11 @@ import yaml
 import h5py
 import scipy.stats as stats
 import matplotlib.pyplot as plt
-from collections import OrderedDict
 from pathlib import Path
 
 # Set defaults for plots
 import matplotlib as mpl
+'''
 mpl.rcParams['lines.linewidth'] = 1
 mpl.rcParams['figure.figsize']  = (6.75, 6.75/1.618034333)
 mpl.rcParams['font.size']  = 20
@@ -24,6 +22,7 @@ mpl.rcParams['ytick.direction'] = 'in'
 mpl.rcParams['xtick.labelsize'] = 12
 mpl.rcParams['ytick.labelsize'] = 12
 mpl.rcParams['text.usetex'] = True
+'''
 
 class data_loader(object):
 
@@ -36,7 +35,8 @@ class data_loader(object):
             data_file=None, 
             use_charm_reweighting=None,
             use_milc_aw0=None,
-            improved_observables=None):
+            improved_observables=None,
+            simultaneous=None):
 
         self.project_path = os.path.normpath(os.path.join(os.path.realpath(__file__), os.pardir, os.pardir))
 
@@ -90,6 +90,7 @@ class data_loader(object):
             'use_charm_reweighting' : False,
             'use_milc_aw0' : False,
             'improved_observables' : True,
+            'simultaneous' : False
         }
 
         # Override values with those from yaml file
@@ -99,6 +100,8 @@ class data_loader(object):
             defaults.update(output)
         except FileNotFoundError:
             pass
+
+        print(defaults)
 
         # Override default/yaml values with those from initializing data_loader object
         collection = {
@@ -110,6 +113,7 @@ class data_loader(object):
             'use_charm_reweighting' : use_charm_reweighting,
             'use_milc_aw0' : use_milc_aw0,
             'improved_observables' : improved_observables,
+            'simultaneous' : simultaneous,
         }
         for key in collection:
             if collection[key] is None:
@@ -229,7 +233,7 @@ class data_loader(object):
             'a' : gv.gvar(0),
             'alpha_s' : gv.gvar(0.0),
             'L' : gv.gvar(np.infty),
-            'hbarc' : gv.gvar(197.3269602),
+            'hbarc' : gv.gvar(197.3269804),
 
             'Fpi' : gv.gvar('92.07(57)'),
             'mpi' : gv.gvar('134.8(3)'), # '138.05638(37)'
@@ -252,7 +256,8 @@ class data_loader(object):
                 output['w0'] = fit_info[obs]['w0']
             elif obs == 't0':
                 output['sqrt_t0'] = fit_info[obs]['sqrt_t0']
-
+            elif obs == 't0w0':
+                output['sqrt_t0/w0'] = fit_info[obs]['sqrt_t0/w0']
 
             output['logGBF'] = gv.gvar(fit_info[obs]['logGBF'])
             output['chi2/df'] = gv.gvar(fit_info[obs]['chi2/df'])
@@ -270,6 +275,10 @@ class data_loader(object):
 
             for key in fit_info[obs]['error_budget']:
                 output['error_budget:'+key] = gv.gvar(fit_info[obs]['error_budget'][key])
+
+            for key in fit_info[obs]:
+                if key.startswith('w0/a:') or key.startswith('t0/a2:'):
+                    output[key] = fit_info[obs][key]
 
             gv.dump(output, filename)
         return None
@@ -300,14 +309,17 @@ class data_loader(object):
                 if obs not in output:
                     output[obs] = {}
 
-
-
                 output[obs][model] = {}
                 output[obs][model]['name'] = model
                 if obs == 'w0':
                     output[obs][model]['w0'] = fit_info_mdl_key['w0']
+                    output[obs][model]['w0/a'] = {}
                 elif obs == 't0':
                     output[obs][model]['sqrt_t0'] = fit_info_mdl_key['sqrt_t0']
+                    output[obs][model]['t0/a2'] = {}
+                elif obs == 't0w0':
+                    output[obs][model]['sqrt_t0/w0'] = fit_info_mdl_key['sqrt_t0/w0']
+
                 output[obs][model]['logGBF'] = fit_info_mdl_key['logGBF'].mean
                 output[obs][model]['chi2/df'] = fit_info_mdl_key['chi2/df'].mean
                 output[obs][model]['Q'] = fit_info_mdl_key['Q'].mean
@@ -325,6 +337,13 @@ class data_loader(object):
                         output[obs][model]['phys_point'][key.split(':')[-1]] = fit_info_mdl_key[key]
                     elif key.startswith('error_budget'):
                         output[obs][model]['error_budget'][key.split(':')[-1]] = fit_info_mdl_key[key].mean
+
+                    elif key.startswith('w0/a') and obs == 'w0':
+                        output[obs][model]['w0/a'][key.split(':')[-1]] = fit_info_mdl_key[key]
+                    elif key.startswith('t0/a2') and obs == 't0':
+                        output[obs][model]['t0/a2'][key.split(':')[-1]] = fit_info_mdl_key[key]
+
+
 
             return output
 
@@ -585,21 +604,22 @@ class data_loader(object):
 
         prior_table = ''
         for obs in observables:
-            prior_table += 'observable: %s \n' %(obs)
-            #priors_models = {mdl : self.get_prior(model=mdl)[obs] for mdl in models}
-            priors_models = {}
-            priors_models['default_Fpi'] = self.get_prior(model='Fpi_n3lo_fv', default=True)[obs]
-            priors_models['default_Om'] = self.get_prior(model='Om_n3lo_fv', default=True)[obs]
+            if obs in ['w0', 't0']:
+                prior_table += 'observable: %s \n' %(obs)
+                #priors_models = {mdl : self.get_prior(model=mdl)[obs] for mdl in models}
+                priors_models = {}
+                priors_models['default_Fpi'] = self.get_prior(model='Fpi_n3lo_fv', default=True)[obs]
+                priors_models['default_Om'] = self.get_prior(model='Om_n3lo_fv', default=True)[obs]
 
-
-            length = lambda x : len(x.split('_')[1]) if len(x.split('_')) > 1 else 0
-            prior_table += dict_dict_to_table(priors_models, column0='model', sort_key=length)
-            prior_table += '\n\n'
+                length = lambda x : len(x.split('_')[1]) if len(x.split('_')) > 1 else 0
+                prior_table += dict_dict_to_table(priors_models, column0='model', sort_key=length)
+                prior_table += '\n\n'
 
         for obs in observables:
-            priors_models = {obs+'_interpolation' : self.get_prior(model=models[0])[obs+'_interpolation']}
-            prior_table += dict_dict_to_table(priors_models, column0='model', sort_key=length)
-            prior_table += '\n\n'
+            if obs in ['w0', 't0']:
+                priors_models = {obs+'_interpolation' : self.get_prior(model=models[0])[obs+'_interpolation']}
+                prior_table += dict_dict_to_table(priors_models, column0='model', sort_key=length)
+                prior_table += '\n\n'
 
         # Generate table for models    
         #models = self.collection['models']
@@ -645,9 +665,9 @@ class data_loader(object):
         if output_filename is None:
             if not os.path.exists(os.path.normpath(self.project_path+'/tmp/')):
                 os.makedirs(os.path.normpath(self.project_path+'/tmp/'))
-            output_file = os.path.normpath(self.project_path+'/tmp/temp.png')
+            output_file = os.path.normpath(self.project_path+'/tmp/temp.svg')
         else:
-            output_file = os.path.normpath(self.project_path+'/results/'+self.collection['name']+'/'+output_filename+'.png')
+            output_file = os.path.normpath(self.project_path+'/results/'+self.collection['name']+'/'+output_filename+'.svg')
 
         if not os.path.exists(os.path.dirname(output_file)):
             os.makedirs(os.path.dirname(output_file))

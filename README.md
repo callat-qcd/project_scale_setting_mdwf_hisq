@@ -12,6 +12,8 @@ The raw correlation functions can be found [here](https://a51.lbl.gov/~callat/pu
 
 ## How to use
 
+### Running the analysis
+
 To generate the extrapolation and interpolation results from the paper, run `python scale-setting.py -c [name]`. This will automatically create the folder `/results/[name]/` . A summary of the results is given inside `/results/[name]/README.md`. Extra options can be viewed by running `python scale-setting.py --help`, which is given below for convenience.
 
 ```
@@ -41,6 +43,38 @@ optional arguments:
 To fine-tune the results, either re-run the fits using the options above or by modifying `/results/[name]/settings.yaml`. Similarly, the fits can be constructed with different priors by editing `/results/[name]/priors.yaml` and re-running `python scale-setting.py -c [name]`.
 
 In addition to this library, this repo contains Juypyter notebooks. The fit for a single model can be explored in `/notebooks/fit_model.ipynb`. The model average is provided in `/notebooks/average_models.ipynb`. Some miscellaneous drudgery (eg, the paper's sensitivity figure) is available in `/notebooks/bespoke_plots.ipynb`.
+
+### Using these results for other projects
+
+To reuse this work for other CalLat projects where a scale is needed, use the pickle produced from `/notebook/generate_scale_setting_pickle.p`. Note that the entries in this dictionary are correlated, as the determinations of the lattice spacings are correlated by the gradient flow scales. The keys are like
+
+```python
+scale_setting_pickle = {
+  'w0_org:w0'       : 0.1713 (12), # the gradient flow scale (in fm) w_0 per the original definition
+  'w0_org:a06'      : 2.986 (12),  # reciprocal lattice spacing of the ~0.06 fm ensembles in w_0 units, i.e w_0/a_06
+   # ... some entries omitted
+  't0_org:sqrt_t0'  : 0.1414 (12), # the gradient flow scale \sqrt{t_0} per the original definition
+  't0_org:a06'      : 6.587 (25),  # reciprocal lattice spacing of the ~0.06 fm ensembles in sqrt{t_0} units, i.e \sqrt{t_0}/a_06
+   # ... etc
+  'w0_imp:w0'       : 0.1716 (12), # the gradient flow scale (in fm) w_0 per the improved definition
+  'w0_imp:a06'      : 2.997 (12),  # reciprocal lattice spacing of the ~0.06 fm ensembles in w_0 units using the improved definition
+   # ... etc
+  'sqrt_t0/w0_org'  : 0.8258 (38)  # dimensionless ratio of flow scales per the original definition
+  'sqrt_t0/w0_imp'  : 0.8262 (37)  # dimensionless ratio of flow scales per the improved definition
+
+   # meta data suggesting the priors/settings used to generate scale_setting.p
+   # check /results/ folder
+  'meta'            : {
+    'original_scales': '2023_06_20-original_simultaneous',
+    'improved_scales': '2023_06_20-improved_simultaneous'}
+}
+```
+
+To convert to physical units, simply compute, e.g., 
+
+```python
+scale_setting_pickle['w0_org:w0'] / scale_setting_pickle['w0_org:a06'] # = 0.05718(53) fm ~ 0.06 fm
+```
 
 ## Requirements
 
