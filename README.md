@@ -60,7 +60,7 @@ scale_setting_pickle = {
   'w0_imp:a06'      : 2.997 (12),  # reciprocal lattice spacing of the ~0.06 fm ensembles in w_0 units using the improved definition
    # ... etc
   'sqrt_t0/w0_org'  : 0.8258 (38),  # dimensionless ratio of flow scales per the original definition
-  'sqrt_t0/w0_imp'  : 0.8262 (37)  # dimensionless ratio of flow scales per the improved definition
+  'sqrt_t0/w0_imp'  : 0.8262 (37),  # dimensionless ratio of flow scales per the improved definition
 
    # meta data suggesting the priors/settings used to generate scale_setting.p
    # check /results/ folder
