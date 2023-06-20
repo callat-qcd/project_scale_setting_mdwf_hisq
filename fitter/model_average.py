@@ -187,6 +187,8 @@ class model_average(object):
 
         if (observable is None) and (param.startswith('w0')):
             observable = 'w0'
+        elif param == 'sqrt_t0/w0':
+            observable = 't0w0'
         elif (observable is None) and (param.startswith('sqrt_t0') or param.startswith('t0/a2')):
             observable = 't0'
 
