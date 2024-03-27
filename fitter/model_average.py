@@ -219,6 +219,9 @@ class model_average(object):
             elif param in self.fit_results[observable][mdl]:
                 y[mdl] = self.fit_results[observable][mdl][param]
 
+            elif param in self.fit_results[observable][mdl]['posterior']:
+                y[mdl] = self.fit_results[observable][mdl]['posterior'][param]
+
             else:
                 y[mdl] = None
 
