@@ -552,8 +552,30 @@ class model_average(object):
         elif parameter in ['mpi', 'pi', 'p', 'l']:
             xlabel = r'$l^2$'# = m_\pi^2 / (4 \pi F_\pi)^2$'
             x = (np.linspace(10, 400, 50) / (4 *np.pi *self._get_phys_point_data()['Fpi']))**2
-            plt.axvline(gv.mean(self._get_phys_point_data()['mpi'] / (4 *np.pi *self._get_phys_point_data()['Fpi']))**2, color=colors[0])
-            plt.axvline(gv.mean(self._get_phys_point_data()['mpi'] / (self._get_phys_point_data()['mO']))**2, color=colors[1])
+            plt.axvline(gv.mean(self._get_phys_point_data()['mpi'] / (4 *np.pi *self._get_phys_point_data()['Fpi']))**2, color=colors[0], ls='--')
+            plt.axvline(gv.mean(self._get_phys_point_data()['mpi'] / (self._get_phys_point_data()['mO']))**2, color=colors[1], ls='--')
+
+            if observable == 'w0':
+                models = [f for f in self.fit_results['w0'] if f.startswith('Fpi')]
+                val = self.average(param='w0', observable=observable, models=models) *self._get_phys_point_data()['mO'] / self._get_phys_point_data()['hbarc']
+                plt.errorbar(x=gv.mean(self._get_phys_point_data()['mpi'] / (4 *np.pi *self._get_phys_point_data()['Fpi']))**2, 
+                    y=gv.mean(val), yerr=gv.sdev(val), marker='o', color='black',)
+                
+                models = [f for f in self.fit_results['w0'] if f.startswith('Om')]
+                val = self.average(param='w0', observable=observable, models=models) *self._get_phys_point_data()['mO'] / self._get_phys_point_data()['hbarc']
+                plt.errorbar(x=gv.mean(self._get_phys_point_data()['mpi'] / (self._get_phys_point_data()['mO']))**2, 
+                    y=gv.mean(val), yerr=gv.sdev(val), marker='o', color='black',)
+                
+            if observable == 't0':
+                models = [f for f in self.fit_results['w0'] if f.startswith('Fpi')]
+                val = self.average(param='sqrt_t0', observable=observable, models=models) *self._get_phys_point_data()['mO'] / self._get_phys_point_data()['hbarc']
+                plt.errorbar(x=gv.mean(self._get_phys_point_data()['mpi'] / (4 *np.pi *self._get_phys_point_data()['Fpi']))**2, 
+                    y=gv.mean(val), yerr=gv.sdev(val), marker='o', color='black',)
+                
+                models = [f for f in self.fit_results['w0'] if f.startswith('Om')]
+                val = self.average(param='sqrt_t0', observable=observable, models=models) *self._get_phys_point_data()['mO'] / self._get_phys_point_data()['hbarc']
+                plt.errorbar(x=gv.mean(self._get_phys_point_data()['mpi'] / (self._get_phys_point_data()['mO']))**2, 
+                    y=gv.mean(val), yerr=gv.sdev(val), marker='o', color='black',)
             
             #xlabel = r'$l^2_F = m_\pi^2 / m_\Omega^2$'
             #x = (np.linspace(10, 400, 50) / (self._get_phys_point_data()['mO']))**2

@@ -68,6 +68,8 @@ parser.add_argument(
     '-d', '--default', dest='use_default_priors', default=False, action='store_true',
     help='use default priors; defaults to using optimized priors if present, otherwise default priors'
 )
+
+
 args = vars(parser.parse_args())
 
 data_loader = dl.data_loader(
@@ -167,38 +169,46 @@ if args['average_models']:
     # w0/t0 comparison figs
     fig = model_average.plot_comparison(observable='w0')
     data_loader.save_fig(fig, output_filename='/figs/w0_comparison_fits')
+    data_loader.save_fig(fig, output_filename='/pdfs/w0_comparison_fits', filetype='pdf')
     str_output += '![image](./figs/w0_comparison_fits.svg)\n' 
 
     fig = model_average.plot_comparison(observable='t0')
     data_loader.save_fig(fig, output_filename='/figs/t0_comparison_fits')
+    data_loader.save_fig(fig, output_filename='/pdfs/t0_comparison_fits', filetype='pdf')
     str_output += '![image](./figs/t0_comparison_fits.svg)\n' 
 
     if collection['simultaneous']:
         fig = model_average.plot_comparison(observable='t0w0')
         data_loader.save_fig(fig, output_filename='/figs/t0w0_comparison_fits')
+        data_loader.save_fig(fig, output_filename='/pdfs/t0w0_comparison_fits', filetype='pdf')
         str_output += '![image](./figs/t0w0_comparison_fits.svg)\n' 
 
     # w0/t0 histogram figs
     fig = model_average.plot_histogram(observable='w0', compare='order')
     data_loader.save_fig(fig, output_filename='/figs/w0_histogram_fit_order')
+    data_loader.save_fig(fig, output_filename='/pdfs/w0_histogram_fit_order', filetype='pdf')
     str_output += '![image](./figs/w0_histogram_fit_order.svg)\n' 
 
     fig = model_average.plot_histogram(observable='t0', compare='order')
     data_loader.save_fig(fig, output_filename='/figs/t0_histogram_fit_order')
+    data_loader.save_fig(fig, output_filename='/pdfs/t0_histogram_fit_order', filetype='pdf')
     str_output += '![image](./figs/t0_histogram_fit_order.svg)\n' 
 
     if collection['simultaneous']:
         fig = model_average.plot_histogram(observable='t0w0', compare='order')
         data_loader.save_fig(fig, output_filename='/figs/t0w0_histogram_fit_order')
+        data_loader.save_fig(fig, output_filename='/pdfs/t0w0_histogram_fit_order', filetype='pdf')
         str_output += '![image](./figs/t0w0_histogram_fit_order.svg)\n' 
 
     # Plot all fits
     fig = model_average.plot_fits('mpi', observable='w0')
     data_loader.save_fig(fig, output_filename='/figs/w0_fits_vs_mpi')
+    data_loader.save_fig(fig, output_filename='/pdfs/w0_fits_vs_mpi', filetype='pdf')
     str_output += '![image](./figs/w0_fits_vs_mpi.svg)\n' 
 
     fig = model_average.plot_fits('mpi', observable='t0')
     data_loader.save_fig(fig, output_filename='/figs/t0_fits_vs_mpi')
+    data_loader.save_fig(fig, output_filename='/pdfs/t0_fits_vs_mpi', filetype='pdf')
     str_output += '![image](./figs/t0_fits_vs_mpi.svg)\n' 
 
     str_output += '\n## Representative model'
@@ -234,11 +244,13 @@ if args['average_models']:
             for latt_spacing in np.unique([ens[:3] for ens in fit_manager.ensembles]):
                 fig = fit_manager.plot_interpolation(latt_spacing=latt_spacing, observable='w0')
                 data_loader.save_fig(fig, output_filename='/figs/w0_interpolation_'+latt_spacing)
+                data_loader.save_fig(fig, output_filename='/pdfs/w0_interpolation_'+latt_spacing, filetype='pdf')
                 str_output += '![image](./figs/w0_interpolation_'+latt_spacing+'.svg)\n' 
             str_output += '\n### t0 interpolation\n'
             for latt_spacing in np.unique([ens[:3] for ens in fit_manager.ensembles]):
                 fig = fit_manager.plot_interpolation(latt_spacing=latt_spacing, observable='t0')
                 data_loader.save_fig(fig, output_filename='/figs/t0_interpolation_'+latt_spacing)
+                data_loader.save_fig(fig, output_filename='/pdfs/t0_interpolation_'+latt_spacing, filetype='pdf')
                 str_output += '![image](./figs/t0_interpolation_'+latt_spacing+'.svg)\n' 
 
         # Plot observables vs eps2_a
@@ -247,8 +259,10 @@ if args['average_models']:
         str_output += '![image](./figs/fits/'+str(j+1)+'sqrt_t0_vs_a--'+fit_manager.model+'.svg)\n'
         fig = fit_manager.plot_fit('a', observable='w0')
         data_loader.save_fig(fig, output_filename='/figs/fits/'+str(j+1)+'w0_vs_a--'+fit_manager.model)
+        data_loader.save_fig(fig, output_filename='/pdfs/fits/'+str(j+1)+'w0_vs_a--'+fit_manager.model, filetype='pdf')
         fig = fit_manager.plot_fit('a', observable='t0')
         data_loader.save_fig(fig, output_filename='/figs/fits/'+str(j+1)+'sqrt_t0_vs_a--'+fit_manager.model)
+        data_loader.save_fig(fig, output_filename='/pdfs/fits/'+str(j+1)+'sqrt_t0_vs_a--'+fit_manager.model, filetype='pdf')
 
         # Plot observables vs l^2
         str_output += '\n### Light quark mass dependence\n'
@@ -256,8 +270,10 @@ if args['average_models']:
         str_output += '![image](./figs/fits/'+str(j+1)+'sqrt_t0_vs_l--'+fit_manager.model+'.svg)\n' 
         fig = fit_manager.plot_fit('pi', observable='w0')
         data_loader.save_fig(fig, output_filename='/figs/fits/'+str(j+1)+'w0_vs_l--'+fit_manager.model)
+        data_loader.save_fig(fig, output_filename='/pdfs/fits/'+str(j+1)+'w0_vs_l--'+fit_manager.model, filetype='pdf')
         fig = fit_manager.plot_fit('pi', observable='t0')
         data_loader.save_fig(fig, output_filename='/figs/fits/'+str(j+1)+'sqrt_t0_vs_l--'+fit_manager.model)        
+        data_loader.save_fig(fig, output_filename='/pdfs/fits/'+str(j+1)+'sqrt_t0_vs_l--'+fit_manager.model, filetype='pdf') 
 
         # Plot observables vs s^2
         str_output += '\n### Strange quark mass dependence\n'
@@ -265,8 +281,10 @@ if args['average_models']:
         str_output += '![image](./figs/fits/'+str(j+1)+'sqrt_t0_vs_s--'+fit_manager.model+'.svg)\n'
         fig = fit_manager.plot_fit('k', observable='w0')
         data_loader.save_fig(fig, output_filename='/figs/fits/'+str(j+1)+'w0_vs_s--'+fit_manager.model)
+        data_loader.save_fig(fig, output_filename='/pdfs/fits/'+str(j+1)+'w0_vs_s--'+fit_manager.model, filetype='pdf')
         fig = fit_manager.plot_fit('k', observable='t0')
         data_loader.save_fig(fig, output_filename='/figs/fits/'+str(j+1)+'sqrt_t0_vs_s--'+fit_manager.model)
+        data_loader.save_fig(fig, output_filename='/pdfs/fits/'+str(j+1)+'sqrt_t0_vs_s--'+fit_manager.model, filetype='pdf')
 
     # Save fit info to /results/{collection}/README.md
     data_loader.save_results_summary(str_output)

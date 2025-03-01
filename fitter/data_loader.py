@@ -232,14 +232,22 @@ class data_loader(object):
             'eps2_a' : gv.gvar(0),
             'a' : gv.gvar(0),
             'alpha_s' : gv.gvar(0.0),
-            'L' : gv.gvar(np.infty),
+            'L' : gv.gvar(np.inf),
             'hbarc' : gv.gvar(197.3269804),
 
+            # Flag 2019
+            # 'Fpi' : gv.gvar('92.07(57)'),
+            # 'mpi' : gv.gvar('134.8(3)'), # '138.05638(37)'
+            # 'mk' : gv.gvar('494.2(3)'), # '495.6479(92)'
+
+            # Edinburgh concensus
             'Fpi' : gv.gvar('92.07(57)'),
-            'mpi' : gv.gvar('134.8(3)'), # '138.05638(37)'
-            'mk' : gv.gvar('494.2(3)'), # '495.6479(92)'
+            'mpi' : gv.gvar('135.00000(1)'), # '138.05638(37)'
+            'mk' : gv.gvar( '494.60000(1)'), # '495.6479(92)'
+            'Fpi' : gv.gvar('130.50000(1)') / np.sqrt(2),
+
             #'mss' : gv.gvar('688.5(2.2)'), # Taken from arxiv/1303.1670
-            'mO' : gv.gvar('1672.43(32)')
+            'mO' : gv.gvar('1672.43(32)') # PDG
         }
         return phys_point_data
 
@@ -656,7 +664,7 @@ class data_loader(object):
         return None
 
 
-    def save_fig(self, fig=None, output_filename=None):
+    def save_fig(self, fig=None, output_filename=None, filetype='svg'):
 
         if fig is None:
             print('Nothing here!')
@@ -665,14 +673,14 @@ class data_loader(object):
         if output_filename is None:
             if not os.path.exists(os.path.normpath(self.project_path+'/tmp/')):
                 os.makedirs(os.path.normpath(self.project_path+'/tmp/'))
-            output_file = os.path.normpath(self.project_path+'/tmp/temp.svg')
+            output_file = os.path.normpath(self.project_path+'/tmp/temp.'+filetype)
         else:
-            output_file = os.path.normpath(self.project_path+'/results/'+self.collection['name']+'/'+output_filename+'.svg')
+            output_file = os.path.normpath(self.project_path+'/results/'+self.collection['name']+'/'+output_filename+'.'+filetype)
 
         if not os.path.exists(os.path.dirname(output_file)):
             os.makedirs(os.path.dirname(output_file))
 
-        fig.savefig(output_file, bbox_inches='tight')
+        fig.savefig(output_file, bbox_inches='tight', transparent=True)
         return None
 
 
